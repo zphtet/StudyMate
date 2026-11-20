@@ -160,10 +160,10 @@ studymate/
 | OAuth | `signInWithOAuth({ provider: 'google' | 'apple', options: { redirectTo: /auth/callback } })`; callback route exchanges the code. First OAuth sign-in without a role → `/sign-up/role` step to choose role once. |
 | Forgot password | `resetPasswordForEmail(email)` with template showing `{{ .Token }}`; always show the neutral message. |
 | Reset password | `verifyOtp({ email, token, type: 'recovery' })` → `updateUser({ password })` → `signOut({ scope: 'others' })`. |
-| Rate limits | Supabase Auth rate limits + per-email cooldown stored client-side; OTP expiry 3600 s; password min length 8 in Auth settings. |
+| Rate limits | Supabase Auth rate limits + server-side per-email counters in `auth_email_limits` (60 s cooldown, 5 sends per hour, 5 wrong codes; spec 001 FR-011); OTP expiry 3600 s; password min length 8 in Auth settings. |
 | SMTP | Resend as Supabase custom SMTP (host `smtp.resend.com`, port 465, user `resend`, password = Resend API key). Verified sending domain with SPF + DKIM (+ DMARC) before launch; sender e.g. `StudyMate <no-reply@yourdomain>`. |
 
-**Invite & link**: `/join/[code]` (or code entry) → Server Action `requestJoin(code)` calls RPC `request_join(p_code)` (SECURITY DEFINER; looks up the code without exposing admins). Admin approves via `respond_join(link_id, approve)`.
+**Invite & link**: `/join/[code]` (or code entry) → Server Action `requestJoin(code)` → `requireRole('student')` → Prisma in `src/features/links/repo.ts` (finds the active code without exposing admins; withdraws an older pending request). Admin approves or declines with `respondToRequest(linkId, approve)` → `requireRole('admin')` → Prisma, with the link's `adminId` in `where`. The SQL RPCs `request_join` / `respond_join` stay in the database but the app doesn't call them: they rely on `auth.uid()`, which is null on Prisma's connection (specs/001 research R2).
 
 ---
 
@@ -375,6 +375,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Next.js | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or anon key) | Next.js | client key |
+| `SUPABASE_SECRET_KEY` (`sb_secret_…`) | Vercel (server only) + local e2e | Supabase Auth admin API: account deletion (`src/server/supabase-admin.ts`) and e2e fixtures. Never `NEXT_PUBLIC_`, never imported by client code |
 | `DATABASE_URL` | Vercel (server only) | Prisma Client — Supabase transaction pooler, port 6543 |
 | `DIRECT_URL` | CI / local (server only) | Prisma CLI migrations — session pooler or direct, port 5432 |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Next.js | push subscribe |

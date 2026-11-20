@@ -31,6 +31,10 @@ const buttonVariants = cva(
         'icon-sm':
           'size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg',
         'icon-lg': 'size-9',
+        // Phone-first sizes (constitution V: tap targets ≥ 44 px).
+        touch: 'h-11 gap-1.5 rounded-xl px-4 text-[0.95rem]',
+        xl: "h-13 gap-2 rounded-xl px-5 text-base font-semibold [&_svg:not([class*='size-'])]:size-5",
+        'icon-touch': "size-11 rounded-full [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {

@@ -1,4 +1,4 @@
-  // Prisma 7 config — the CLI no longer reads .env automatically.
+// Prisma 7 config — the CLI no longer reads .env automatically.
 // Secrets live in .env.local (CLAUDE.md); .env is a fallback. The first file wins.
 import { config } from 'dotenv'
 import { defineConfig } from 'prisma/config'

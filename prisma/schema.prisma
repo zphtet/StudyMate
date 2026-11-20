@@ -112,49 +112,49 @@ enum MessageStatus {
 
 /// One row per Supabase auth user (id = auth.users.id). Created by the handle_new_user trigger.
 model Profile {
-  id                String    @id @db.Uuid
-  role              UserRole
-  displayName       String    @map("display_name")
-  avatarUrl         String?   @map("avatar_url")
-  timezone          String    @default("UTC")
-  locale            String    @default("en")
-  colorMode         String    @default("system") @map("color_mode")
-  themeId           String    @default("indigo") @map("theme_id")
-  fontId            String    @default("inter") @map("font_id")
-  fontScale         Decimal   @default(1.00) @map("font_scale") @db.Decimal(3, 2)
-  weeklyGoalDays    Int       @default(5) @map("weekly_goal_days") @db.SmallInt
-  sleepMinutes      Int       @default(480) @map("sleep_minutes") @db.SmallInt
-  afterShiftBuffer  Int       @default(30) @map("after_shift_buffer") @db.SmallInt
-  wakingStart       DateTime  @default(dbgenerated("'08:00:00'::time without time zone")) @map("waking_start") @db.Time(6)
-  wakingEnd         DateTime  @default(dbgenerated("'23:00:00'::time without time zone")) @map("waking_end") @db.Time(6)
-  quietStart        DateTime? @map("quiet_start") @db.Time(6)
-  quietEnd          DateTime? @map("quiet_end") @db.Time(6)
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id               String    @id @db.Uuid
+  role             UserRole
+  displayName      String    @map("display_name")
+  avatarUrl        String?   @map("avatar_url")
+  timezone         String    @default("UTC")
+  locale           String    @default("en")
+  colorMode        String    @default("system") @map("color_mode")
+  themeId          String    @default("indigo") @map("theme_id")
+  fontId           String    @default("inter") @map("font_id")
+  fontScale        Decimal   @default(1.00) @map("font_scale") @db.Decimal(3, 2)
+  weeklyGoalDays   Int       @default(5) @map("weekly_goal_days") @db.SmallInt
+  sleepMinutes     Int       @default(480) @map("sleep_minutes") @db.SmallInt
+  afterShiftBuffer Int       @default(30) @map("after_shift_buffer") @db.SmallInt
+  wakingStart      DateTime  @default(dbgenerated("'08:00:00'::time without time zone")) @map("waking_start") @db.Time(6)
+  wakingEnd        DateTime  @default(dbgenerated("'23:00:00'::time without time zone")) @map("waking_end") @db.Time(6)
+  quietStart       DateTime? @map("quiet_start") @db.Time(6)
+  quietEnd         DateTime? @map("quiet_end") @db.Time(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  adminInvites           AdminInvite[]
-  linksAsStudent         StudentLink[]        @relation("LinkStudent")
-  linksAsAdmin           StudentLink[]        @relation("LinkAdmin")
-  courses                Course[]
-  assignments            CourseAssignment[]   @relation("AssignmentStudent")
-  assignmentsGiven       CourseAssignment[]   @relation("AssignmentAssignedBy")
-  lessonDeadlines        LessonDeadline[]     @relation("DeadlineStudent")
-  lessonDeadlinesSet     LessonDeadline[]     @relation("DeadlineSetBy")
-  progress               LessonProgress[]     @relation("ProgressStudent")
-  progressCompletedByMe  LessonProgress[]     @relation("ProgressCompletedBy")
-  submissions            Submission[]
-  commentsWritten        Comment[]            @relation("CommentAuthor")
-  commentsOnMe           Comment[]            @relation("CommentStudent")
-  studySessions          StudySession[]
-  shiftPatterns          ShiftPattern[]
-  shifts                 Shift[]
-  rulesCreated           NotificationRule[]   @relation("RuleAdmin")
-  rulesForMe             NotificationRule[]   @relation("RuleStudent")
-  messagesSent           ScheduledMessage[]
-  messagesReceived       ScheduledMessageRecipient[]
-  pushSubscriptions      PushSubscription[]
-  notifications          Notification[]
-  auditEntries           AuditLog[]
+  adminInvites          AdminInvite[]
+  linksAsStudent        StudentLink[]               @relation("LinkStudent")
+  linksAsAdmin          StudentLink[]               @relation("LinkAdmin")
+  courses               Course[]
+  assignments           CourseAssignment[]          @relation("AssignmentStudent")
+  assignmentsGiven      CourseAssignment[]          @relation("AssignmentAssignedBy")
+  lessonDeadlines       LessonDeadline[]            @relation("DeadlineStudent")
+  lessonDeadlinesSet    LessonDeadline[]            @relation("DeadlineSetBy")
+  progress              LessonProgress[]            @relation("ProgressStudent")
+  progressCompletedByMe LessonProgress[]            @relation("ProgressCompletedBy")
+  submissions           Submission[]
+  commentsWritten       Comment[]                   @relation("CommentAuthor")
+  commentsOnMe          Comment[]                   @relation("CommentStudent")
+  studySessions         StudySession[]
+  shiftPatterns         ShiftPattern[]
+  shifts                Shift[]
+  rulesCreated          NotificationRule[]          @relation("RuleAdmin")
+  rulesForMe            NotificationRule[]          @relation("RuleStudent")
+  messagesSent          ScheduledMessage[]
+  messagesReceived      ScheduledMessageRecipient[]
+  pushSubscriptions     PushSubscription[]
+  notifications         Notification[]
+  auditEntries          AuditLog[]
 
   @@map("profiles")
 }
@@ -245,14 +245,14 @@ model Lesson {
   createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  course       Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  section      CourseSection?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
-  resources    LessonResource[]
-  deadlines    LessonDeadline[]
-  progress     LessonProgress[]
-  submissions  Submission[]
-  sessions     StudySession[]
-  messages     ScheduledMessage[]
+  course      Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section     CourseSection?     @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  resources   LessonResource[]
+  deadlines   LessonDeadline[]
+  progress    LessonProgress[]
+  submissions Submission[]
+  sessions    StudySession[]
+  messages    ScheduledMessage[]
 
   // + index lessons_course (course_id, position) WHERE deleted_at IS NULL — in SQL
   @@map("lessons")
@@ -322,9 +322,9 @@ model LessonProgress {
   clientOpId   String?        @unique @map("client_op_id") @db.Uuid
   updatedAt    DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  student     Profile  @relation("ProgressStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  completer   Profile? @relation("ProgressCompletedBy", fields: [completedBy], references: [id], onDelete: NoAction)
+  student   Profile  @relation("ProgressStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completer Profile? @relation("ProgressCompletedBy", fields: [completedBy], references: [id], onDelete: NoAction)
 
   @@id([studentId, lessonId])
   @@map("lesson_progress")
@@ -521,4 +521,21 @@ model AuditLog {
   actor Profile @relation(fields: [actorId], references: [id], onDelete: NoAction)
 
   @@map("audit_log")
+}
+
+/// Server-only counters for email codes (spec 001 FR-011, research R3).
+/// RLS on with no policies; anon/authenticated have no privileges. Reached only through Prisma.
+model AuthEmailLimit {
+  /// lower-cased, trimmed
+  email           String
+  /// signup | recovery (CHECK in SQL)
+  purpose         String
+  windowStartedAt DateTime  @default(now()) @map("window_started_at") @db.Timestamptz(6)
+  sendsInWindow   Int       @default(0) @map("sends_in_window")
+  lastSentAt      DateTime? @map("last_sent_at") @db.Timestamptz(6)
+  failedAttempts  Int       @default(0) @map("failed_attempts")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@id([email, purpose])
+  @@map("auth_email_limits")
 }
