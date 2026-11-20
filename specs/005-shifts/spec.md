@@ -1,0 +1,66 @@
+# Feature Specification: Shift Calendar and Availability
+
+**Feature Branch**: `005-shifts`
+**Created**: 2026-11-20
+**Status**: Draft
+**Screens**: `07-Shifts.png`, `08-ShiftEdit.png`, `04-Today.png` (shift banner), Admin `22-AdminPlan.png`, `16-AdminStudents.png`
+
+## User Scenarios & Testing
+
+### User Story 1 – Student adds a shift, including overnight (Priority: P1)
+**Independent Test**: Add a night shift 22:00–07:00 on Fri; it shows on Fri and Sat in the calendar and as one record in the database.
+
+**Acceptance Scenarios**
+1. **Given** the Shifts tab, **When** the student taps "Add shift" and picks a preset (Day 09–18, Evening 14–23, Night 22–07, Off, Custom), **Then** start and end are pre-filled.
+2. **Given** an end time earlier than the start time, **Then** the end date is set to the next day and shown with a "+1 day" badge and duration (e.g. "9 h · crosses midnight").
+3. **Given** a saved night shift Fri 22:00 → Sat 07:00, **Then** the month calendar shows "22→" at the end of Fri and "→07" at the start of Sat, visually joined, including across a Sunday→Monday row break.
+4. **Given** "Block sleep after this shift" is on (default for Night), **Then** a sleep block of the student's sleep length (default 8 h) follows the shift.
+
+### User Story 2 – Repeating rotation (Priority: P2)
+**Acceptance Scenarios**
+1. **Given** a pattern (e.g. 3 day, 1 off, 2 night, 2 off) and a start date, **When** saved, **Then** shifts are generated 8 weeks ahead and extended weekly.
+2. **Given** a generated day edited by hand, **Then** it stays as edited when the pattern regenerates.
+3. **Given** Sunday 18:00 local, **Then** the student gets "Next week's shifts — correct?" with Confirm / Edit.
+
+### User Story 3 – Day timeline (Priority: P2)
+**Acceptance Scenarios**
+1. **Given** a selected day, **Then** a 24 h bar shows shift (including a continuation from the previous night), sleep, and free study windows, with a list of times.
+
+### User Story 4 – Admin sees availability (Priority: P1)
+**Acceptance Scenarios**
+1. **Given** a linked student, **Then** the Admin's student card shows live status: "On night shift until 07:00", "Sleeping until 15:30" or "Free now".
+2. **Given** the Plan week, **Then** each day shows the student's shift / sleep / free bar (feature 003).
+3. **Given** a student with no shifts entered, **Then** status is "No shift info" and reminders use fixed times.
+
+### Edge Cases
+- Overlapping shifts → save blocked with "Overlaps your shift {time}".
+- Shift longer than 24 h → blocked [NEEDS CLARIFICATION: allow 24 h+ duty?].
+- Student changes timezone → shifts keep their absolute UTC instants; display updates.
+- DST transitions (not in Japan, but supported) → duration computed from instants, not clock difference.
+
+## Requirements
+
+### Functional Requirements
+- **FR-001**: A shift MUST be one record with `start_at` and `end_at` (UTC); `end_at` > `start_at`; duration ≤ 24 h.
+- **FR-002**: Shift types: day, evening, night, off, custom; presets editable per student.
+- **FR-003**: Sleep block after a shift is optional, length per student (default 8 h).
+- **FR-004**: Free windows = waking hours (default 08:00–23:00 local, editable) minus shifts minus sleep blocks minus quiet hours.
+- **FR-005**: Availability for any time range MUST be available as ordered segments {kind: shift | sleep | quiet | night | free, start, end}, where `night` is outside waking hours and `free` is what FR-004 leaves; used by Today, Plan, scheduling and notifications.
+- **FR-006**: `status_now(student)` MUST return on_shift / sleeping / free / unknown with the next change time. on_shift = in a working shift; sleeping = in a sleep block or outside waking hours; free = anything else (quiet hours only hold notifications and don't change the status); unknown = no shifts entered (User Story 4, scenario 3), with no change time. The next change time is when the status next becomes different (none if that is more than 2 days away).
+- **FR-007**: Rotations generate concrete shift rows tagged with `pattern_id`; manual edits set `overridden = true`.
+- **FR-008**: Admin can read but not edit a student's shifts.
+
+### Permissions
+| Action | Student | Admin |
+| --- | --- | --- |
+| Create / edit / delete own shifts and patterns | ✓ | – |
+| Read shifts & availability | own | linked students |
+
+### Key Entities
+- **Shift**: student, type, start_at, end_at, sleep_block_min, pattern_id, overridden.
+- **ShiftPattern**: student, sequence (e.g. `DDDONNOO`), start_date, preset times.
+
+## Success Criteria
+- **SC-001**: Adding a night shift takes ≤ 3 taps from the Shifts tab.
+- **SC-002**: Availability (busy segments and the free time between them) passes property tests for overnight, back-to-back and pattern-generated shifts.
+- **SC-003**: No reminder is ever delivered inside a shift or sleep block (feature 006 integration test).

@@ -1,0 +1,524 @@
+// StudyMate — Prisma schema (Prisma ORM 7)
+// Mirrors prisma/migrations/0_init/migration.sql (the tested SQL). Tables/columns are snake_case in
+// Postgres and camelCase in TypeScript via @@map / @map.
+//
+// Not expressible in Prisma, kept in SQL migrations (do not delete them when Prisma generates a diff):
+//   • Row-Level Security policies, SECURITY DEFINER functions, triggers, views (course_progress)
+//   • CHECK constraints, the shifts no-overlap EXCLUDE constraint (btree_gist), partial unique indexes
+//   • FK profiles.id → auth.users.id, Storage buckets/policies, custom access token hook
+//
+// IMPORTANT: Prisma connects as a privileged role and BYPASSES RLS. Every Prisma query must go
+// through the authorization guards in src/server/auth/guards.ts (see docs/technical-spec.md §7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum UserRole {
+  student
+  admin
+
+  @@map("user_role")
+}
+
+enum LinkStatus {
+  pending
+  active
+  declined
+  removed
+
+  @@map("link_status")
+}
+
+enum CourseStatus {
+  draft
+  active
+  archived
+
+  @@map("course_status")
+}
+
+enum LessonStatus {
+  draft
+  published
+
+  @@map("lesson_status_t")
+}
+
+enum ProgressStatus {
+  not_started
+  in_progress
+  done
+
+  @@map("progress_status")
+}
+
+enum SubmissionStatus {
+  draft
+  submitted
+  reviewed
+  needs_redo
+
+  @@map("submission_status")
+}
+
+enum ShiftType {
+  day
+  evening
+  night
+  off
+  custom
+
+  @@map("shift_type")
+}
+
+enum RuleTrigger {
+  daily
+  after_shift
+  due_soon
+  overdue
+  streak_risk
+  inactive
+  weekly_summary
+
+  @@map("rule_trigger")
+}
+
+enum MessageMode {
+  now
+  fixed
+  next_free
+
+  @@map("message_mode")
+}
+
+enum MessageStatus {
+  scheduled
+  sending
+  sent
+  cancelled
+
+  @@map("message_status")
+}
+
+// ───────────────────────────── Profiles & linking (spec 001, 007) ─────────────────────────────
+
+/// One row per Supabase auth user (id = auth.users.id). Created by the handle_new_user trigger.
+model Profile {
+  id                String    @id @db.Uuid
+  role              UserRole
+  displayName       String    @map("display_name")
+  avatarUrl         String?   @map("avatar_url")
+  timezone          String    @default("UTC")
+  locale            String    @default("en")
+  colorMode         String    @default("system") @map("color_mode")
+  themeId           String    @default("indigo") @map("theme_id")
+  fontId            String    @default("inter") @map("font_id")
+  fontScale         Decimal   @default(1.00) @map("font_scale") @db.Decimal(3, 2)
+  weeklyGoalDays    Int       @default(5) @map("weekly_goal_days") @db.SmallInt
+  sleepMinutes      Int       @default(480) @map("sleep_minutes") @db.SmallInt
+  afterShiftBuffer  Int       @default(30) @map("after_shift_buffer") @db.SmallInt
+  wakingStart       DateTime  @default(dbgenerated("'08:00:00'::time without time zone")) @map("waking_start") @db.Time(6)
+  wakingEnd         DateTime  @default(dbgenerated("'23:00:00'::time without time zone")) @map("waking_end") @db.Time(6)
+  quietStart        DateTime? @map("quiet_start") @db.Time(6)
+  quietEnd          DateTime? @map("quiet_end") @db.Time(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  adminInvites           AdminInvite[]
+  linksAsStudent         StudentLink[]        @relation("LinkStudent")
+  linksAsAdmin           StudentLink[]        @relation("LinkAdmin")
+  courses                Course[]
+  assignments            CourseAssignment[]   @relation("AssignmentStudent")
+  assignmentsGiven       CourseAssignment[]   @relation("AssignmentAssignedBy")
+  lessonDeadlines        LessonDeadline[]     @relation("DeadlineStudent")
+  lessonDeadlinesSet     LessonDeadline[]     @relation("DeadlineSetBy")
+  progress               LessonProgress[]     @relation("ProgressStudent")
+  progressCompletedByMe  LessonProgress[]     @relation("ProgressCompletedBy")
+  submissions            Submission[]
+  commentsWritten        Comment[]            @relation("CommentAuthor")
+  commentsOnMe           Comment[]            @relation("CommentStudent")
+  studySessions          StudySession[]
+  shiftPatterns          ShiftPattern[]
+  shifts                 Shift[]
+  rulesCreated           NotificationRule[]   @relation("RuleAdmin")
+  rulesForMe             NotificationRule[]   @relation("RuleStudent")
+  messagesSent           ScheduledMessage[]
+  messagesReceived       ScheduledMessageRecipient[]
+  pushSubscriptions      PushSubscription[]
+  notifications          Notification[]
+  auditEntries           AuditLog[]
+
+  @@map("profiles")
+}
+
+model AdminInvite {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId   String   @map("admin_id") @db.Uuid
+  code      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  admin Profile @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  // + partial unique index admin_invites_one_active (admin_id) WHERE active — in SQL
+  @@map("admin_invites")
+}
+
+model StudentLink {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String     @map("student_id") @db.Uuid
+  adminId     String     @map("admin_id") @db.Uuid
+  status      LinkStatus @default(pending)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  respondedAt DateTime?  @map("responded_at") @db.Timestamptz(6)
+
+  student Profile @relation("LinkStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  admin   Profile @relation("LinkAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  // + partial unique index student_links_one_active (student_id) WHERE status = 'active' — in SQL
+  @@index([adminId, status], map: "student_links_admin")
+  @@map("student_links")
+}
+
+// ───────────────────────────── Courses & lessons (spec 002) ─────────────────────────────
+
+model Course {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId       String       @map("owner_id") @db.Uuid
+  isPersonal    Boolean      @default(false) @map("is_personal")
+  title         String
+  description   String?
+  icon          String       @default("文")
+  color         String       @default("indigo")
+  levelTag      String?      @map("level_tag")
+  targetDate    DateTime?    @map("target_date") @db.Date
+  unlockInOrder Boolean      @default(true) @map("unlock_in_order")
+  status        CourseStatus @default(draft)
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  owner       Profile            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sections    CourseSection[]
+  lessons     Lesson[]
+  assignments CourseAssignment[]
+
+  // + index courses_owner (owner_id) WHERE deleted_at IS NULL — in SQL
+  @@map("courses")
+}
+
+model CourseSection {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId String @map("course_id") @db.Uuid
+  title    String
+  position Int
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([courseId, position], map: "course_sections_course")
+  @@map("course_sections")
+}
+
+model Lesson {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId          String       @map("course_id") @db.Uuid
+  sectionId         String?      @map("section_id") @db.Uuid
+  title             String
+  contentMd         String       @default("") @map("content_md")
+  estMinutes        Int          @default(15) @map("est_minutes") @db.SmallInt
+  assignmentPrompt  String?      @map("assignment_prompt")
+  requireSubmission Boolean      @default(false) @map("require_submission")
+  /// { "type": "none" | "after_previous" | "on_date", "date"?: "YYYY-MM-DD" }
+  unlockRule        Json         @default("{\"type\": \"after_previous\"}") @map("unlock_rule")
+  status            LessonStatus @default(draft)
+  position          Int
+  deletedAt         DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  course       Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section      CourseSection?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  resources    LessonResource[]
+  deadlines    LessonDeadline[]
+  progress     LessonProgress[]
+  submissions  Submission[]
+  sessions     StudySession[]
+  messages     ScheduledMessage[]
+
+  // + index lessons_course (course_id, position) WHERE deleted_at IS NULL — in SQL
+  @@map("lessons")
+}
+
+model LessonResource {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId    String   @map("lesson_id") @db.Uuid
+  /// file | link | audio | image
+  kind        String
+  name        String
+  url         String?
+  storagePath String?  @map("storage_path")
+  sizeBytes   BigInt?  @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("lesson_resources")
+}
+
+// ───────────────────────────── Assignments & deadlines (spec 003) ─────────────────────────────
+
+model CourseAssignment {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId   String    @map("course_id") @db.Uuid
+  studentId  String    @map("student_id") @db.Uuid
+  assignedBy String    @map("assigned_by") @db.Uuid
+  dueAt      DateTime? @map("due_at") @db.Timestamptz(6)
+  /// active | removed
+  status     String    @default("active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  course       Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student      Profile @relation("AssignmentStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  assignedByMe Profile @relation("AssignmentAssignedBy", fields: [assignedBy], references: [id], onDelete: NoAction)
+
+  @@unique([courseId, studentId])
+  // + index course_assignments_student (student_id) WHERE status = 'active' — in SQL
+  @@map("course_assignments")
+}
+
+model LessonDeadline {
+  lessonId  String   @map("lesson_id") @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  dueAt     DateTime @map("due_at") @db.Timestamptz(6)
+  setBy     String   @map("set_by") @db.Uuid
+
+  lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student Profile @relation("DeadlineStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  setter  Profile @relation("DeadlineSetBy", fields: [setBy], references: [id], onDelete: NoAction)
+
+  @@id([lessonId, studentId])
+  @@map("lesson_deadlines")
+}
+
+// ───────────────────────────── Progress & submissions (spec 004) ─────────────────────────────
+
+model LessonProgress {
+  studentId    String         @map("student_id") @db.Uuid
+  lessonId     String         @map("lesson_id") @db.Uuid
+  status       ProgressStatus @default(not_started)
+  completedAt  DateTime?      @map("completed_at") @db.Timestamptz(6)
+  completedBy  String?        @map("completed_by") @db.Uuid
+  minutesSpent Int            @default(0) @map("minutes_spent")
+  /// offline idempotency key
+  clientOpId   String?        @unique @map("client_op_id") @db.Uuid
+  updatedAt    DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  student     Profile  @relation("ProgressStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completer   Profile? @relation("ProgressCompletedBy", fields: [completedBy], references: [id], onDelete: NoAction)
+
+  @@id([studentId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Submission {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String           @map("student_id") @db.Uuid
+  lessonId    String           @map("lesson_id") @db.Uuid
+  bodyMd      String           @default("") @map("body_md")
+  /// [{ path, name, size }]
+  attachments Json             @default("[]")
+  status      SubmissionStatus @default(draft)
+  submittedAt DateTime?        @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt  DateTime?        @map("reviewed_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@map("submissions")
+}
+
+model Comment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authorId   String   @map("author_id") @db.Uuid
+  /// whose thread this comment belongs to
+  studentId  String   @map("student_id") @db.Uuid
+  /// lesson | submission
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id") @db.Uuid
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  author  Profile @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  student Profile @relation("CommentStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model StudySession {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String    @map("student_id") @db.Uuid
+  lessonId   String?   @map("lesson_id") @db.Uuid
+  startedAt  DateTime  @map("started_at") @db.Timestamptz(6)
+  endedAt    DateTime? @map("ended_at") @db.Timestamptz(6)
+  clientOpId String?   @unique @map("client_op_id") @db.Uuid
+
+  student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@map("study_sessions")
+}
+
+// ───────────────────────────── Shifts (spec 005) ─────────────────────────────
+
+model ShiftPattern {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  /// e.g. "DDDONNOO" — D day, E evening, N night, O off, C custom
+  sequence  String
+  startDate DateTime @map("start_date") @db.Date
+  /// { "D": ["09:00","18:00"], "E": [...], "N": ["22:00","07:00"] }
+  presets   Json     @default("{\"D\": [\"09:00\", \"18:00\"], \"E\": [\"14:00\", \"23:00\"], \"N\": [\"22:00\", \"07:00\"]}")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  shifts  Shift[]
+
+  @@map("shift_patterns")
+}
+
+/// One record per shift; a night shift's endAt is on the next day. No-overlap EXCLUDE constraint lives in SQL.
+model Shift {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId    String    @map("student_id") @db.Uuid
+  type         ShiftType
+  startAt      DateTime  @map("start_at") @db.Timestamptz(6)
+  endAt        DateTime  @map("end_at") @db.Timestamptz(6)
+  /// 0 = no sleep block after this shift
+  sleepMinutes Int       @default(0) @map("sleep_minutes") @db.SmallInt
+  patternId    String?   @map("pattern_id") @db.Uuid
+  overridden   Boolean   @default(false)
+  clientOpId   String?   @unique @map("client_op_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student Profile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  pattern ShiftPattern? @relation(fields: [patternId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, startAt], map: "shifts_student_time")
+  @@map("shifts")
+}
+
+// ───────────────────────────── Notifications (spec 006) ─────────────────────────────
+
+model NotificationRule {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId   String      @map("admin_id") @db.Uuid
+  /// null = all linked students
+  studentId String?     @map("student_id") @db.Uuid
+  trigger   RuleTrigger
+  /// e.g. {"time":"20:00","days":[1,2,3,4,5]} or {"offsets_h":[24,2]}
+  config    Json        @default("{}")
+  message   String
+  channels  String[]    @default(["push", "inapp"])
+  enabled   Boolean     @default(true)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  admin   Profile  @relation("RuleAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  student Profile? @relation("RuleStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("notification_rules")
+}
+
+model ScheduledMessage {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId   String        @map("admin_id") @db.Uuid
+  body      String
+  lessonId  String?       @map("lesson_id") @db.Uuid
+  mode      MessageMode
+  /// null when mode = next_free
+  sendAt    DateTime?     @map("send_at") @db.Timestamptz(6)
+  urgent    Boolean       @default(false)
+  status    MessageStatus @default(scheduled)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  admin      Profile                     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  lesson     Lesson?                     @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  recipients ScheduledMessageRecipient[]
+
+  @@map("scheduled_messages")
+}
+
+model ScheduledMessageRecipient {
+  messageId   String    @map("message_id") @db.Uuid
+  studentId   String    @map("student_id") @db.Uuid
+  deliverAt   DateTime  @map("deliver_at") @db.Timestamptz(6)
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(6)
+  readAt      DateTime? @map("read_at") @db.Timestamptz(6)
+
+  message ScheduledMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  student Profile          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, studentId])
+  // + index smr_due (deliver_at) WHERE delivered_at IS NULL — in SQL
+  @@map("scheduled_message_recipients")
+}
+
+model PushSubscription {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  deviceLabel String?  @map("device_label")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+/// In-app inbox and the de-duplication log for every push sent.
+model Notification {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  /// rule | message | system
+  sourceType    String    @map("source_type")
+  sourceId      String?   @map("source_id") @db.Uuid
+  /// e.g. "2026-11-20" or a deadline id
+  occurrenceKey String    @map("occurrence_key")
+  title         String
+  body          String
+  url           String?
+  sentAt        DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
+  readAt        DateTime? @map("read_at") @db.Timestamptz(6)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, sourceId, userId, occurrenceKey])
+  @@index([userId, sentAt(sort: Desc)], map: "notifications_user")
+  @@map("notifications")
+}
+
+model AuditLog {
+  id      BigInt   @id @default(autoincrement())
+  actorId String   @map("actor_id") @db.Uuid
+  action  String
+  target  Json
+  at      DateTime @default(now()) @db.Timestamptz(6)
+
+  actor Profile @relation(fields: [actorId], references: [id], onDelete: NoAction)
+
+  @@map("audit_log")
+}

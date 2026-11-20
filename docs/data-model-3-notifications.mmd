@@ -1,0 +1,58 @@
+erDiagram
+  PROFILES ||--o{ NOTIFICATION_RULES : "admin creates / student target"
+  PROFILES ||--o{ SCHEDULED_MESSAGES : "admin sends"
+  SCHEDULED_MESSAGES ||--o{ SCHEDULED_MESSAGE_RECIPIENTS : "sent to"
+  PROFILES ||--o{ SCHEDULED_MESSAGE_RECIPIENTS : receives
+  LESSONS |o--o{ SCHEDULED_MESSAGES : "links to"
+  PROFILES ||--o{ PUSH_SUBSCRIPTIONS : devices
+  PROFILES ||--o{ NOTIFICATIONS : inbox
+
+  PROFILES {
+    uuid id PK "= auth.users.id"
+    user_role role "student | admin"
+    text display_name
+    text timezone "IANA, e.g. Asia/Tokyo"
+    text locale "en | my | ja"
+    text theme_id
+    text font_id
+    smallint sleep_minutes
+  }
+  LESSONS {
+    uuid id PK
+    uuid course_id FK
+    uuid section_id FK
+    text content_md "Markdown"
+    smallint est_minutes
+    lesson_status_t status "draft | published"
+    int position
+  }
+  NOTIFICATION_RULES {
+    uuid id PK
+    uuid admin_id FK
+    uuid student_id FK "null = all"
+    rule_trigger trigger
+    jsonb config
+  }
+  SCHEDULED_MESSAGES {
+    uuid id PK
+    uuid admin_id FK
+    message_mode mode "now | fixed | next_free"
+    timestamptz send_at
+  }
+  SCHEDULED_MESSAGE_RECIPIENTS {
+    uuid message_id PK
+    uuid student_id PK
+    timestamptz deliver_at
+    timestamptz read_at
+  }
+  PUSH_SUBSCRIPTIONS {
+    uuid id PK
+    uuid user_id FK
+    text endpoint UK
+  }
+  NOTIFICATIONS {
+    uuid id PK
+    uuid user_id FK
+    text occurrence_key "dedupe"
+    timestamptz read_at
+  }

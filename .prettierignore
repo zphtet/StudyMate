@@ -1,0 +1,19 @@
+# Hand-written specs and docs: never reformat
+*.md
+.specify/
+specs/
+docs/
+screenshots/
+
+# Generated / tool output
+pnpm-lock.yaml
+next-env.d.ts
+supabase/
+public/
+playwright-report/
+test-results/
+blob-report/
+coverage/
+
+# Prisma client (generated)
+src/generated/

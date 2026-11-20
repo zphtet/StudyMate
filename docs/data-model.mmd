@@ -1,0 +1,162 @@
+erDiagram
+  PROFILES ||--o{ ADMIN_INVITES : "admin has code"
+  PROFILES ||--o{ STUDENT_LINKS : "student joins"
+  PROFILES ||--o{ STUDENT_LINKS : "admin approves"
+  PROFILES ||--o{ COURSES : owns
+  COURSES ||--o{ COURSE_SECTIONS : groups
+  COURSES ||--o{ LESSONS : contains
+  COURSE_SECTIONS |o--o{ LESSONS : "in section"
+  LESSONS ||--o{ LESSON_RESOURCES : attaches
+  COURSES ||--o{ COURSE_ASSIGNMENTS : "assigned as"
+  PROFILES ||--o{ COURSE_ASSIGNMENTS : "student gets"
+  LESSONS ||--o{ LESSON_DEADLINES : "override due"
+  PROFILES ||--o{ LESSON_DEADLINES : "student due"
+  LESSONS ||--o{ LESSON_PROGRESS : tracked
+  PROFILES ||--o{ LESSON_PROGRESS : "student progress"
+  LESSONS ||--o{ SUBMISSIONS : "assignment for"
+  PROFILES ||--o{ SUBMISSIONS : writes
+  PROFILES ||--o{ COMMENTS : "authors / thread of"
+  PROFILES ||--o{ STUDY_SESSIONS : "focus timer"
+  PROFILES ||--o{ SHIFT_PATTERNS : rotation
+  SHIFT_PATTERNS |o--o{ SHIFTS : generates
+  PROFILES ||--o{ SHIFTS : works
+  PROFILES ||--o{ NOTIFICATION_RULES : "admin creates / student target"
+  PROFILES ||--o{ SCHEDULED_MESSAGES : "admin sends"
+  SCHEDULED_MESSAGES ||--o{ SCHEDULED_MESSAGE_RECIPIENTS : "sent to"
+  PROFILES ||--o{ SCHEDULED_MESSAGE_RECIPIENTS : receives
+  LESSONS |o--o{ SCHEDULED_MESSAGES : "links to"
+  PROFILES ||--o{ PUSH_SUBSCRIPTIONS : devices
+  PROFILES ||--o{ NOTIFICATIONS : inbox
+
+  PROFILES {
+    uuid id PK "= auth.users.id"
+    user_role role "student | admin"
+    text display_name
+    text timezone "IANA, e.g. Asia/Tokyo"
+    text locale "en | my | ja"
+    text theme_id
+    text font_id
+    smallint sleep_minutes
+  }
+  ADMIN_INVITES {
+    uuid id PK
+    uuid admin_id FK
+    text code UK "6 chars"
+    bool active
+  }
+  STUDENT_LINKS {
+    uuid id PK
+    uuid student_id FK
+    uuid admin_id FK
+    link_status status "pending | active | ..."
+  }
+  COURSES {
+    uuid id PK
+    uuid owner_id FK
+    text title
+    course_status status "draft | active | archived"
+    date target_date
+    bool unlock_in_order
+    timestamptz deleted_at "soft delete"
+  }
+  COURSE_SECTIONS {
+    uuid id PK
+    uuid course_id FK
+    int position
+  }
+  LESSONS {
+    uuid id PK
+    uuid course_id FK
+    uuid section_id FK
+    text content_md "Markdown"
+    smallint est_minutes
+    lesson_status_t status "draft | published"
+    int position
+  }
+  LESSON_RESOURCES {
+    uuid id PK
+    uuid lesson_id FK
+    text kind "file | link | audio | image"
+    text storage_path
+  }
+  COURSE_ASSIGNMENTS {
+    uuid id PK
+    uuid course_id FK
+    uuid student_id FK
+    timestamptz due_at "course deadline"
+  }
+  LESSON_DEADLINES {
+    uuid lesson_id PK
+    uuid student_id PK
+    timestamptz due_at "overrides course"
+  }
+  LESSON_PROGRESS {
+    uuid student_id PK
+    uuid lesson_id PK
+    progress_status status
+    timestamptz completed_at
+  }
+  SUBMISSIONS {
+    uuid id PK
+    uuid student_id FK
+    uuid lesson_id FK
+    text body_md
+    submission_status status
+  }
+  COMMENTS {
+    uuid id PK
+    uuid author_id FK
+    uuid student_id FK
+    text target_type
+    uuid target_id
+  }
+  STUDY_SESSIONS {
+    uuid id PK
+    uuid student_id FK
+    timestamptz started_at
+    timestamptz ended_at
+  }
+  SHIFT_PATTERNS {
+    uuid id PK
+    uuid student_id FK
+    text sequence "DDDONNOO"
+    date start_date
+  }
+  SHIFTS {
+    uuid id PK
+    uuid student_id FK
+    shift_type type
+    timestamptz start_at
+    timestamptz end_at "next day for night"
+    smallint sleep_minutes
+  }
+  NOTIFICATION_RULES {
+    uuid id PK
+    uuid admin_id FK
+    uuid student_id FK "null = all"
+    rule_trigger trigger
+    jsonb config
+  }
+  SCHEDULED_MESSAGES {
+    uuid id PK
+    uuid admin_id FK
+    message_mode mode "now | fixed | next_free"
+    timestamptz send_at
+  }
+  SCHEDULED_MESSAGE_RECIPIENTS {
+    uuid message_id PK
+    uuid student_id PK
+    timestamptz deliver_at
+    timestamptz read_at
+  }
+  PUSH_SUBSCRIPTIONS {
+    uuid id PK
+    uuid user_id FK
+    text endpoint UK
+  }
+  NOTIFICATIONS {
+    uuid id PK
+    uuid user_id FK
+    text occurrence_key "dedupe"
+    timestamptz read_at
+  }

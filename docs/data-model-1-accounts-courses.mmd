@@ -1,0 +1,76 @@
+erDiagram
+  PROFILES ||--o{ ADMIN_INVITES : "admin has code"
+  PROFILES ||--o{ STUDENT_LINKS : "student joins"
+  PROFILES ||--o{ STUDENT_LINKS : "admin approves"
+  PROFILES ||--o{ COURSES : owns
+  COURSES ||--o{ COURSE_SECTIONS : groups
+  COURSES ||--o{ LESSONS : contains
+  COURSE_SECTIONS |o--o{ LESSONS : "in section"
+  LESSONS ||--o{ LESSON_RESOURCES : attaches
+  COURSES ||--o{ COURSE_ASSIGNMENTS : "assigned as"
+  PROFILES ||--o{ COURSE_ASSIGNMENTS : "student gets"
+  LESSONS ||--o{ LESSON_DEADLINES : "override due"
+  PROFILES ||--o{ LESSON_DEADLINES : "student due"
+
+  PROFILES {
+    uuid id PK "= auth.users.id"
+    user_role role "student | admin"
+    text display_name
+    text timezone "IANA, e.g. Asia/Tokyo"
+    text locale "en | my | ja"
+    text theme_id
+    text font_id
+    smallint sleep_minutes
+  }
+  ADMIN_INVITES {
+    uuid id PK
+    uuid admin_id FK
+    text code UK "6 chars"
+    bool active
+  }
+  STUDENT_LINKS {
+    uuid id PK
+    uuid student_id FK
+    uuid admin_id FK
+    link_status status "pending | active | ..."
+  }
+  COURSES {
+    uuid id PK
+    uuid owner_id FK
+    text title
+    course_status status "draft | active | archived"
+    date target_date
+    bool unlock_in_order
+    timestamptz deleted_at "soft delete"
+  }
+  COURSE_SECTIONS {
+    uuid id PK
+    uuid course_id FK
+    int position
+  }
+  LESSONS {
+    uuid id PK
+    uuid course_id FK
+    uuid section_id FK
+    text content_md "Markdown"
+    smallint est_minutes
+    lesson_status_t status "draft | published"
+    int position
+  }
+  LESSON_RESOURCES {
+    uuid id PK
+    uuid lesson_id FK
+    text kind "file | link | audio | image"
+    text storage_path
+  }
+  COURSE_ASSIGNMENTS {
+    uuid id PK
+    uuid course_id FK
+    uuid student_id FK
+    timestamptz due_at "course deadline"
+  }
+  LESSON_DEADLINES {
+    uuid lesson_id PK
+    uuid student_id PK
+    timestamptz due_at "overrides course"
+  }

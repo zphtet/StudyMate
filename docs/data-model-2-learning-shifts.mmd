@@ -1,0 +1,70 @@
+erDiagram
+  LESSONS ||--o{ LESSON_PROGRESS : tracked
+  PROFILES ||--o{ LESSON_PROGRESS : "student progress"
+  LESSONS ||--o{ SUBMISSIONS : "assignment for"
+  PROFILES ||--o{ SUBMISSIONS : writes
+  PROFILES ||--o{ COMMENTS : "authors / thread of"
+  PROFILES ||--o{ STUDY_SESSIONS : "focus timer"
+  PROFILES ||--o{ SHIFT_PATTERNS : rotation
+  SHIFT_PATTERNS |o--o{ SHIFTS : generates
+  PROFILES ||--o{ SHIFTS : works
+
+  PROFILES {
+    uuid id PK "= auth.users.id"
+    user_role role "student | admin"
+    text display_name
+    text timezone "IANA, e.g. Asia/Tokyo"
+    text locale "en | my | ja"
+    text theme_id
+    text font_id
+    smallint sleep_minutes
+  }
+  LESSONS {
+    uuid id PK
+    uuid course_id FK
+    uuid section_id FK
+    text content_md "Markdown"
+    smallint est_minutes
+    lesson_status_t status "draft | published"
+    int position
+  }
+  LESSON_PROGRESS {
+    uuid student_id PK
+    uuid lesson_id PK
+    progress_status status
+    timestamptz completed_at
+  }
+  SUBMISSIONS {
+    uuid id PK
+    uuid student_id FK
+    uuid lesson_id FK
+    text body_md
+    submission_status status
+  }
+  COMMENTS {
+    uuid id PK
+    uuid author_id FK
+    uuid student_id FK
+    text target_type
+    uuid target_id
+  }
+  STUDY_SESSIONS {
+    uuid id PK
+    uuid student_id FK
+    timestamptz started_at
+    timestamptz ended_at
+  }
+  SHIFT_PATTERNS {
+    uuid id PK
+    uuid student_id FK
+    text sequence "DDDONNOO"
+    date start_date
+  }
+  SHIFTS {
+    uuid id PK
+    uuid student_id FK
+    shift_type type
+    timestamptz start_at
+    timestamptz end_at "next day for night"
+    smallint sleep_minutes
+  }
