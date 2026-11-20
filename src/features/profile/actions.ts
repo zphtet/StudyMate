@@ -1,0 +1,64 @@
+'use server'
+
+import { setPreferenceCookies } from '@/features/auth/preferences'
+import { action } from '@/lib/action'
+import { prisma } from '@/lib/prisma'
+import { createServerClient } from '@/lib/supabase/server'
+import { requireUser } from '@/server/auth/guards'
+import { deleteAuthUser } from '@/server/supabase-admin'
+import { colorModeSchema, deleteAccountSchema, updateProfileSchema } from './schemas'
+
+// Profile actions (contracts/server-actions.md). Each starts with a guard; writes touch only the
+// caller's own profile.
+
+export const updateProfile = action(updateProfileSchema, async (input) => {
+  const me = await requireUser()
+  const profile = await prisma.profile.update({
+    where: { id: me.id },
+    data: input,
+    select: { displayName: true, timezone: true, locale: true },
+  })
+  await setPreferenceCookies(profile)
+  return profile
+})
+
+/** Light / Dark / Auto (spec 007 FR-001, pulled into 001): saved so other devices follow. */
+export const setColorMode = action(colorModeSchema, async ({ colorMode }) => {
+  const me = await requireUser()
+  await prisma.profile.update({ where: { id: me.id }, data: { colorMode } })
+  return { colorMode }
+})
+
+/**
+ * Delete account (research R6): admins first leave a notice for each linked student (FR-015),
+ * then the auth user is deleted through the admin API, which cascades to every row of theirs.
+ */
+export const deleteAccount = action(deleteAccountSchema, async () => {
+  const me = await requireUser()
+
+  if (me.role === 'admin') {
+    const links = await prisma.studentLink.findMany({
+      where: { adminId: me.id, status: { in: ['pending', 'active'] } },
+      select: { studentId: true },
+    })
+    if (links.length > 0) {
+      // data-model.md › Notification: sourceType system, occurrenceKey admin-deleted:<admin id>.
+      await prisma.notification.createMany({
+        data: links.map(({ studentId }) => ({
+          userId: studentId,
+          sourceType: 'system',
+          occurrenceKey: `admin-deleted:${me.id}`,
+          title: 'Your admin closed their account',
+          body: `${me.displayName} closed their StudyMate account. Join another admin with their code.`,
+          url: '/join',
+        })),
+        skipDuplicates: true,
+      })
+    }
+  }
+
+  await deleteAuthUser(me.id)
+  const supabase = await createServerClient()
+  await supabase.auth.signOut().catch(() => null)
+  return {}
+})

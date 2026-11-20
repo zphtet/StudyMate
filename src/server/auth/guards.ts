@@ -26,7 +26,7 @@ export const requireUser = cache(async () => {
   if (!user.email_confirmed_at) throw new AuthError(403, 'Email not confirmed')
   const profile = await prisma.profile.findUnique({ where: { id: user.id } })
   if (!profile) throw new AuthError(403, 'No profile')
-  return profile
+  return { ...profile, email: user.email ?? '' }
 })
 
 export async function requireRole(role: 'student' | 'admin') {
