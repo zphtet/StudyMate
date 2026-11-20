@@ -33,11 +33,11 @@ pnpm typecheck      # tsc --noEmit
 pnpm lint
 pnpm test           # Vitest
 pnpm test:e2e       # Playwright
-supabase start                 # local Supabase (DB on :54322)
-pnpm prisma migrate deploy     # apply prisma/migrations
+pnpm test:db        # pgTAP RLS/function tests (supabase/tests) against DIRECT_URL
+pnpm prisma migrate deploy     # apply prisma/migrations to DIRECT_URL
 pnpm prisma generate           # regenerate client after schema changes
-supabase test db               # pgTAP RLS tests
 ```
+`.env` points at the **dev** Supabase project (no local Supabase/Docker). New migrations: `docs/data-model.md` §7 (diff `schema.prisma` against git, never `migrate dev` or `--from-config-datasource`).
 
 ## Done means
 Acceptance scenarios of the user story pass in Playwright, guard and RLS tests pass, typecheck and lint are clean, and the screen matches its screenshot at phone width.

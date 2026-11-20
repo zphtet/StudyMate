@@ -345,7 +345,7 @@ Custom shared components: `Markdown`, `CalendarMonth` (with overnight shift bars
 
 | Layer | Tool | What |
 | --- | --- | --- |
-| DB & RLS | pgTAP via `supabase test db` | Each policy: allowed + denied per role; functions `busy_segments`, `next_free_at`, `status_at`/`status_now`, `effective_due`, `request_join` |
+| DB & RLS | pgTAP via `pnpm test:db` (dev project; `supabase test db` with local Docker) | Each policy: allowed + denied per role; functions `busy_segments`, `next_free_at`, `status_at`/`status_now`, `effective_due`, `request_join` |
 | Guards | Vitest against the local database | every guard: allowed + denied cases (same matrix as the pgTAP RLS tests) |
 | Logic | Vitest | `lib/time.ts`, `lib/availability.ts` (free gaps), progress forecast, rule evaluation |
 | Components | Vitest + Testing Library | forms, OTP input, calendar rendering of overnight shifts |

@@ -87,7 +87,7 @@ const [s] = await prisma.$queryRaw<{ state: string; until: Date }[]>`select * fr
 
 - **Prisma bypasses RLS.** It connects as a database owner role. Every Route Handler and Server Action must call a guard from `src/server/auth/guards.ts` (`requireUser`, `requireRole`, `requireAdminOf`, `requireSelfOrAdminOf`, `requireCourseOwner`, `requireCourseReader`) before any query, and scope `where` clauses by the current user.
 - **RLS stays on** as a second line of defence and because Supabase **Realtime** and **Storage** use it with the user's token.
-- Tests: guard tests (Vitest against the local database) mirror the pgTAP RLS tests — same allowed/denied cases.
+- Tests: guard tests (Vitest against the dev database) mirror the pgTAP RLS tests (`pnpm test:db`) — same allowed/denied cases.
 
 ---
 
@@ -98,20 +98,32 @@ const [s] = await prisma.$queryRaw<{ state: string; until: Date }[]>`select * fr
 | `DATABASE_URL` | Transaction pooler (Supavisor), port **6543** | Prisma Client at runtime (Vercel functions) |
 | `DIRECT_URL` | Session pooler or direct, port **5432** | Prisma CLI (`migrate deploy`, `migrate diff`) via `prisma.config.ts` |
 
-Locally (Supabase CLI): both point to `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+**Environments**: development uses its own Supabase project (values in `.env`, see `.env.example`); production uses a separate project whose values live only in Vercel. Never put production URLs in `.env`: `pnpm prisma migrate deploy` and `pnpm test:db` run against whatever `DIRECT_URL` points to.
+
+With the Supabase CLI and Docker (optional), both variables can point to the local stack instead: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
 
 ---
 
 ## 7. Changing the schema
 
-Supabase's `auth` schema isn't present in a Prisma shadow database, so use a **diff + deploy** workflow instead of `prisma migrate dev`:
+Prisma can't read this database: `profiles.id` references Supabase's `auth.users`, so `prisma migrate diff --from-config-datasource` and `prisma db pull` fail with **P4002** (cross-schema reference), and `prisma migrate dev` has no shadow database with an `auth` schema. Don't use any of them.
 
-1. Edit `prisma/schema.prisma`.
-2. Generate the SQL for the change into a new folder, e.g. `prisma/migrations/20261201_add_badges/migration.sql`:
-   `pnpm prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > prisma/migrations/20261201_add_badges/migration.sql`
-   (check `pnpm prisma migrate diff --help` for the exact flag names in your Prisma 7 version).
-3. Open the file: **delete any lines that drop SQL-only objects** from §4, then append the new table's `enable row level security` + policies.
-4. `pnpm prisma migrate deploy` (local), run guard + pgTAP tests, commit.
-5. `pnpm prisma generate` (also runs on `postinstall`).
+Instead, **diff the previous `schema.prisma` (from git) against the edited one**. No database is needed, and because neither file contains the SQL-only objects in §4, the generated SQL can never drop them.
 
-First-time setup on a fresh database: `pnpm prisma migrate deploy` applies `0_init`. On a database where `0_init` was already applied by hand: `pnpm prisma migrate resolve --applied 0_init`.
+1. Edit `prisma/schema.prisma`. Don't commit it yet: step 2 diffs against the committed version.
+2. Generate the SQL into a new folder named `<UTC timestamp>_<name>` (folders are applied in name order):
+   ```bash
+   name=$(date -u +%Y%m%d%H%M%S)_add_badges
+   mkdir -p prisma/migrations/$name
+   before=$(mktemp) && git show HEAD:prisma/schema.prisma > "$before"
+   pnpm -s prisma migrate diff --from-schema "$before" --to-schema prisma/schema.prisma --script \
+     > prisma/migrations/$name/migration.sql
+   rm "$before"
+   ```
+   If the schema edit was already committed, replace `HEAD` with the commit before it.
+3. Open the file and add what Prisma can't express: for a new table, `enable row level security` + policies (§5), plus any CHECK constraints, indexes, triggers or functions it needs.
+   A change that is SQL only (a function, a policy) has no Prisma diff: create the folder and write `migration.sql` by hand, e.g. `20261120190000_status_now_states`.
+4. Apply it to the dev database with `pnpm prisma migrate deploy`. Run `pnpm test:db` (pgTAP) and `pnpm test` (guards), then commit `schema.prisma` and the migration together.
+5. `pnpm prisma generate` refreshes the client (it also runs on `postinstall`).
+
+First-time setup on a fresh database: `pnpm prisma migrate deploy` applies every migration. On a database where `0_init` was already applied by hand: `pnpm prisma migrate resolve --applied 0_init`.
