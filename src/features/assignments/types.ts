@@ -73,7 +73,7 @@ export type PlanDay = {
   /** The local day's real bounds (23 or 25 h on DST changes). */
   start: string
   end: string
-  /** Clipped to the day; filled by US4. */
+  /** Shift / Sleep, clipped to the day; free time is the gaps. */
   segments: Segment[]
   /** Ordered by dueAt. */
   cards: PlanCard[]
@@ -86,4 +86,12 @@ export type PlanWeek = {
   adminTimezone: string
   now: string
   days: PlanDay[]
+}
+
+/** GET /api/admin/plan/month: only days with at least one card, by date. */
+export type PlanMonth = {
+  student: StudentRef
+  /** YYYY-MM */
+  month: string
+  days: { date: string; count: number; late: number }[]
 }

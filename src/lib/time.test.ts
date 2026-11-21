@@ -4,8 +4,10 @@
 import { describe, expect, test } from 'vitest'
 import {
   addCalendarDays,
+  addMonths,
   calendarDaysBetween,
   cityOf,
+  datesOfMonth,
   localDayRange,
   mondayOf,
   moveToDay,
@@ -205,5 +207,20 @@ describe('addCalendarDays / mondayOf (Plan weeks, spec 003 research R10)', () =>
     ['2027-01-01', '2026-12-28'],
   ])('the week of %s starts on %s', (date, monday) => {
     expect(mondayOf(date)).toBe(monday)
+  })
+})
+
+describe('addMonths / datesOfMonth (Plan month, spec 003 FR-010)', () => {
+  test('moves across year ends both ways', () => {
+    expect(addMonths('2026-11', 1)).toBe('2026-12')
+    expect(addMonths('2026-12', 1)).toBe('2027-01')
+    expect(addMonths('2027-01', -1)).toBe('2026-12')
+  })
+
+  test('lists every day of the month, leap years included', () => {
+    expect(datesOfMonth('2026-11')).toHaveLength(30)
+    expect(datesOfMonth('2026-11')[0]).toBe('2026-11-01')
+    expect(datesOfMonth('2026-11').at(-1)).toBe('2026-11-30')
+    expect(datesOfMonth('2028-02')).toHaveLength(29)
   })
 })

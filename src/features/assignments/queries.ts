@@ -1,6 +1,14 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AdminStudentCourse, AssignSheet, Clash, PlanWeek, StudentRef, Today } from './types'
+import type {
+  AdminStudentCourse,
+  AssignSheet,
+  Clash,
+  PlanMonth,
+  PlanWeek,
+  StudentRef,
+  Today,
+} from './types'
 
 // TanStack Query options for the 003 Route Handlers (contracts/route-handlers.md). Invalidation
 // after writes follows contracts/server-actions.md › Query invalidation.
@@ -15,6 +23,8 @@ export const planKeys = {
   weeks: (studentId: string) => ['plan', studentId, 'week'] as const,
   /** `week` null = the current week in the student's zone. */
   week: (studentId: string, week: string | null) => ['plan', studentId, 'week', week] as const,
+  /** `month` null = the current month in the student's zone. */
+  month: (studentId: string, month: string | null) => ['plan', studentId, 'month', month] as const,
 }
 
 export const adminStudentKeys = {
@@ -74,4 +84,13 @@ export const planWeekQuery = (studentId: string, week: string | null) =>
     queryKey: planKeys.week(studentId, week),
     queryFn: () =>
       api<PlanWeek>(`/api/admin/plan?${new URLSearchParams({ studentId, ...(week && { week }) })}`),
+  })
+
+export const planMonthQuery = (studentId: string, month: string | null) =>
+  queryOptions({
+    queryKey: planKeys.month(studentId, month),
+    queryFn: () =>
+      api<PlanMonth>(
+        `/api/admin/plan/month?${new URLSearchParams({ studentId, ...(month && { month }) })}`,
+      ),
   })

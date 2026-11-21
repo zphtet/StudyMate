@@ -108,10 +108,11 @@
   --success: #15803d;
   --success-soft: #dcfce7;
   /* Availability bar (spec 003 DayBar; research R13): derived from the theme, so every theme and
-     mode gets them. Free time is the gaps. */
+     mode gets them. Mixed with the card so Sleep and Free stand out from the bar's muted track
+     (screen 22-AdminPlan); not text, so not in the contrast test. */
   --avail-shift: var(--primary);
-  --avail-sleep: var(--muted);
-  --avail-free: var(--success-soft);
+  --avail-sleep: color-mix(in oklab, var(--muted-foreground) 35%, var(--card));
+  --avail-free: color-mix(in oklch, var(--success) 50%, var(--card));
   /* Course colours (spec 002 Course.color): glyph / tile */
   --course-indigo: #3730a3;
   --course-indigo-soft: #e0e7ff;

@@ -70,6 +70,21 @@ export function mondayOf(date: string) {
   return addCalendarDays(date, -((weekday + 6) % 7))
 }
 
+/** `YYYY-MM` + n months (Plan and calendar months). */
+export function addMonths(month: string, months: number) {
+  const [year, m] = month.split('-').map(Number)
+  return new Date(Date.UTC(year, m - 1 + months, 1)).toISOString().slice(0, 7)
+}
+
+/** Every `YYYY-MM-DD` of a `YYYY-MM` month, in order. */
+export function datesOfMonth(month: string): string[] {
+  const dates: string[] = []
+  for (let date = `${month}-01`; date.startsWith(month); date = addCalendarDays(date, 1)) {
+    dates.push(date)
+  }
+  return dates
+}
+
 /** The same local clock time on another local date (Plan drag; correct across DST changes). */
 export function moveToDay(instant: Date, date: string, timeZone: string): Date {
   return zonedToUtc(date, utcToZoned(instant, timeZone).time, timeZone)

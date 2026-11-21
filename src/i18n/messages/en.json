@@ -586,6 +586,21 @@
     "remove": "Remove deadline",
     "saved": "Deadline saved",
     "removed": "Deadline removed",
-    "noCourses": "Assign a course to {name} first."
+    "noCourses": "Assign a course to {name} first.",
+    "view": "View",
+    "week": "Week",
+    "month": "Month",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "monthCount": "{count, plural, one {# deadline} other {# deadlines}}{late, plural, =0 {} other {, # late}}",
+    "monthHint": "Tap a day to open its week."
+  },
+  "dayBar": {
+    "shift": "Shift",
+    "sleep": "Sleep",
+    "free": "Free",
+    "part": "{kind} {from}–{to}",
+    "now": "now {time}",
+    "legend": "Key"
   }
 }

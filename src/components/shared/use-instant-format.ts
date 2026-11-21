@@ -17,6 +17,8 @@ export function useInstantFormat() {
     viewerZone,
     /** "21:00" */
     time: formatWith(TIME),
+    /** "Wed" ("Move to Wed 18:00": the suggestion is within a week) */
+    weekday: formatWith({ weekday: 'short' }),
     /** "Wed 18 Nov" */
     day: formatWith(DAY),
     /** "24 Nov" */

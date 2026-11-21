@@ -72,7 +72,7 @@ export function ClashNotice({
           onClick={() => clash.suggestion && onMove(clash.suggestion)}
         >
           {t('moveTo', {
-            time: `${f.day(clash.suggestion, timeZone)} ${timeBoth(clash.suggestion, timeZone, { compact: true })}`,
+            time: `${f.weekday(clash.suggestion, timeZone)} ${timeBoth(clash.suggestion, timeZone, { compact: true })}`,
           })}
         </Button>
       )}

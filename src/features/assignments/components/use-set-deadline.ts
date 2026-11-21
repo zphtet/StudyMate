@@ -32,7 +32,8 @@ function moveCard(week: PlanWeek, target: DeadlineTarget): PlanWeek {
     days: week.days.map((day) => {
       const cards = day.cards.filter((c) => !isTarget(c))
       if (!target.dueAt || day.date !== date) return { ...day, cards }
-      const moved = { ...card, due: { ...card.due, dueAt: target.dueAt } }
+      // The clash is re-checked by the refetch; the new time was picked to be free.
+      const moved = { ...card, due: { ...card.due, dueAt: target.dueAt }, clash: null }
       return {
         ...day,
         cards: [...cards, moved].sort((a, b) => a.due.dueAt.localeCompare(b.due.dueAt)),

@@ -198,8 +198,8 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T053 [P] [US4] Repo tests against the dev database in src/features/assignments/plan-repo.test.ts: segments are mapped (Shift/Sleep, quiet ignored) and clipped to each student-local day; a DST-change day has 23 or 25 h bounds (America/New_York student); `clash` only on not-done future cards; the suggestion leaves the lesson's minutes (min 60) of free time; month counts and late counts per local day
-- [ ] T054 [P] [US4] Playwright tests in tests/e2e/us4-plan.spec.ts (seeded night shift Fri 22:00–Sat 07:00 with 8 h sleep):
+- [X] T053 [P] [US4] Repo tests against the dev database in src/features/assignments/plan-repo.test.ts: segments are mapped (Shift/Sleep, quiet ignored) and clipped to each student-local day; a DST-change day has 23 or 25 h bounds (America/New_York student); `clash` only on not-done future cards; the suggestion leaves the lesson's minutes (min 60) of free time; month counts and late counts per local day
+- [X] T054 [P] [US4] Playwright tests in tests/e2e/us4-plan.spec.ts (seeded night shift Fri 22:00–Sat 07:00 with 8 h sleep):
   - scenario 1: bars per day with the legend; today highlighted with the now-marker;
   - scenario 2: a Fri 23:00 deadline shows "{name} is on shift then" + "Move to {day time}" at the first free time that fits the lesson, rounded up to the hour (spec FR-009); with quiet hours set, they don't create a clash; with the Admin in another zone the button adds "· {time} yours"; tapping moves it and records a notice;
   - scenario 3: Month shows counts (red when late); tapping a day opens that week;
@@ -209,13 +209,13 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ### Implementation for User Story 4
 
-- [ ] T055 [US4] Extend `getPlanWeek` in src/features/assignments/plan-repo.ts with per-day display `segments` (one `getBusySegments` call for the week + 7 days ahead), day bounds, and `clash` + `suggestion` per card via src/lib/availability.ts (minutes = lesson `est_minutes`, min 60; course cards 60); add `getPlanMonth(adminId, studentId, month)`; T053 passes
-- [ ] T056 [US4] Route Handler GET src/app/api/admin/plan/month/route.ts (`requireAdminOf`) and `planMonthQuery` in src/features/assignments/queries.ts; the week route returns the new fields (contracts/route-handlers.md)
-- [ ] T057 [P] [US4] `DayBar` in src/components/shared/day-bar.tsx: 00–24 of one local day scaled to its real length, `--avail-*` tokens, optional now-marker, `role="img"` with a text summary ("Shift 22:00–07:00, sleep …"); legend component Shift / Sleep / Free
-- [ ] T058 [P] [US4] `CalendarMonth` in src/components/shared/calendar-month.tsx: month grid starting Monday, per-day badge slot, keyboard navigation, `onSelectDay`
-- [ ] T059 [US4] Plan week additions in src/features/assignments/components/plan-week.tsx and deadline-card.tsx: `DayBar` per day row with the legend under the week header, today's row highlighted; clash cards get the amber border, "{name} is on shift then" / "{name} is asleep then" and a "Move to {day time}" button (label via `TimeBoth` `compact`, spec FR-008) that calls the US2 actions with the suggestion; no button when the suggestion is null
-- [ ] T060 [US4] `PlanMonth` in src/features/assignments/components/plan-month.tsx (counts, red when late; tap → week view of that week) and the Week/Month toggle in src/features/assignments/components/plan-view.tsx (`view` in the URL)
-- [ ] T061 [US4] Add the plan legend, clash and month strings to src/i18n/messages/{en,my,ja}.json; T054 passes
+- [X] T055 [US4] Extend `getPlanWeek` in src/features/assignments/plan-repo.ts with per-day display `segments` (one `getBusySegments` call for the week + 7 days ahead), day bounds, and `clash` + `suggestion` per card via src/lib/availability.ts (minutes = lesson `est_minutes`, min 60; course cards 60); add `getPlanMonth(adminId, studentId, month)`; T053 passes
+- [X] T056 [US4] Route Handler GET src/app/api/admin/plan/month/route.ts (`requireAdminOf`) and `planMonthQuery` in src/features/assignments/queries.ts; the week route returns the new fields (contracts/route-handlers.md)
+- [X] T057 [P] [US4] `DayBar` in src/components/shared/day-bar.tsx: 00–24 of one local day scaled to its real length, `--avail-*` tokens, optional now-marker, `role="img"` with a text summary ("Shift 22:00–07:00, sleep …"); legend component Shift / Sleep / Free
+- [X] T058 [P] [US4] `CalendarMonth` in src/components/shared/calendar-month.tsx: month grid starting Monday, per-day badge slot, keyboard navigation, `onSelectDay`
+- [X] T059 [US4] Plan week additions in src/features/assignments/components/plan-week.tsx and deadline-card.tsx: `DayBar` per day row with the legend under the week header, today's row highlighted; clash cards get the amber border, "{name} is on shift then" / "{name} is asleep then" and a "Move to {day time}" button (label via `TimeBoth` `compact`, spec FR-008) that calls the US2 actions with the suggestion; no button when the suggestion is null
+- [X] T060 [US4] `PlanMonth` in src/features/assignments/components/plan-month.tsx (counts, red when late; tap → week view of that week) and the Week/Month toggle in src/features/assignments/components/plan-view.tsx (`view` in the URL)
+- [X] T061 [US4] Add the plan legend, clash and month strings to src/i18n/messages/{en,my,ja}.json; T054 passes
 
 **Checkpoint**: all user stories independently functional
 

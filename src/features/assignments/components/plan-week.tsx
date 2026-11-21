@@ -16,20 +16,32 @@ import {
 } from '@dnd-kit/core'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useFormatter, useTranslations, type DateTimeFormatOptions } from 'next-intl'
+import { useFormatter, useNow, useTranslations, type DateTimeFormatOptions } from 'next-intl'
 import { useMemo, useRef, type ReactNode } from 'react'
+import { DayBar, DayBarLegend, DayBarScale } from '@/components/shared/day-bar'
 import { addCalendarDays, cityOf, moveToDay, todayIn } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { planWeekQuery } from '../queries'
 import type { PlanCard, PlanDay } from '../types'
 import { DeadlineCard } from './deadline-card'
+import { NavButton } from './nav-button'
 import { useSetDeadline } from './use-set-deadline'
 
 // The Plan week (screen 22-AdminPlan; spec 003 US2, research R10): "‹ 16 – 22 Nov ›", then one row
 // per student-local day with its deadline cards. Rows are drop targets: long-press (250 ms) on
 // touch, a 6 px drag with a pointer, or Space, ↑/↓, Space on the keyboard (FR-011). A drop keeps
 // the local clock time on the new day (moveToDay) and saves at once (optimistic, rolled back on
-// error). Availability bars come with US4.
+// error). Each row starts with the student's availability bar (US4, FR-009); today's row is
+// highlighted and its bar has the now-marker.
+
+/**
+ * Node's ICU puts thin spaces around the range dash ("Nov 16 – 22"), browsers plain ones; the
+ * difference broke hydration and re-mounted the week. Same text on both sides.
+ */
+const plainSpaces = (text: string) => text.replace(/[\u2009\u202f]/g, ' ')
+
+/** When a drag ended, to tell its trailing click from a tap (only read in event handlers). */
+const eventTime = () => Date.now()
 
 /** Pointer inside a row first; keyboard drags have no pointer, so fall back to overlap. */
 const collision: CollisionDetection = (args) => {
@@ -70,6 +82,7 @@ export function PlanWeek({
   const t = useTranslations('plan')
   const format = useFormatter()
   const move = useSetDeadline(studentId)
+  const now = useNow({ updateInterval: 60_000 })
   const lastDragEnd = useRef(0)
   const { data } = useQuery({
     ...planWeekQuery(studentId, week),
@@ -87,44 +100,49 @@ export function PlanWeek({
   if (!data) return null
 
   const timeZone = data.student.timezone
-  const today = todayIn(timeZone)
+  const today = todayIn(timeZone, now)
   const calendar = (date: string, options: DateTimeFormatOptions) =>
     format.dateTime(new Date(`${date}T00:00:00Z`), { ...options, timeZone: 'UTC' })
   const monday = data.days[0].date
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
-    lastDragEnd.current = Date.now()
+    lastDragEnd.current = eventTime()
     const card = active.data.current?.card as PlanCard | undefined
     const date = over ? String(over.id) : null
     if (!card || !date || date === active.data.current?.date) return
-    move.mutate({
-      kind: card.kind,
-      id: card.id,
-      courseId: card.courseId,
-      dueAt: moveToDay(new Date(card.due.dueAt), date, timeZone).toISOString(),
-    })
+    moveTo(card, moveToDay(new Date(card.due.dueAt), date, timeZone).toISOString())
   }
+  const moveTo = (card: PlanCard, dueAt: string) =>
+    move.mutate({ kind: card.kind, id: card.id, courseId: card.courseId, dueAt })
   // A drag ends with a click on the card; don't open the sheet for it.
   const open = (card: PlanCard) => {
-    if (Date.now() - lastDragEnd.current > 300) onOpen(card)
+    if (eventTime() - lastDragEnd.current > 300) onOpen(card)
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-1">
-        <Button label={t('previousWeek')} onClick={() => onWeekChange(addCalendarDays(monday, -7))}>
-          <ChevronLeft className="size-5" aria-hidden />
-        </Button>
-        <h2 className="text-lg font-semibold" aria-live="polite">
-          {format.dateTimeRange(
-            new Date(`${monday}T00:00:00Z`),
-            new Date(`${data.days[6].date}T00:00:00Z`),
-            { day: 'numeric', month: 'short', timeZone: 'UTC' },
-          )}
-        </h2>
-        <Button label={t('nextWeek')} onClick={() => onWeekChange(addCalendarDays(monday, 7))}>
-          <ChevronRight className="size-5" aria-hidden />
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="-ml-3 flex items-center">
+          <NavButton
+            label={t('previousWeek')}
+            onClick={() => onWeekChange(addCalendarDays(monday, -7))}
+          >
+            <ChevronLeft className="size-5" aria-hidden />
+          </NavButton>
+          <h2 className="text-lg font-semibold" aria-live="polite">
+            {plainSpaces(
+              format.dateTimeRange(
+                new Date(`${monday}T00:00:00Z`),
+                new Date(`${data.days[6].date}T00:00:00Z`),
+                { day: 'numeric', month: 'short', timeZone: 'UTC' },
+              ),
+            )}
+          </h2>
+          <NavButton label={t('nextWeek')} onClick={() => onWeekChange(addCalendarDays(monday, 7))}>
+            <ChevronRight className="size-5" aria-hidden />
+          </NavButton>
+        </div>
+        <DayBarLegend className="gap-2.5 text-xs" />
       </div>
       {data.adminTimezone !== timeZone && (
         <p className="-mt-2 text-sm text-muted-foreground">
@@ -136,34 +154,47 @@ export function PlanWeek({
         sensors={sensors}
         collisionDetection={collision}
         onDragEnd={onDragEnd}
-        onDragCancel={() => (lastDragEnd.current = Date.now())}
+        onDragCancel={() => (lastDragEnd.current = eventTime())}
         accessibility={{
           screenReaderInstructions: { draggable: t('dragInstructions') },
         }}
       >
-        <ol className="overflow-hidden rounded-3xl border bg-card">
-          {data.days.map((day) => {
-            const dayLabel = calendar(day.date, {
-              weekday: 'short',
-              day: 'numeric',
-              month: 'short',
-            })
-            return (
-              <DayRow key={day.date} day={day} isToday={day.date === today} calendar={calendar}>
-                {day.cards.map((card) => (
-                  <DeadlineCard
-                    key={`${card.kind}:${card.id}`}
-                    card={card}
-                    date={day.date}
-                    dayLabel={dayLabel}
+        <div className="overflow-hidden rounded-3xl border bg-card">
+          <DayBarScale className="border-b py-2 pr-4 pl-19" />
+          <ol>
+            {data.days.map((day) => {
+              const dayLabel = calendar(day.date, {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              })
+              return (
+                <DayRow key={day.date} day={day} isToday={day.date === today} calendar={calendar}>
+                  <DayBar
+                    start={day.start}
+                    end={day.end}
+                    segments={day.segments}
                     timeZone={timeZone}
-                    onOpen={open}
+                    now={day.date === today ? now : undefined}
+                    className="my-1.5"
                   />
-                ))}
-              </DayRow>
-            )
-          })}
-        </ol>
+                  {day.cards.map((card) => (
+                    <DeadlineCard
+                      key={`${card.kind}:${card.id}`}
+                      card={card}
+                      date={day.date}
+                      dayLabel={dayLabel}
+                      timeZone={timeZone}
+                      studentName={data.student.displayName}
+                      onOpen={open}
+                      onMove={moveTo}
+                    />
+                  ))}
+                </DayRow>
+              )
+            })}
+          </ol>
+        </div>
       </DndContext>
       <p className="px-2 text-center text-sm text-muted-foreground">
         {t('hint', { name: data.student.displayName })}
@@ -206,26 +237,5 @@ function DayRow({
       </p>
       <div className="flex min-w-0 flex-1 flex-col gap-2">{children}</div>
     </li>
-  )
-}
-
-function Button({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="flex size-11 items-center justify-center rounded-full hover:bg-muted"
-    >
-      {children}
-    </button>
   )
 }

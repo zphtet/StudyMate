@@ -586,6 +586,21 @@
     "remove": "期限を削除",
     "saved": "期限を保存しました",
     "removed": "期限を削除しました",
-    "noCourses": "先に {name} さんにコースを割り当ててください。"
+    "noCourses": "先に {name} さんにコースを割り当ててください。",
+    "view": "表示",
+    "week": "週",
+    "month": "月",
+    "previousMonth": "前の月",
+    "nextMonth": "次の月",
+    "monthCount": "締め切り{count}件{late, plural, =0 {} other {、遅れ#件}}",
+    "monthHint": "日付をタップするとその週を開きます。"
+  },
+  "dayBar": {
+    "shift": "シフト",
+    "sleep": "睡眠",
+    "free": "空き",
+    "part": "{kind} {from}–{to}",
+    "now": "現在 {time}",
+    "legend": "凡例"
   }
 }
