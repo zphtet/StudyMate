@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Trash2 } from 'lucide-react'
 import { useFormatter, useTimeZone, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -10,7 +10,7 @@ import { useId, useState, type MouseEvent } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
-import { Field, inputClass } from '@/components/shared/field'
+import { checkboxClass, checkboxLabelClass, Field, inputClass } from '@/components/shared/field'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils'
 import { inlineMediaMarkdown } from '../files'
 import { saveLesson, setLessonStatus } from '../lesson-actions'
 import { adminLessonQuery, courseKeys, lessonKeys } from '../queries'
+import { DeleteLessonSheet } from './delete-lesson-sheet'
 import {
   lessonFieldsSchema,
   MAX_CONTENT_BYTES,
@@ -63,6 +64,7 @@ const fromLesson = (lesson: AdminLesson): LessonFieldsInput => ({
 })
 
 export function LessonEditForm({ lessonId }: { lessonId: string }) {
+  const tDelete = useTranslations('deleteFlow')
   const t = useTranslations('lessonEditor')
   const tErrors = useTranslations('errors')
   const validation = useValidationMessage()
@@ -73,6 +75,7 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
   const { data: lesson } = useSuspenseQuery(adminLessonQuery(lessonId))
   const courseUrl = `/a/courses/${lesson.courseId}`
   const [leaving, setLeaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   // Next keeps recently visited screens in the page (hidden), so two editors can exist at once:
   // ids must be unique per instance.
   const uid = useId()
@@ -327,7 +330,7 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
       </Field>
 
       <div className="flex min-h-11 items-center justify-between gap-4">
-        <Label htmlFor={id('lesson-require')} className="text-base font-normal">
+        <Label htmlFor={id('lesson-require')} className={checkboxLabelClass}>
           {t('requireSubmission')}
         </Label>
         <Controller
@@ -338,13 +341,24 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
               id={id('lesson-require')}
               checked={field.value}
               onCheckedChange={(checked) => field.onChange(checked === true)}
-              className="size-7 rounded-md"
+              className={checkboxClass}
             />
           )}
         />
       </div>
 
       <BottomBar contentClassName="lg:max-w-5xl">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-touch"
+          className="size-13 rounded-xl text-destructive"
+          aria-label={tDelete('deleteLesson')}
+          disabled={busy}
+          onClick={() => setDeleting(true)}
+        >
+          <Trash2 aria-hidden />
+        </Button>
         {lesson.status === 'draft' ? (
           <>
             <Button
@@ -391,6 +405,16 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
           </>
         )}
       </BottomBar>
+
+      <DeleteLessonSheet
+        lesson={lesson}
+        courseId={lesson.courseId}
+        courseTitle={lesson.courseTitle}
+        open={deleting}
+        onOpenChange={setDeleting}
+        beforeDelete={() => autosave.flush()}
+        onDeleted={() => router.replace(courseUrl)}
+      />
 
       <AlertDialog open={leaving} onOpenChange={setLeaving}>
         <AlertDialogContent>

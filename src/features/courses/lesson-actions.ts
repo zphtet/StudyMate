@@ -54,6 +54,17 @@ export const reorderLessons = action(
   },
 )
 
+/** Soft delete (US3 scenario 1); `requireLessonOwner` also matches deleted lessons. */
+export const deleteLesson = action(z.object({ lessonId }), async ({ lessonId }) => {
+  const { me } = await requireLessonOwner(lessonId)
+  return repo.deleteLesson(me.id, lessonId)
+})
+
+export const restoreLesson = action(z.object({ lessonId }), async ({ lessonId }) => {
+  const { me } = await requireLessonOwner(lessonId)
+  return repo.restoreLesson(me.id, lessonId)
+})
+
 export const addLessonResource = action(
   z.object({ lessonId, resource: resourceSchema }),
   async ({ lessonId, resource }) => {

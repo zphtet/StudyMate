@@ -1,9 +1,9 @@
-import type { CourseColor, CourseStatus, UnlockRule } from './schemas'
+import type { CourseColor, CourseStatus, LessonStatus, UnlockRule } from './schemas'
 
 // Response shapes of the 002 Route Handlers (specs/002-courses-lessons/contracts/route-handlers.md).
 // Instants are ISO 8601 UTC strings; calendar dates are YYYY-MM-DD.
 
-export type { CourseColor, CourseStatus, UnlockRule }
+export type { CourseColor, CourseStatus, LessonStatus, UnlockRule }
 
 export type ResourceKind = 'file' | 'link' | 'audio' | 'image'
 /** url = /api/lesson-files/<id>/<name> for stored files, the external https URL for links. */

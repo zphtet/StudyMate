@@ -47,6 +47,21 @@ export const duplicateCourse = action(z.object({ sourceId: courseId }), async ({
   return copyCourse(me.id, sourceId)
 })
 
+/** Soft delete after typing the course name (US3 scenario 2). */
+export const deleteCourse = action(
+  z.object({ courseId, confirmTitle: z.string().max(200) }),
+  async ({ courseId, confirmTitle }) => {
+    const me = await requireCourseOwner(courseId)
+    return repo.deleteCourse(me.id, courseId, confirmTitle)
+  },
+)
+
+/** From Recently deleted, within 30 days (US3 scenario 3). */
+export const restoreCourse = action(z.object({ courseId }), async ({ courseId }) => {
+  const me = await requireCourseOwner(courseId)
+  return repo.restoreCourse(me.id, courseId)
+})
+
 // ── Sections ────────────────────────────────────────────────────────────────────────────────
 
 const sectionId = z.uuid()

@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
@@ -22,7 +22,16 @@ export default async function AdminCoursesPage() {
         }
       />
       <WithAdminCourses>
-        <AdminCourseList />
+        <AdminCourseList
+          footer={
+            <Link
+              href="/a/courses/deleted"
+              className="mx-auto flex min-h-11 items-center gap-2 px-4 text-muted-foreground underline-offset-4 hover:underline"
+            >
+              <Trash2 className="size-4" aria-hidden /> {t('recentlyDeleted')}
+            </Link>
+          }
+        />
       </WithAdminCourses>
     </>
   )

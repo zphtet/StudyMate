@@ -258,7 +258,13 @@
     "emptyDrafts": "No drafts",
     "emptyArchived": "No archived courses",
     "emptyBody": "Create a course, add lessons, then make it active to assign it to students.",
-    "noMatches": "No courses match “{query}”."
+    "noMatches": "No courses match “{query}”.",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "deleteCourse": "Delete course",
+    "archivedToast": "Course archived",
+    "unarchivedToast": "Course is active again",
+    "recentlyDeleted": "Recently deleted"
   },
   "courseForm": {
     "newTitle": "New course",
@@ -445,5 +451,43 @@
     "lockedAfter": "It unlocks after lesson {number}, {title}.",
     "lockedOnDate": "It opens on {date}.",
     "backToCourse": "Back to course"
+  },
+  "deleteFlow": {
+    "title": "Delete “{title}”?",
+    "body": "Lesson {number} in {course}. Students' work on it is deleted too after 30 days in Recently deleted.",
+    "checking": "Checking students' work…",
+    "work": {
+      "not_started": "Not started",
+      "in_progress": "In progress",
+      "done": "Done",
+      "draft_assignment": "Draft assignment",
+      "submitted": "Submitted",
+      "reviewed": "Reviewed"
+    },
+    "keepWork": "Want to keep their work? <b>Unpublish</b> hides the lesson from students and keeps everything.",
+    "deleteLesson": "Delete lesson",
+    "unpublishInstead": "Unpublish instead",
+    "cancel": "Cancel",
+    "courseFootnote": "Deleting a whole course asks you to type its name first.",
+    "lessonDeleted": "Lesson deleted. You can restore it from Recently deleted for 30 days.",
+    "unpublished": "Lesson unpublished. Students can't see it now.",
+    "deleteCourseTitle": "Delete {title}?",
+    "deleteCourseBody": "Students lose access. You can restore it from Recently deleted for 30 days.",
+    "typeName": "Type the course name to confirm",
+    "deleteCourse": "Delete course",
+    "courseDeleted": "Course deleted. You can restore it from Recently deleted for 30 days."
+  },
+  "recentlyDeleted": {
+    "title": "Recently deleted",
+    "back": "Back to courses",
+    "intro": "Deleted courses and lessons stay here for 30 days. Restore brings back students' progress and work too.",
+    "empty": "Nothing deleted in the last 30 days.",
+    "courses": "Courses",
+    "lessons": "Lessons",
+    "inCourse": "in {course}",
+    "meta": "Deleted {relative} · removed for good on {date}",
+    "restore": "Restore",
+    "restoreLabel": "Restore {title}",
+    "restored": "Restored"
   }
 }

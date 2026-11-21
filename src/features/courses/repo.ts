@@ -3,8 +3,9 @@ import { fail } from '@/lib/action'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
 import { groupCourse, numberLessons } from './order'
+import { isExpired, purgeAt, RESTORE_MS } from './retention'
 import type { CourseColor, CourseFields, CourseStatus } from './schemas'
-import type { AdminCourseDetail, AdminCourseList } from './types'
+import type { AdminCourseDetail, AdminCourseList, RecentlyDeleted } from './types'
 
 // Admin course reads and writes (spec 002 US1). Callers MUST have run a guard; every query is
 // scoped by data-model.md Course.ownerId = the caller and Course.deletedAt = null.
@@ -198,4 +199,85 @@ export async function setCourseStatus(adminId: string, courseId: string, status:
     data: { status, updatedAt: new Date() },
   })
   return { status }
+}
+
+// ── Delete and restore (US3, research.md R8) ────────────────────────────────────────────────
+
+/** Soft delete; the trimmed confirmation must equal data-model.md Course.title. Lessons are left alone. */
+export async function deleteCourse(adminId: string, courseId: string, confirmTitle: string) {
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, ownerId: adminId, deletedAt: null },
+    select: { title: true },
+  })
+  if (!course) fail('course_not_found')
+  if (confirmTitle.trim() !== course.title.trim()) fail('title_mismatch')
+  await prisma.course.update({ where: { id: courseId }, data: { deletedAt: new Date() } })
+  return {}
+}
+
+/** Clears Course.deletedAt within 30 days; its lessons and students' work come back as they were. */
+export async function restoreCourse(adminId: string, courseId: string, now = new Date()) {
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, ownerId: adminId, deletedAt: { not: null } },
+    select: { deletedAt: true },
+  })
+  if (!course?.deletedAt) fail('course_not_found')
+  if (isExpired(course.deletedAt, now)) fail('restore_expired')
+  await prisma.course.update({ where: { id: courseId }, data: { deletedAt: null, updatedAt: now } })
+  return {}
+}
+
+/**
+ * Courses deleted in the last 30 days, plus lessons deleted on their own from courses that still
+ * exist (lessons of a deleted course come back with it), newest first.
+ */
+export async function listRecentlyDeleted(
+  adminId: string,
+  now = new Date(),
+): Promise<RecentlyDeleted> {
+  const since = new Date(now.getTime() - RESTORE_MS)
+  const [courses, lessons] = await Promise.all([
+    prisma.course.findMany({
+      where: { ownerId: adminId, isPersonal: false, deletedAt: { gte: since } },
+      orderBy: { deletedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        icon: true,
+        color: true,
+        deletedAt: true,
+        _count: { select: { lessons: { where: { deletedAt: null } } } },
+      },
+    }),
+    prisma.lesson.findMany({
+      where: { deletedAt: { gte: since }, course: { ownerId: adminId, deletedAt: null } },
+      orderBy: { deletedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        deletedAt: true,
+        course: { select: { id: true, title: true } },
+      },
+    }),
+  ])
+  // The `where` guarantees deletedAt; narrowing keeps the types honest without assertions.
+  const dates = (deletedAt: Date | null) =>
+    deletedAt
+      ? [{ deletedAt: deletedAt.toISOString(), purgeAt: purgeAt(deletedAt).toISOString() }]
+      : []
+  return {
+    courses: courses.flatMap((c) =>
+      dates(c.deletedAt).map((d) => ({
+        id: c.id,
+        title: c.title,
+        icon: c.icon,
+        color: c.color as CourseColor,
+        lessonCount: c._count.lessons,
+        ...d,
+      })),
+    ),
+    lessons: lessons.flatMap((l) =>
+      dates(l.deletedAt).map((d) => ({ id: l.id, title: l.title, course: l.course, ...d })),
+    ),
+  }
 }
