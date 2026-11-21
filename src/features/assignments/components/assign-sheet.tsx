@@ -8,7 +8,7 @@ import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-state'
 import { checkboxClass, checkboxLabelClass } from '@/components/shared/field'
-import { useMediaQuery } from '@/components/shared/use-media-query'
+import { AdaptiveSheetContent } from '@/components/shared/bottom-sheet'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,13 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { courseKeys } from '@/features/courses/queries'
 import { unwrap } from '@/lib/result'
 import { zonedToUtc } from '@/lib/time'
@@ -53,19 +47,11 @@ export function AssignSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const isWide = useMediaQuery('(min-width: 1024px)')
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side={isWide ? 'right' : 'bottom'}
-        className={
-          isWide
-            ? 'w-full overflow-y-auto sm:max-w-lg'
-            : 'mx-auto max-h-[92dvh] max-w-xl overflow-y-auto rounded-t-3xl'
-        }
-      >
+      <AdaptiveSheetContent>
         <AssignBody courseId={courseId} onDone={() => onOpenChange(false)} />
-      </SheetContent>
+      </AdaptiveSheetContent>
     </Sheet>
   )
 }

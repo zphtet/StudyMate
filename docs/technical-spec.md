@@ -104,16 +104,21 @@ studymate/
 │  ├─ features/                        # one folder per spec
 │  │  ├─ auth/        (actions.ts, schemas.ts, components/)
 │  │  ├─ courses/     (actions.ts, queries.ts [queryOptions], repo.ts [Prisma], schemas.ts, components/)
-│  │  ├─ assignments/ ├─ progress/ ├─ shifts/ ├─ notifications/ ├─ appearance/
+│  │  ├─ assignments/ (spec 003: actions.ts, queries.ts, repo.ts [Assign sheet, deadlines],
+│  │  │               student-repo.ts [Today, due status], plan-repo.ts [Plan week/month, clashes],
+│  │  │               status.ts [pure deadline rules], notices.ts, plan-selection.ts, components/)
+│  │  ├─ progress/ ├─ shifts/ ├─ notifications/ ├─ appearance/
 │  ├─ components/
 │  │  ├─ ui/                           # shadcn/ui generated
 │  │  ├─ layout/ (BottomNav, SideNav, PageHeader)
-│  │  └─ shared/ (Markdown, CalendarMonth, DayBar, ProgressBar, EmptyState)
+│  │  └─ shared/ (Markdown, CalendarMonth, DayBar, TimeBoth, StatusChip, ProgressBar, EmptyState)
 │  ├─ lib/
 │  │  ├─ prisma.ts                     # PrismaClient singleton (adapter-pg, pooler URL)
 │  │  ├─ supabase/ (server.ts, client.ts)  # auth, storage, realtime
 │  │  ├─ time.ts                       # tz helpers, overnight math (unit-tested)
-│  │  ├─ availability.ts               # busy_segments() + the free gaps between them; previews
+│  │  ├─ availability.ts               # pure: busy_segments() rows → Shift / Sleep (`night` = Sleep,
+│  │  │                                #   `quiet` ignored: it only delays notifications), free gaps,
+│  │  │                                #   clashAt, suggestSlot ("Move to …", spec 003 FR-009)
 │  │  ├─ offline/ (db.ts [Dexie], queue.ts, sync.ts)
 │  │  └─ utils.ts                      # cn(), etc.
 │  ├─ i18n/ (request.ts, messages/en.json, my.json, ja.json)
@@ -321,6 +326,7 @@ const create = useMutation({
 - **Text size**: `--font-scale` on `<html>` (0.93 / 1 / 1.13) → root `font-size`.
 - **i18n**: `next-intl` without locale prefix; locale from `locale` cookie (synced from profile, default from `Accept-Language`). Messages in `src/i18n/messages/{en,my,ja}.json`. Dates/numbers through `next-intl` formatters with the user's timezone.
 - **Contrast check**: a Vitest test computes contrast for every theme × mode token pair (≥ 4.5:1).
+- **Spec 003 tokens**: `--destructive-soft` (late chips and cards, a hex value per mode so the contrast test checks it against `--destructive`); `--avail-shift` (= `--primary`), `--avail-sleep` and `--avail-free` (`color-mix` of `--muted-foreground` / `--success` with `--card`, so every theme and mode gets them; graphics, not text).
 
 ---
 
@@ -338,6 +344,12 @@ const create = useMutation({
 Markdown editing: `@uiw/react-md-editor` wrapped in `LessonEditor` (dynamic import, theme follows `data-color-mode` from next-themes, toolbar trimmed to heading, bold, italic, list, quote, link, image, code; image/audio buttons upload to Storage then insert the URL).
 
 Custom shared components: `Markdown`, `CalendarMonth` (with overnight shift bars), `DayBar` (24 h availability), `StatusChip`, `ProgressRing`, `TimeBoth` (her time · your time).
+
+As built in spec 003:
+- `TimeBoth` / `useTimeBoth()` (`time-both.tsx`): the student's time first, the viewer's beside it only when the clocks differ. Default "Tue 1 Dec, 23:59 (Tokyo) · 22:29 (Yangon)"; `compact` "21:00 · 18:30 yours" for Plan cards and "Move to …".
+- `DayBar` (`day-bar.tsx`, with `DayBarLegend` and `DayBarScale`): one local day 00–24 scaled to its real length (23/25 h on DST days), Shift / Sleep segments from the server and free gaps between them, optional now-marker; `role="img"` with a text summary ("Sleep 00:00–08:00, Free 08:00–22:00, Shift 22:00–24:00").
+- `CalendarMonth` (`calendar-month.tsx`): a native table, weeks from Monday, one focusable day (arrow keys by day/week, Home/End), a badge slot per day and `onSelectDay`. 005 adds the shift bars.
+- `StatusChip` gained the `danger` and `warning` tones.
 
 ---
 

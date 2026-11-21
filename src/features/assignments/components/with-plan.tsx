@@ -34,7 +34,7 @@ async function SeedPlan({ searchParams }: { searchParams: SearchParams }) {
     const plan = await getPlanMonth({ admin: me, studentId: student.id, month })
     entries.push([planMonthQuery(student.id, month).queryKey, plan])
   } else if (student) {
-    const plan = await getPlanWeek({ admin: me, studentId: student.id, week })
+    const plan = await getPlanWeek({ admin: me, studentId: student.id, student, week })
     entries.push([planWeekQuery(student.id, week).queryKey, plan])
   }
   return (

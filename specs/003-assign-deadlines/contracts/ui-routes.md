@@ -14,6 +14,8 @@ Phone first (390×844); every tap target ≥ 44 px; theme tokens only; all text 
 
 "Partial" = parts owned by other features stay out: 004 (progress %, bars, streak/goal cards, Continue, Done counts card), 005 (night-shift banner), 006 (bell).
 
+Intentional differences from `22-AdminPlan.png`, both set by the spec: clash text uses the student's name ("May is on shift then", FR-014) where the mock-up says "She"; and time outside waking hours is drawn as Sleep (FR-009), where the mock-up leaves the night pale.
+
 ## Admin screens
 
 **Students card + Assign sheet** (`AssignSheet`, bottom `Sheet`; side sheet ≥ 1024 px)

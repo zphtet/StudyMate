@@ -57,7 +57,7 @@ export function CalendarMonth({
   }
 
   return (
-    <table className="w-full table-fixed border-separate border-spacing-1">
+    <table className="w-full table-fixed border-separate border-spacing-x-0.5 border-spacing-y-1">
       <thead>
         <tr>
           {weekdays.map((date) => (

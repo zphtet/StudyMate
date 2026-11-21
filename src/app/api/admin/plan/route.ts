@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { getPlanWeek } from '@/features/assignments/plan-repo'
-import { weekSchema } from '@/features/assignments/plan-selection'
+import { weekSchema } from '@/features/assignments/schemas'
 import { handle } from '@/lib/http'
 import { requireAdminOf } from '@/server/auth/guards'
 

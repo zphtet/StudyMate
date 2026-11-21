@@ -6,16 +6,10 @@ import { useTranslations } from 'next-intl'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import { inputClass } from '@/components/shared/field'
-import { useMediaQuery } from '@/components/shared/use-media-query'
+import { AdaptiveSheetContent } from '@/components/shared/bottom-sheet'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cityOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { adminStudentCoursesQuery } from '../queries'
@@ -42,17 +36,9 @@ export function DeadlineSheet({
   onOpenChange: (open: boolean) => void
 }) {
   const t = useTranslations('plan')
-  const isWide = useMediaQuery('(min-width: 1024px)')
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side={isWide ? 'right' : 'bottom'}
-        className={
-          isWide
-            ? 'w-full overflow-y-auto sm:max-w-lg'
-            : 'mx-auto max-h-[92dvh] max-w-xl overflow-y-auto rounded-t-3xl'
-        }
-      >
+      <AdaptiveSheetContent>
         <SheetHeader className="text-left">
           <SheetTitle className="text-2xl leading-tight font-bold">
             {editing ? t('sheetEdit') : t('sheetNew')}
@@ -62,7 +48,7 @@ export function DeadlineSheet({
           </SheetDescription>
         </SheetHeader>
         <DeadlineBody student={student} editing={editing} onDone={() => onOpenChange(false)} />
-      </SheetContent>
+      </AdaptiveSheetContent>
     </Sheet>
   )
 }

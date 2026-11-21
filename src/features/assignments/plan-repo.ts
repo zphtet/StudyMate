@@ -11,7 +11,7 @@ import {
   utcToZoned,
 } from '@/lib/time'
 import { courseDeadlineStatus, deadlineStatus } from './status'
-import type { Clash, PlanCard, PlanMonth, PlanWeek, Segment } from './types'
+import type { Clash, PlanCard, PlanMonth, PlanWeek, Segment, StudentRef } from './types'
 
 // Busy time and clashes for the Plan and the deadline pickers (spec 003 FR-009, research R7).
 // Callers MUST have run requireAdminOf(studentId). busy_segments() allows server connections
@@ -211,15 +211,18 @@ const COURSE_MINUTES = 60
 export async function getPlanWeek({
   admin,
   studentId,
+  student: known,
   week,
   now = new Date(),
 }: {
   admin: { id: string; timezone: string }
   studentId: string
+  /** The student's row when the caller already has it (the page seed): saves a round trip. */
+  student?: StudentRef
   week?: string | null
   now?: Date
 }): Promise<PlanWeek> {
-  const student = await loadStudent(studentId)
+  const student = known?.id === studentId ? known : await loadStudent(studentId)
   const timeZone = student.timezone
   const monday = week ?? mondayOf(todayIn(timeZone, now))
   const dates = Array.from({ length: 7 }, (_, i) => addCalendarDays(monday, i))

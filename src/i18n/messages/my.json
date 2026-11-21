@@ -592,11 +592,11 @@
     "month": "လ",
     "previousMonth": "ယခင်လ",
     "nextMonth": "နောက်လ",
-    "monthCount": "သတ်မှတ်ရက် {count} ခု{late, plural, =0 {} other {၊ နောက်ကျ # ခု}}",
+    "monthCount": "နောက်ဆုံးရက် {count} ခု{late, plural, =0 {} other {၊ ရက်လွန် # ခု}}",
     "monthHint": "ထိုအပတ်ကို ဖွင့်ရန် ရက်တစ်ရက်ကို နှိပ်ပါ။"
   },
   "dayBar": {
-    "shift": "အလုပ်ချိန်",
+    "shift": "အလုပ်ဆိုင်း",
     "sleep": "အိပ်ချိန်",
     "free": "အားချိန်",
     "part": "{kind} {from}–{to}",

@@ -3,6 +3,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Plus, Users } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
@@ -15,7 +16,6 @@ import { cn } from '@/lib/utils'
 import { planSelection, type PlanViewMode } from '../plan-selection'
 import { linkedStudentsQuery } from '../queries'
 import type { PlanCard } from '../types'
-import { DeadlineSheet } from './deadline-sheet'
 import { PlanMonth } from './plan-month'
 import { PlanWeek } from './plan-week'
 
@@ -23,6 +23,9 @@ import { PlanWeek } from './plan-week'
 // toggle and the week or month. State lives in the URL (?student=<id>&view=month&week=<monday>&
 // month=<YYYY-MM>) so Back and reload work (research R10). Defaults: the first linked student by
 // name, the week view, this week or month in that student's zone.
+
+// The sheet (pickers, date fields, clash check) loads on the first tap, not with the week (T066).
+const DeadlineSheet = dynamic(() => import('./deadline-sheet').then((m) => m.DeadlineSheet))
 
 export function PlanView() {
   const t = useTranslations('plan')
@@ -35,6 +38,12 @@ export function PlanView() {
     open: false,
     editing: null,
   })
+  // Stays mounted after the first open so the closing animation can run.
+  const [hasOpenedSheet, setHasOpenedSheet] = useState(false)
+  const openSheet = (editing: PlanCard | null) => {
+    setHasOpenedSheet(true)
+    setSheet({ open: true, editing })
+  }
 
   const navigate = (next: Record<string, string | null>) => {
     const query = new URLSearchParams(params)
@@ -59,11 +68,7 @@ export function PlanView() {
         title={t('title')}
         actions={
           student && (
-            <Button
-              size="touch"
-              className="rounded-2xl px-5"
-              onClick={() => setSheet({ open: true, editing: null })}
-            >
+            <Button size="touch" className="rounded-2xl px-5" onClick={() => openSheet(null)}>
               <Plus aria-hidden /> {t('addDeadline')}
             </Button>
           )
@@ -126,15 +131,17 @@ export function PlanView() {
               studentId={student.id}
               week={week}
               onWeekChange={(monday) => navigate({ student: student.id, week: monday })}
-              onOpen={(card) => setSheet({ open: true, editing: card })}
+              onOpen={openSheet}
             />
           )}
-          <DeadlineSheet
-            student={student}
-            editing={sheet.editing}
-            open={sheet.open}
-            onOpenChange={(open) => setSheet((s) => ({ ...s, open }))}
-          />
+          {hasOpenedSheet && (
+            <DeadlineSheet
+              student={student}
+              editing={sheet.editing}
+              open={sheet.open}
+              onOpenChange={(open) => setSheet((s) => ({ ...s, open }))}
+            />
+          )}
         </>
       )}
     </div>

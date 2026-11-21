@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { getPlanMonth } from '@/features/assignments/plan-repo'
-import { monthSchema } from '@/features/assignments/plan-selection'
+import { monthSchema } from '@/features/assignments/schemas'
 import { handle } from '@/lib/http'
 import { requireAdminOf } from '@/server/auth/guards'
 

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-assign-deadlines`
 **Created**: 2026-11-20
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "003 assign-deadlines" (completes the 2026-11-20 draft of this spec)
 **Screens**: `23-AdminAssign.png`, `22-AdminPlan.png`, Student `04-Today.png`, `05-Courses.png`, `09-Course.png`
 

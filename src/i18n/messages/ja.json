@@ -592,7 +592,7 @@
     "month": "月",
     "previousMonth": "前の月",
     "nextMonth": "次の月",
-    "monthCount": "締め切り{count}件{late, plural, =0 {} other {、遅れ#件}}",
+    "monthCount": "期限{count}件{late, plural, =0 {} other {、期限切れ#件}}",
     "monthHint": "日付をタップするとその週を開きます。"
   },
   "dayBar": {

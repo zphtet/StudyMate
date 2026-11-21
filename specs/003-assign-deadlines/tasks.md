@@ -223,16 +223,16 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T062 [P] Documentation:
+- [X] T062 [P] Documentation:
   - docs/data-model.md: `lesson_deadlines_student_due` in the `lesson_deadlines` row; §4: the replaced `deadlines_write` and `notification_rules_default_once`.
   - docs/technical-spec.md: §3 `features/assignments` and `lib/availability.ts` (display kinds, quiet hours excluded); §12 the `--avail-*` and `--destructive-soft` tokens and `TimeBoth`/`DayBar`/`CalendarMonth`.
-- [ ] T063 [P] Review every new `my` and `ja` string for completeness and tone; list strings needing a native speaker under a `_review` note in specs/003-assign-deadlines/quickstart.md
-- [ ] T064 [P] Accessibility and layout pass at 390×844 and 1280×800: 44 px targets, labels on date/time inputs, focus order in the Assign and Deadline sheets, keyboard drag on the Plan, every drag action also possible by tap (spec FR-011). Fix findings in src/features/assignments/components/ and src/components/shared/
-- [ ] T065 Compare each changed screen with screenshots/04-Today.png, 05-Courses.png, 09-Course.png, 18-AdminCourse.png, 22-AdminPlan.png and 23-AdminAssign.png at 390×844, and fix layout, hierarchy and copy, keeping only the "partial" differences in contracts/ui-routes.md
-- [ ] T066 Performance: the Plan week is one request with one `busy_segments` call (check server logs); Lighthouse performance on `/s/today` and `/a/plan` (mobile) ≥ 90; `@dnd-kit` loads only on admin routes; record results in specs/003-assign-deadlines/quickstart.md §5
-- [ ] T067 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`
-- [ ] T068 Walk through specs/003-assign-deadlines/quickstart.md §4 scenarios 1–10 and note any failures
-- [ ] T069 Set **Status** to `Implemented` in specs/003-assign-deadlines/spec.md (constitution quality gate)
+- [X] T063 [P] Review every new `my` and `ja` string for completeness and tone; list strings needing a native speaker under a `_review` note in specs/003-assign-deadlines/quickstart.md
+- [X] T064 [P] Accessibility and layout pass at 390×844 and 1280×800: 44 px targets, labels on date/time inputs, focus order in the Assign and Deadline sheets, keyboard drag on the Plan, every drag action also possible by tap (spec FR-011). Fix findings in src/features/assignments/components/ and src/components/shared/
+- [X] T065 Compare each changed screen with screenshots/04-Today.png, 05-Courses.png, 09-Course.png, 18-AdminCourse.png, 22-AdminPlan.png and 23-AdminAssign.png at 390×844, and fix layout, hierarchy and copy, keeping only the "partial" differences in contracts/ui-routes.md
+- [X] T066 Performance: the Plan week is one request with one `busy_segments` call (check server logs); Lighthouse performance on `/s/today` and `/a/plan` (mobile) ≥ 90; `@dnd-kit` loads only on admin routes; record results in specs/003-assign-deadlines/quickstart.md §5
+- [X] T067 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`
+- [X] T068 Walk through specs/003-assign-deadlines/quickstart.md §4 scenarios 1–10 and note any failures
+- [X] T069 Set **Status** to `Implemented` in specs/003-assign-deadlines/spec.md (constitution quality gate)
 
 ---
 
