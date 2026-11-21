@@ -1,0 +1,85 @@
+'use client'
+
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { BookOpen } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import Link from 'next/link'
+import { useState } from 'react'
+import { EmptyState } from '@/components/shared/empty-state'
+import { cn } from '@/lib/utils'
+import { studentCoursesQuery } from '../queries'
+import type { StudentCourseCard } from '../types'
+import { CourseIcon } from './course-icon'
+import { useCalendarDate } from './use-calendar-date'
+
+// Student Courses tab (screen 05-Courses, partial per contracts/ui-routes.md): chips Active · n and
+// Archived · n (only when there are any), and one card per assigned course. The weekly study card,
+// progress bars, Completed and Mine come with 004 and the personal-courses feature.
+
+export function StudentCourseList() {
+  const t = useTranslations('studentCourses')
+  const { data } = useSuspenseQuery(studentCoursesQuery)
+  const [tab, setTab] = useState<'active' | 'archived'>('active')
+
+  if (data.active.length === 0 && data.archived.length === 0) {
+    return <EmptyState icon={BookOpen}>{t('empty')}</EmptyState>
+  }
+  const shown = tab === 'archived' ? data.archived : data.active
+  const tabs = (['active', 'archived'] as const).filter(
+    (key) => key === 'active' || data.archived.length > 0,
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div role="group" aria-label={t('filters')} className="flex gap-2 overflow-x-auto pb-1">
+        {tabs.map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={tab === key}
+            onClick={() => setTab(key)}
+            className={cn(
+              'min-h-11 shrink-0 rounded-full border px-5 font-medium whitespace-nowrap',
+              tab === key
+                ? 'border-inverse bg-inverse text-inverse-foreground'
+                : 'bg-card hover:bg-muted',
+            )}
+          >
+            {t(key, { count: data[key].length })}
+          </button>
+        ))}
+      </div>
+      {shown.length > 0 ? (
+        <ul className="flex flex-col gap-3">
+          {shown.map((course) => (
+            <li key={course.id}>
+              <CourseLink course={course} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState icon={BookOpen}>{t('emptyActive')}</EmptyState>
+      )}
+    </div>
+  )
+}
+
+function CourseLink({ course }: { course: StudentCourseCard }) {
+  const t = useTranslations('studentCourses')
+  const calendarDate = useCalendarDate()
+  return (
+    <Link
+      href={`/s/courses/${course.id}`}
+      className="flex items-center gap-4 rounded-3xl border bg-card p-5 outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <CourseIcon icon={course.icon} color={course.color} />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-lg leading-snug font-semibold">{course.title}</h2>
+        <p className="text-muted-foreground">
+          {t('lessonCount', { count: course.lessonCount })}
+          {course.targetDate && ` · ${t('finishBy', { date: calendarDate(course.targetDate) })}`}
+        </p>
+      </div>
+    </Link>
+  )
+}

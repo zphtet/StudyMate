@@ -4,6 +4,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
+    public details?: Record<string, unknown>,
   ) {
     super(code)
   }
@@ -15,8 +16,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { Accept: 'application/json', ...init?.headers },
   })
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null
-    throw new ApiError(res.status, body?.error?.code ?? 'unexpected')
+    const body = (await res.json().catch(() => null)) as {
+      error?: { code?: string; details?: Record<string, unknown> }
+    } | null
+    throw new ApiError(res.status, body?.error?.code ?? 'unexpected', body?.error?.details)
   }
   return (await res.json()) as T
 }

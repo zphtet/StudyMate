@@ -1,0 +1,19 @@
+import { z } from 'zod'
+import { getStudentLesson } from '@/features/courses/student-repo'
+import { handle, NotFound } from '@/lib/http'
+import { AuthError, requireLessonReader, requireRole } from '@/server/auth/guards'
+
+// GET /api/lessons/[lessonId] (spec 002 contracts/route-handlers.md › Student). 404 lesson_not_found
+// when the student can't read it; 403 lesson_locked (with the reason) while it is locked.
+export function GET(_request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
+  return handle(async () => {
+    const me = await requireRole('student')
+    const id = z.uuid().safeParse((await params).lessonId)
+    if (!id.success) throw new NotFound('lesson_not_found')
+    await requireLessonReader(id.data).catch((error: unknown) => {
+      if (error instanceof AuthError && error.status === 404) throw new NotFound('lesson_not_found')
+      throw error
+    })
+    return getStudentLesson(me, id.data)
+  })
+}

@@ -13,18 +13,22 @@ export class NotFound extends Error {
   }
 }
 
-/** Any other expected failure with its own status and code, e.g. 403 `lesson_locked` (spec 002 R13). */
+/**
+ * Any other expected failure with its own status and code, e.g. 403 `lesson_locked` (spec 002 R13).
+ * `details` go to the client as `error.details` (the locked screen shows why and links back).
+ */
 export class HttpError extends Error {
   constructor(
     public status: 400 | 401 | 403 | 404 | 409,
     public code: string,
+    public details?: Record<string, unknown>,
   ) {
     super(code)
   }
 }
 
-const json = (status: number, code: string, message: string) =>
-  NextResponse.json({ error: { code, message } }, { status })
+const json = (status: number, code: string, message: string, details?: Record<string, unknown>) =>
+  NextResponse.json({ error: { code, message, ...(details && { details }) } }, { status })
 
 export async function handle(fn: () => Promise<unknown>): Promise<Response> {
   try {
@@ -35,7 +39,7 @@ export async function handle(fn: () => Promise<unknown>): Promise<Response> {
     if (isNextInternalError(error)) throw error
     if (error instanceof ZodError) return json(400, 'invalid_input', 'Invalid input')
     if (error instanceof NotFound) return json(404, error.code, 'Not found')
-    if (error instanceof HttpError) return json(error.status, error.code, error.code)
+    if (error instanceof HttpError) return json(error.status, error.code, error.code, error.details)
     if (error instanceof AuthError) {
       if (error.status === 401) return json(401, 'unauthenticated', error.message)
       if (error.status === 403) return json(403, 'forbidden', error.message)

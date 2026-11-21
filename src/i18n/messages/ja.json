@@ -413,5 +413,37 @@
     "leaveBody": "最新の変更はまだ保存されていません。",
     "stay": "このページに残る",
     "leave": "移動する"
+  },
+  "studentCourses": {
+    "title": "コース",
+    "filters": "コースの絞り込み",
+    "active": "受講中 · {count}",
+    "archived": "アーカイブ · {count}",
+    "lessonCount": "{count} レッスン",
+    "finishBy": "{date} までに修了",
+    "empty": "管理者はまだコースを割り当てていません。",
+    "emptyActive": "現在受講中のコースはありません。",
+    "back": "コース一覧に戻る",
+    "assignedBy": "{name} が割り当て",
+    "archivedBanner": "アーカイブ済み · 完了したレッスンは引き続き閲覧できます",
+    "noLessons": "公開されたレッスンはまだありません。",
+    "noCompleted": "このコースで完了したレッスンはありません。",
+    "minutes": "{count} 分",
+    "unlocksAfter": "{number} の後に公開",
+    "opensOn": "{date} に公開",
+    "locked": "ロック中"
+  },
+  "lessonView": {
+    "back": "コースに戻る",
+    "position": "{course} · レッスン {number} / {total}",
+    "minutes": "{count} 分",
+    "attachments": "添付ファイル",
+    "opensInNewTab": "新しいタブで開きます",
+    "assignment": "課題",
+    "requireSubmission": "このレッスンを完了にする前に回答を提出してください。",
+    "lockedTitle": "このレッスンはまだ公開されていません",
+    "lockedAfter": "レッスン {number}「{title}」の後に公開されます。",
+    "lockedOnDate": "{date} に公開されます。",
+    "backToCourse": "コースに戻る"
   }
 }

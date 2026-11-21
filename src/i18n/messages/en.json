@@ -413,5 +413,37 @@
     "leaveBody": "Your latest changes aren't saved yet.",
     "stay": "Stay",
     "leave": "Leave"
+  },
+  "studentCourses": {
+    "title": "Courses",
+    "filters": "Course filters",
+    "active": "Active · {count}",
+    "archived": "Archived · {count}",
+    "lessonCount": "{count, plural, one {# lesson} other {# lessons}}",
+    "finishBy": "finish by {date}",
+    "empty": "Your admin hasn't assigned a course yet.",
+    "emptyActive": "No active courses right now.",
+    "back": "Back to courses",
+    "assignedBy": "Assigned by {name}",
+    "archivedBanner": "Archived · completed lessons stay available",
+    "noLessons": "No lessons are published yet.",
+    "noCompleted": "You didn't complete any lessons in this course.",
+    "minutes": "{count} min",
+    "unlocksAfter": "unlocks after {number}",
+    "opensOn": "opens {date}",
+    "locked": "Locked"
+  },
+  "lessonView": {
+    "back": "Back to course",
+    "position": "{course} · Lesson {number} of {total}",
+    "minutes": "{count} min",
+    "attachments": "Attachments",
+    "opensInNewTab": "opens in a new tab",
+    "assignment": "Assignment",
+    "requireSubmission": "Submit your answer before marking this lesson complete.",
+    "lockedTitle": "This lesson isn't open yet",
+    "lockedAfter": "It unlocks after lesson {number}, {title}.",
+    "lockedOnDate": "It opens on {date}.",
+    "backToCourse": "Back to course"
   }
 }

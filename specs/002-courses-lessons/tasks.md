@@ -251,13 +251,13 @@ description: "Tasks for 002 Courses and Lessons"
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T051 [P] [US4] Unit tests in src/features/courses/lock.test.ts for `computeLocks()` (research.md R1, data-model.md Lesson.unlockRule):
+- [X] T051 [P] [US4] Unit tests in src/features/courses/lock.test.ts for `computeLocks()` (research.md R1, data-model.md Lesson.unlockRule):
   - `none` is open; with `after_previous`, the first visible lesson is open;
   - previous not done → locked with the previous number and title; a locked chain stays locked;
   - Draft and deleted lessons (Lesson.status, Lesson.deletedAt) are skipped when finding the previous lesson;
   - `on_date` the day before, the same day and after, in Asia/Yangon versus UTC around midnight;
   - every lesson of an Archived course is open.
-- [ ] T052 [P] [US4] Playwright tests in tests/e2e/us4-student-reads.spec.ts (seeded via T022):
+- [X] T052 [P] [US4] Playwright tests in tests/e2e/us4-student-reads.spec.ts (seeded via T022):
   - /s/courses lists the assigned Active course;
   - 4.1: sections and Published lessons in order with minutes; Draft lessons are absent;
   - 4.2: an `after_previous` lesson shows "Locked · unlocks after {n}", and opening its URL shows the locked message; after `markDone` on the previous lesson it opens; an `on_date` lesson in the future shows "opens {date}";
@@ -267,21 +267,21 @@ description: "Tasks for 002 Courses and Lessons"
 
 ### Implementation for User Story 4
 
-- [ ] T053 [US4] `computeLocks()` in src/features/courses/lock.ts using `todayIn` (T015) and order.ts (T017); T051 passes
-- [ ] T054 [US4] Student repo in src/features/courses/student-repo.ts (`import 'server-only'`; `studentId` always in `where`):
+- [X] T053 [US4] `computeLocks()` in src/features/courses/lock.ts using `todayIn` (T015) and order.ts (T017); T051 passes
+- [X] T054 [US4] Student repo in src/features/courses/student-repo.ts (`import 'server-only'`; `studentId` always in `where`):
   - `listStudentCourses`: assigned, not deleted, data-model.md Course.status active / archived;
   - `getStudentCourse`: visible lessons per data-model.md Lesson.status and Lesson.deletedAt; Archived courses show completed lessons only; locks from `computeLocks` with the student's time zone and done set;
   - `getStudentLesson`: "n of m"; attachments limited to data-model.md LessonResource.kind file | link; a locked lesson throws `HttpError(403, 'lesson_locked')`.
-- [ ] T055 [US4] Route Handlers:
+- [X] T055 [US4] Route Handlers:
   - GET src/app/api/courses/route.ts (`requireRole('student')`);
   - GET src/app/api/courses/[courseId]/route.ts (`requireRole('student')` + `requireCourseReader`);
   - GET src/app/api/lessons/[lessonId]/route.ts (`requireRole('student')` + `requireLessonReader` + lock check);
   - `studentCoursesQuery`, `studentCourseQuery` and `studentLessonQuery` in src/features/courses/queries.ts;
   - add the reader path (`requireLessonReader` + not locked) to src/app/api/lesson-files/[resourceId]/[name]/route.ts, creating that route if T042 isn't done yet (contracts/route-handlers.md).
-- [ ] T056 [US4] Student Courses page src/app/s/(tabs)/courses/page.tsx (replace the placeholder) matching screenshots/05-Courses.png, partial per contracts/ui-routes.md: chips Active · n and Archived · n (when any), cards with icon, title and "{n} lessons · finish by {date}", empty state
-- [ ] T057 [US4] Student course page src/app/s/courses/[courseId]/page.tsx matching screenshots/09-Course.png (partial): back; title; "Assigned by {admin} · finish by {date}"; Archived banner; section headings. `StudentLessonRow` in src/features/courses/components/student-lesson-row.tsx: number circle, title, minutes, lock reason, Locked chip; locked rows `aria-disabled` and not links
-- [ ] T058 [US4] Lesson page src/app/s/lessons/[lessonId]/page.tsx matching screenshots/10-Lesson.png (partial): "{course} · Lesson {n} of {m}", title, minutes, `Markdown` body, attachments (name + size, or link), read-only assignment card, locked state with reason and back link
-- [ ] T059 [US4] Add the `studentCourses` and `lessonView` strings to src/i18n/messages/{en,my,ja}.json; T052 passes
+- [X] T056 [US4] Student Courses page src/app/s/(tabs)/courses/page.tsx (replace the placeholder) matching screenshots/05-Courses.png, partial per contracts/ui-routes.md: chips Active · n and Archived · n (when any), cards with icon, title and "{n} lessons · finish by {date}", empty state
+- [X] T057 [US4] Student course page src/app/s/courses/[courseId]/page.tsx matching screenshots/09-Course.png (partial): back; title; "Assigned by {admin} · finish by {date}"; Archived banner; section headings. `StudentLessonRow` in src/features/courses/components/student-lesson-row.tsx: number circle, title, minutes, lock reason, Locked chip; locked rows `aria-disabled` and not links
+- [X] T058 [US4] Lesson page src/app/s/lessons/[lessonId]/page.tsx matching screenshots/10-Lesson.png (partial): "{course} · Lesson {n} of {m}", title, minutes, `Markdown` body, attachments (name + size, or link), read-only assignment card, locked state with reason and back link
+- [X] T059 [US4] Add the `studentCourses` and `lessonView` strings to src/i18n/messages/{en,my,ja}.json; T052 passes
 
 **Checkpoint**: all P1 stories functional; feature MVP
 
