@@ -1,16 +1,16 @@
 <!--
-Sync Impact Report — 1.2.0 → 2.0.0 (2026-11-20)
-Why MAJOR: Principle I's security rule is redefined (server guards are now the primary access check; RLS is the second layer).
-Modified: I (security in two layers) · III (guard tests) · VI (next-intl, not i18next) · VII (Prisma 7 for table access,
-  Route Handlers for reads, Route Handlers instead of Edge Functions, Prisma types, prisma/migrations/0_init) · Quality Gates (guard check).
-Specs updated (2026-11-20):
-  - 001 FR-009, SC-002 · 002 SC-003: guards + RLS, guard + RLS tests.
-  - 005 FR-005, SC-002 · 006 FR-003: availability = busy_segments() + free gaps (no availability() function); `night` kind added.
-  - 006 FR-002: pg_cron → /api/cron/dispatch.
-  - docs/technical-spec.md §3, §4, §13, §17: busy_segments / next_free_at / status_now; lesson_status() removed.
-Resolved: 005 FR-006 status_now() — migration 20261120190000_status_now_states + supabase/tests/005_status_now.test.sql.
-Still open:
-  - 003: lesson status (done/overdue/due soon/upcoming/locked) has no SQL function; decide SQL vs app code in /speckit.plan.
+Sync Impact Report — 2.0.0 → 2.0.1 (2026-11-21)
+Why PATCH: wording fix in Principle VII that matches its intent (supabase-js was never meant only for uploads);
+  no principle added, removed or redefined.
+Modified: VII (supabase-js covers all Storage operations: uploads, signed URLs, copy, delete; never table queries).
+Added sections: none. Removed sections: none.
+Trigger: /speckit-analyze on 002 (finding C1): reading private lesson files needs signed URLs; copy and purge need
+  Storage copy/delete.
+Dependent docs: CLAUDE.md "Working rules" line on supabase-js aligned to the same wording (outside this file).
+  specs/002-courses-lessons/plan.md Constitution Check VII cites 2.0.1. Templates unchanged.
+Still open (carried from 2.0.0):
+  - 003: lesson status chips (done/overdue/due soon/upcoming) have no SQL function. 002 research R1 chose app code
+    for Open/Locked (src/features/courses/lock.ts); 003's /speckit-plan decides whether its chips reuse it.
 -->
 
 # StudyMate Constitution
@@ -61,7 +61,7 @@ StudyMate is one mobile-first PWA used by two roles: **Student** (studies, submi
 - Reads through TanStack Query `queryOptions` factories that call Route Handlers (`src/app/api/**`); Server Components may prefetch the same queries + `HydrationBoundary`. Writes through `useMutation` calling Server Actions that validate with the same Zod schema as the form. `proxy.ts` refreshes the Supabase session and guards `/s/*` and `/a/*`.
 - PWA: Serwist (`@serwist/next`) + `app/manifest.ts`; offline write queue in IndexedDB (Dexie).
 - Email: Resend (Supabase Auth SMTP + app emails). Hosting: Vercel.
-- Backend: Supabase only (Auth, Postgres, RLS, Storage, Realtime, pg_cron + pg_net). Server code reaches tables only through **Prisma 7** (`@prisma/adapter-pg`, queries in each feature's `repo.ts`). supabase-js (`@supabase/ssr`) is used only for Auth, Storage uploads and Realtime. Server logic, including the notification dispatcher, runs in Next.js Route Handlers and Server Actions; no custom server unless a spec proves it is needed.
+- Backend: Supabase only (Auth, Postgres, RLS, Storage, Realtime, pg_cron + pg_net). Server code reaches tables only through **Prisma 7** (`@prisma/adapter-pg`, queries in each feature's `repo.ts`). supabase-js (`@supabase/ssr`) is used only for Auth, Storage (uploads, signed URLs, copy, delete) and Realtime, never for table queries. Server logic, including the notification dispatcher, runs in Next.js Route Handlers and Server Actions; no custom server unless a spec proves it is needed.
 - `prisma/schema.prisma` and the generated Prisma Client are the single source for data types. Rules Prisma can't express (RLS, functions, triggers, CHECK and EXCLUDE constraints, partial indexes) live in the SQL migrations, and a Prisma-generated migration must never drop them.
 - `docs/technical-spec.md` and `docs/data-model.md` are the binding technical references; `prisma/migrations/0_init` is the starting schema.
 
@@ -77,4 +77,4 @@ StudyMate is one mobile-first PWA used by two roles: **Student** (studies, submi
 ## Governance
 This constitution overrides other conventions. Amendments are made in this file with a version bump and a one-line reason, and affected specs are re-checked with `/speckit.analyze`.
 
-**Version**: 2.0.0 | **Ratified**: 2026-11-20 | **Last Amended**: 2026-11-20 (Prisma 7 for all table access, server guards first and RLS second; next-intl; Route Handlers replace Edge Functions)
+**Version**: 2.0.1 | **Ratified**: 2026-11-20 | **Last Amended**: 2026-11-21 (VII: supabase-js covers all Storage operations, not only uploads)

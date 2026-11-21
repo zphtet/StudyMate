@@ -20,7 +20,7 @@ Next.js 16 App Router · TypeScript strict · Supabase (`@supabase/ssr` for auth
 - Schema changes: edit `prisma/schema.prisma`, generate a new migration with `prisma migrate diff`, add RLS policies to it, never drop SQL-only objects (see `docs/data-model.md` §4 and §7). `0_init` is the starting schema.
 - **Prisma bypasses RLS: every Route Handler and Server Action calls a guard from `src/server/auth/guards.ts` first**, and every Prisma `where` is scoped to the current user.
 - Reads: Prisma in `src/features/<feature>/repo.ts` → Route Handler `src/app/api/**/route.ts` → `queryOptions` in `queries.ts`. Writes: `useMutation` → Server Action in `actions.ts` with a Zod schema from `schemas.ts`.
-- supabase-js only for Auth, Storage uploads and Realtime.
+- supabase-js only for Auth, Storage (uploads, signed URLs, copy, delete) and Realtime — never for table queries.
 - UI text goes in `src/i18n/messages/{en,my,ja}.json` — never hard-coded.
 - Colours from theme tokens only; tap targets ≥ 44 px; test at 390×844.
 - Times: store UTC, show in the viewer's timezone; overnight shifts are one record.
