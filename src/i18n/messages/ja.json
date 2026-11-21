@@ -355,7 +355,9 @@
       "movedTo": "{title} は {group} の {total} 件中 {position} 番目にあります。",
       "droppedAt": "{title} を {group} の {total} 件中 {position} 番目に配置しました。",
       "cancelled": "移動をキャンセルしました。{title} は元の位置に戻りました。"
-    }
+    },
+    "assign": "割り当て",
+    "noStudents": "まだ生徒はいません"
   },
   "lessonEditor": {
     "newLesson": "新しいレッスン",
@@ -527,5 +529,39 @@
     "showAll": "すべて表示（{count}）",
     "empty": "今日が期限のレッスンはありません",
     "emptyBody": "今日が期限のレッスンと期限切れのレッスンがここに表示されます。"
+  },
+  "notices": {
+    "assignedTitle": "新しいコース: {course}",
+    "assignedBody": "{admin} さんがあなたに割り当てました。",
+    "assignedBodyDue": "{admin} さんがあなたに割り当てました。{due} までに修了してください。",
+    "deadlineTitle": "{item} の期限が {due} になりました",
+    "deadlineRemovedTitle": "{item} の期限がなくなりました",
+    "deadlineBody": "{admin} さんが変更しました。"
+  },
+  "reminders": {
+    "default": {
+      "daily": "今日のレッスンの時間です。",
+      "due_soon": "もうすぐ期限のレッスンがあります。",
+      "overdue": "期限切れのレッスンがあります。",
+      "streak_risk": "連続記録を続けるために今日も学習しましょう。"
+    }
+  },
+  "assign": {
+    "title": "コースを割り当て",
+    "subtitle": "{course} · 連携している生徒を選択",
+    "loading": "生徒を読み込み中…",
+    "count": "生徒 · {total} 人中 {selected} 人を選択",
+    "dueFor": "{name} さんの期限",
+    "unlockInOrder": "レッスンを順番に公開",
+    "unlockHint": "このコースのすべての生徒に適用されます",
+    "defaultReminders": "標準のリマインダーを追加",
+    "notifyNow": "今すぐ生徒に通知",
+    "submit": "{count, plural, =0 {保存} other {# 人の生徒に割り当て}}",
+    "confirmTitle": "{names} さんの割り当てを解除しますか？",
+    "confirmBody": "進捗は保持されます。",
+    "confirmAction": "解除",
+    "saved": "割り当てを保存しました",
+    "empty": "連携している生徒はまだいません",
+    "emptyLink": "生徒を招待"
   }
 }

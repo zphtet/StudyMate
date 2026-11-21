@@ -4,10 +4,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Archive, ChevronLeft, EyeOff, Pencil } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { StatusChip } from '@/components/shared/status-chip'
 import { Button } from '@/components/ui/button'
+import { AssignSheet } from '@/features/assignments/components/assign-sheet'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { setCourseStatus } from '../actions'
@@ -16,7 +18,8 @@ import type { AdminCourseDetail, CourseStatus } from '../types'
 import { CourseIcon } from './course-icon'
 
 // Top of the admin course page (screen 18-AdminCourse): back, Edit details, icon, title, status,
-// counts, and the Draft / Archived banners (US1 scenario 3; US3 scenario 4).
+// counts, the students card with Assign (spec 003 US1; Active courses only) and the Draft /
+// Archived banners (US1 scenario 3; US3 scenario 4).
 
 const TONE = { draft: 'muted', active: 'success', archived: 'muted' } as const
 
@@ -26,6 +29,8 @@ export function AdminCourseHeader({ detail }: { detail: AdminCourseDetail }) {
   const errorMessage = useErrorMessage()
   const queryClient = useQueryClient()
   const { course, students } = detail
+  const [isAssigning, setAssigning] = useState(false)
+  const canAssign = course.status === 'active'
 
   const status = useMutation({
     mutationFn: async (next: CourseStatus) =>
@@ -73,9 +78,9 @@ export function AdminCourseHeader({ detail }: { detail: AdminCourseDetail }) {
         </div>
       </div>
 
-      {students.length > 0 && (
+      {(students.length > 0 || canAssign) && (
         <div className="flex items-center gap-3 rounded-2xl border bg-card p-4">
-          <div className="flex -space-x-2">
+          <div className="flex -space-x-2 empty:hidden">
             {students.slice(0, 3).map((s) => (
               <InitialAvatar
                 key={s.id}
@@ -86,11 +91,28 @@ export function AdminCourseHeader({ detail }: { detail: AdminCourseDetail }) {
             ))}
           </div>
           <p className="min-w-0 flex-1 truncate text-muted-foreground">
-            {students
-              .map((s) => (s.percent === null ? s.displayName : `${s.displayName} ${s.percent}%`))
-              .join(' · ')}
+            {students.length === 0
+              ? t('noStudents')
+              : students
+                  .map((s) =>
+                    s.percent === null ? s.displayName : `${s.displayName} ${s.percent}%`,
+                  )
+                  .join(' · ')}
           </p>
+          {canAssign && (
+            <Button
+              variant="secondary"
+              size="touch"
+              className="bg-accent text-primary hover:bg-accent/80"
+              onClick={() => setAssigning(true)}
+            >
+              {t('assign')}
+            </Button>
+          )}
         </div>
+      )}
+      {canAssign && (
+        <AssignSheet courseId={course.id} open={isAssigning} onOpenChange={setAssigning} />
       )}
 
       {course.status === 'draft' && (

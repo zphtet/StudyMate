@@ -84,14 +84,14 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T023 [P] [US1] Repo tests against the dev database in src/features/assignments/repo.test.ts (assign part):
+- [X] T023 [P] [US1] Repo tests against the dev database in src/features/assignments/repo.test.ts (assign part):
   - first save creates one active row per ticked student with `assigned_by` = admin and the given `due_at` (data-model.md CourseAssignment.assignedBy, CourseAssignment.dueAt); a second save updates instead of duplicating;
   - unticking sets `removed` and keeps that student's `lesson_progress`, `submissions` and `lesson_deadlines`; ticking again restores `active` with the new `due_at` (data-model.md CourseAssignment.status; spec FR-007);
   - Draft, Archived or deleted course → `course_not_active`;
   - `addDefaultReminders` inserts the 4 rules of data-model.md › Default reminder set once per student, also when two saves run concurrently;
   - `notifyNow` records an `assigned` notice only for new or reassigned students; a changed `dueAt` for an already assigned student records one `deadline` notice; an unchanged one records none; texts are in the student's locale;
   - `unlockInOrder` change rewrites lesson rules exactly like 002's `updateCourse`.
-- [ ] T024 [P] [US1] Playwright tests in tests/e2e/us1-assign.spec.ts (fixtures from T021):
+- [X] T024 [P] [US1] Playwright tests in tests/e2e/us1-assign.spec.ts (fixtures from T021):
   - scenario 1–3: Assign on an Active course lists both linked students with their cities; Due pre-fills from the course target date at 23:59 in each student's zone (spec clarification); assign → each student's Courses shows their own deadline;
   - scenario 2: admin in Yangon, student in Tokyo → `TimeBoth` shows both clocks; a time inside a seeded shift shows "{name} is on shift then" and "Move to …" fills the suggestion;
   - scenario 4: reopening the sheet shows the student ticked with their current deadline;
@@ -103,16 +103,16 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ### Implementation for User Story 1
 
-- [ ] T025 [US1] Extract `applyUnlockInOrder(tx, courseId, on)` from `updateCourse` in src/features/courses/repo.ts and call it from both places (research.md R5); 002's existing tests still pass
-- [ ] T026 [US1] Notice texts in src/features/assignments/notices.ts (`import 'server-only'`): `assignedNotice` and `deadlineNotice` render title and body with next-intl `getTranslations({ locale: student.locale, namespace: 'notices' })` and the due time formatted in the student's zone, then call `recordNotice` (data-model.md › Notifications recorded by 003)
-- [ ] T027 [US1] Assignment repo in src/features/assignments/repo.ts (`import 'server-only'`; `ownerId: adminId` in every course `where`):
+- [X] T025 [US1] Extract `applyUnlockInOrder(tx, courseId, on)` from `updateCourse` in src/features/courses/repo.ts and call it from both places (research.md R5); 002's existing tests still pass
+- [X] T026 [US1] Notice texts in src/features/assignments/notices.ts (`import 'server-only'`): `assignedNotice` and `deadlineNotice` render title and body with next-intl `getTranslations({ locale: student.locale, namespace: 'notices' })` and the due time formatted in the student's zone, then call `recordNotice` (data-model.md › Notifications recorded by 003)
+- [X] T027 [US1] Assignment repo in src/features/assignments/repo.ts (`import 'server-only'`; `ownerId: adminId` in every course `where`):
   - `getAssignSheet(adminId, courseId)` per contracts/route-handlers.md (actively linked students ordered by name, `assigned`, current data-model.md CourseAssignment.dueAt);
   - `saveAssignments(admin, input)` in one `prisma.$transaction` per research.md R5: upsert on (CourseAssignment.courseId, CourseAssignment.studentId) with CourseAssignment.assignedBy = admin and CourseAssignment.status `active`; previously active, now unticked rows → CourseAssignment.status `removed`; `applyUnlockInOrder` when changed; default rules with `createMany({ skipDuplicates: true })` (data-model.md › Default reminder set); notices from T026 after the transaction commits; returns counts; T023 passes
-- [ ] T028 [US1] Server Action `saveAssignments` in src/features/assignments/actions.ts (`action()` + `saveAssignmentsSchema`; guards `requireCourseOwner` then `requireAdminOfAll`; errors and invalidation per contracts/server-actions.md)
-- [ ] T029 [US1] Route Handler GET src/app/api/admin/courses/[courseId]/assign/route.ts (`requireCourseOwner`) and `assignSheetQuery(courseId)` in src/features/assignments/queries.ts
-- [ ] T030 [P] [US1] `AssignStudentRow` in src/features/assignments/components/assign-student-row.tsx (checkbox, initial avatar, name, `cityOf` city, `DueField` when ticked) and `AssignSheet` in src/features/assignments/components/assign-sheet.tsx per contracts/ui-routes.md (bottom `Sheet`, side sheet ≥ 1024 px; "Students · N of M selected"; three switches with defaults and the unlock hint; "Assign to N students"; `AlertDialog` before unassigning; pre-fill from `targetDate`; `useMutation` → `saveAssignments`)
-- [ ] T031 [US1] Students card with avatars, names and an **Assign** button (Active courses only) opening `AssignSheet`, in src/features/courses/components/admin-course-view.tsx, matching the students card of screenshots/18-AdminCourse.png (percentages come with 004)
-- [ ] T032 [US1] Add the `assign`, `notices` and `reminders.default` strings to src/i18n/messages/{en,my,ja}.json; T024 passes
+- [X] T028 [US1] Server Action `saveAssignments` in src/features/assignments/actions.ts (`action()` + `saveAssignmentsSchema`; guards `requireCourseOwner` then `requireAdminOfAll`; errors and invalidation per contracts/server-actions.md)
+- [X] T029 [US1] Route Handler GET src/app/api/admin/courses/[courseId]/assign/route.ts (`requireCourseOwner`) and `assignSheetQuery(courseId)` in src/features/assignments/queries.ts
+- [X] T030 [P] [US1] `AssignStudentRow` in src/features/assignments/components/assign-student-row.tsx (checkbox, initial avatar, name, `cityOf` city, `DueField` when ticked) and `AssignSheet` in src/features/assignments/components/assign-sheet.tsx per contracts/ui-routes.md (bottom `Sheet`, side sheet ≥ 1024 px; "Students · N of M selected"; three switches with defaults and the unlock hint; "Assign to N students"; `AlertDialog` before unassigning; pre-fill from `targetDate`; `useMutation` → `saveAssignments`)
+- [X] T031 [US1] Students card with avatars, names and an **Assign** button (Active courses only) opening `AssignSheet`, in src/features/courses/components/admin-course-view.tsx, matching the students card of screenshots/18-AdminCourse.png (percentages come with 004)
+- [X] T032 [US1] Add the `assign`, `notices` and `reminders.default` strings to src/i18n/messages/{en,my,ja}.json; T024 passes
 
 **Checkpoint**: US1 independently functional (assign, update, unassign, reassign, reminders and notices stored)
 

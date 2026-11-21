@@ -355,7 +355,9 @@
       "movedTo": "{title} is now at position {position} of {total} in {group}.",
       "droppedAt": "{title} was dropped at position {position} of {total} in {group}.",
       "cancelled": "Moving cancelled. {title} is back where it was."
-    }
+    },
+    "assign": "Assign",
+    "noStudents": "No students yet"
   },
   "lessonEditor": {
     "newLesson": "New lesson",
@@ -527,5 +529,39 @@
     "showAll": "Show all ({count})",
     "empty": "Nothing due today",
     "emptyBody": "Lessons due today and anything overdue will show up here."
+  },
+  "notices": {
+    "assignedTitle": "New course: {course}",
+    "assignedBody": "{admin} assigned it to you.",
+    "assignedBodyDue": "{admin} assigned it to you. Finish by {due}.",
+    "deadlineTitle": "{item} is now due {due}",
+    "deadlineRemovedTitle": "{item} no longer has a deadline",
+    "deadlineBody": "Changed by {admin}."
+  },
+  "reminders": {
+    "default": {
+      "daily": "Time for today's lesson.",
+      "due_soon": "A lesson is due soon.",
+      "overdue": "You have an overdue lesson.",
+      "streak_risk": "Study today to keep your streak going."
+    }
+  },
+  "assign": {
+    "title": "Assign course",
+    "subtitle": "{course} · pick any linked students",
+    "loading": "Loading students…",
+    "count": "Students · {selected} of {total} selected",
+    "dueFor": "Due for {name}",
+    "unlockInOrder": "Unlock lessons in order",
+    "unlockHint": "Applies to every student of this course",
+    "defaultReminders": "Add default reminders",
+    "notifyNow": "Notify students now",
+    "submit": "{count, plural, =0 {Save} one {Assign to # student} other {Assign to # students}}",
+    "confirmTitle": "Unassign {names}?",
+    "confirmBody": "Their progress is kept.",
+    "confirmAction": "Unassign",
+    "saved": "Assignments saved",
+    "empty": "No linked students yet",
+    "emptyLink": "Invite students"
   }
 }

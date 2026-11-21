@@ -63,7 +63,7 @@ export function DueField({
             className={cn(inputClass, 'h-11')}
           />
         </div>
-        <div className="flex w-32 flex-col gap-1">
+        <div className="flex w-36 flex-col gap-1">
           <Label htmlFor={`${id}-time`} className="text-sm text-muted-foreground">
             {t('dueTime')}
           </Label>

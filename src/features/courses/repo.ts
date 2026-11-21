@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Prisma } from '@/generated/prisma/client'
 import { fail } from '@/lib/action'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
@@ -170,13 +171,24 @@ export async function updateCourse(adminId: string, courseId: string, fields: Co
     })
 
     if (current.unlockInOrder !== fields.unlockInOrder) {
-      const rule = JSON.stringify({ type: fields.unlockInOrder ? 'after_previous' : 'none' })
-      await tx.$executeRaw`
-        update lessons set unlock_rule = ${rule}::jsonb, updated_at = now()
-        where course_id = ${courseId}::uuid and unlock_rule ->> 'type' in ('none', 'after_previous')`
+      await applyUnlockInOrder(tx, courseId, fields.unlockInOrder)
     }
     return course
   })
+}
+
+type Tx = Prisma.TransactionClient
+
+/**
+ * The lesson side of a Course.unlockInOrder change: every lesson whose rule is `none` or
+ * `after_previous` gets the new default; `on_date` stays. Shared by updateCourse and spec 003's
+ * Assign sheet (research.md R5). The caller updates the course row in the same transaction.
+ */
+export async function applyUnlockInOrder(tx: Tx, courseId: string, on: boolean) {
+  const rule = JSON.stringify({ type: on ? 'after_previous' : 'none' })
+  await tx.$executeRaw`
+    update lessons set unlock_rule = ${rule}::jsonb, updated_at = now()
+    where course_id = ${courseId}::uuid and unlock_rule ->> 'type' in ('none', 'after_previous')`
 }
 
 const TRANSITIONS: Record<CourseStatus, CourseStatus[]> = {

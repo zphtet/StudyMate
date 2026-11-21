@@ -42,3 +42,17 @@ export type TodayItem = {
 
 /** GET /api/today: overdue oldest first, due today earliest first, all items. */
 export type Today = { overdue: TodayItem[]; dueToday: TodayItem[] }
+
+/** GET /api/admin/courses/[courseId]/assign: every actively linked student, by name. */
+export type AssignSheet = {
+  course: {
+    id: string
+    title: string
+    status: 'draft' | 'active' | 'archived'
+    /** YYYY-MM-DD; only pre-fills Due for unassigned students (23:59 in their zone). */
+    targetDate: string | null
+    unlockInOrder: boolean
+  }
+  /** `dueAt` = the current course deadline of an active assignment, else null. */
+  students: (StudentRef & { assigned: boolean; dueAt: string | null })[]
+}

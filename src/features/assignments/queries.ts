@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Clash, Today } from './types'
+import type { AssignSheet, Clash, Today } from './types'
 
 // TanStack Query options for the 003 Route Handlers (contracts/route-handlers.md). Invalidation
 // after writes follows contracts/server-actions.md › Query invalidation.
@@ -37,3 +37,11 @@ export const todayQuery = queryOptions({
   queryKey: todayKeys.all,
   queryFn: () => api<Today>('/api/today'),
 })
+
+/** The Assign sheet; always fresh when the sheet opens. */
+export const assignSheetQuery = (courseId: string) =>
+  queryOptions({
+    queryKey: assignKeys.sheet(courseId),
+    queryFn: () => api<AssignSheet>(`/api/admin/courses/${courseId}/assign`),
+    staleTime: 0,
+  })
