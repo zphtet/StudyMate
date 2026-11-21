@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 import { EmptyState } from '@/components/shared/empty-state'
+import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { cn } from '@/lib/utils'
 import { studentCoursesQuery } from '../queries'
 import type { StudentCourseCard } from '../types'
@@ -13,7 +14,8 @@ import { CourseIcon } from './course-icon'
 import { useCalendarDate } from './use-calendar-date'
 
 // Student Courses tab (screen 05-Courses, partial per contracts/ui-routes.md): chips Active · n and
-// Archived · n (only when there are any), and one card per assigned course. The weekly study card,
+// Archived · n (only when there are any), and one card per assigned course. Active cards show the
+// student's course deadline and a red overdue count (spec 003 US3 scenario 5). The weekly study card,
 // progress bars, Completed and Mine come with 004 and the personal-courses feature.
 
 export function StudentCourseList() {
@@ -53,7 +55,7 @@ export function StudentCourseList() {
         <ul className="flex flex-col gap-3">
           {shown.map((course) => (
             <li key={course.id}>
-              <CourseLink course={course} />
+              <CourseLink course={course} archived={tab === 'archived'} />
             </li>
           ))}
         </ul>
@@ -64,9 +66,10 @@ export function StudentCourseList() {
   )
 }
 
-function CourseLink({ course }: { course: StudentCourseCard }) {
+function CourseLink({ course, archived }: { course: StudentCourseCard; archived: boolean }) {
   const t = useTranslations('studentCourses')
   const calendarDate = useCalendarDate()
+  const f = useInstantFormat()
   return (
     <Link
       href={`/s/courses/${course.id}`}
@@ -77,7 +80,19 @@ function CourseLink({ course }: { course: StudentCourseCard }) {
         <h2 className="text-lg leading-snug font-semibold">{course.title}</h2>
         <p className="text-muted-foreground">
           {t('lessonCount', { count: course.lessonCount })}
-          {course.targetDate && ` · ${t('finishBy', { date: calendarDate(course.targetDate) })}`}
+          {archived
+            ? course.targetDate && ` · ${t('finishBy', { date: calendarDate(course.targetDate) })}`
+            : ' · '}
+          {!archived && (
+            <span className="whitespace-nowrap">
+              {course.dueAt ? t('due', { date: f.date(course.dueAt) }) : t('noDeadline')}
+            </span>
+          )}
+          {course.overdueCount > 0 && (
+            <span className="font-medium whitespace-nowrap text-destructive">
+              {` · ${t('overdueCount', { count: course.overdueCount })}`}
+            </span>
+          )}
         </p>
       </div>
     </Link>

@@ -6,18 +6,19 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useId } from 'react'
 import { EmptyState } from '@/components/shared/empty-state'
+import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { studentCourseQuery } from '../queries'
 import type { StudentCourse } from '../types'
 import { StudentLessonRow } from './student-lesson-row'
-import { useCalendarDate } from './use-calendar-date'
 
 // Student course screen (screen 09-Course, partial per contracts/ui-routes.md and FR-010): title,
-// "Assigned by …", the Archived banner, then sections with lessons in course order, Open or Locked.
-// The progress card and due / overdue / done chips come with 003 and 004.
+// "Assigned by … · finish by {the student's course deadline}" (spec 003 US3 scenario 4), the Archived
+// banner, then sections with lessons in course order and their deadline chips (003). The progress
+// card comes with 004.
 
 export function StudentCourseView({ courseId }: { courseId: string }) {
   const t = useTranslations('studentCourses')
-  const calendarDate = useCalendarDate()
+  const f = useInstantFormat()
   const { data } = useSuspenseQuery(studentCourseQuery(courseId))
   const { course } = data
   const archived = course.status === 'archived'
@@ -36,7 +37,7 @@ export function StudentCourseView({ courseId }: { courseId: string }) {
           <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight">{course.title}</h1>
           <p className="mt-1 text-muted-foreground">
             {t('assignedBy', { name: course.admin.displayName })}
-            {course.targetDate && ` · ${t('finishBy', { date: calendarDate(course.targetDate) })}`}
+            {course.dueAt && ` · ${t('finishBy', { date: f.fullDate(course.dueAt) })}`}
           </p>
         </div>
       </header>

@@ -1,3 +1,4 @@
+import type { Due } from '@/features/assignments/types'
 import type { CourseColor, CourseStatus, LessonStatus, UnlockRule } from './schemas'
 
 // Response shapes of the 002 Route Handlers (specs/002-courses-lessons/contracts/route-handlers.md).
@@ -117,6 +118,10 @@ export type StudentCourseCard = {
   targetDate: string | null
   lessonCount: number
   admin: { displayName: string }
+  /** Spec 003: the student's own course deadline (null = none, and always for Archived courses). */
+  dueAt: string | null
+  /** Spec 003: counting lessons past their effective deadline and not done (0 when Archived). */
+  overdueCount: number
 }
 export type StudentCourseList = { active: StudentCourseCard[]; archived: StudentCourseCard[] }
 
@@ -131,6 +136,10 @@ export type StudentLessonRow = {
   estMinutes: number
   state: 'open' | 'locked'
   lock: LockInfo | null
+  /** Spec 003 (completion is written by 004). */
+  done: boolean
+  /** Spec 003: null = no effective deadline (the row falls back to Open/Locked); null when Archived. */
+  due: Due | null
 }
 
 export type StudentCourse = {
@@ -143,6 +152,8 @@ export type StudentCourse = {
     targetDate: string | null
     status: 'active' | 'archived'
     admin: { displayName: string }
+    /** Spec 003: the student's own course deadline ("finish by"); null when none or Archived. */
+    dueAt: string | null
   }
   lessonCount: number
   groups: { section: { id: string; title: string } | null; lessons: StudentLessonRow[] }[]

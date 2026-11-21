@@ -115,7 +115,6 @@
     "qrBody": "学生はスマホのカメラでこれをスキャンすると、招待リンクを開けます。"
   },
   "empty": {
-    "today": "管理者がコースを割り当てると、ここにレッスンと期限が表示されます。",
     "courses": "管理者が割り当てたコースがここに表示されます。",
     "progress": "連続学習日数と進捗がここに表示されます。",
     "shifts": "仕事のシフトを追加すると、リマインダーがシフトに合わせて届きます。",
@@ -439,7 +438,13 @@
     "minutes": "{count} 分",
     "unlocksAfter": "{number} の後に公開",
     "opensOn": "{date} に公開",
-    "locked": "ロック中"
+    "locked": "ロック中",
+    "due": "{date} 期限",
+    "noDeadline": "期限なし",
+    "overdueCount": "期限切れ {count} 件",
+    "wasDue": "期限は {date}",
+    "tonight": "今夜 {time}",
+    "todayAt": "今日 {time}"
   },
   "lessonView": {
     "back": "コースに戻る",
@@ -510,6 +515,17 @@
     "moveTo": "{time} に移動",
     "timeBoth": "{primary}（{primaryCity}）· {secondary}（{secondaryCity}）",
     "timeOne": "{primary}（{primaryCity}）",
-    "timeCompact": "{primary} · あなたの時間 {secondary}"
+    "timeCompact": "{primary} · あなたの時間 {secondary}",
+    "locked": "ロック中"
+  },
+  "today": {
+    "dateLine": "<date></date> · {city}",
+    "greeting": "{period, select, morning {おはようございます、{name} さん} afternoon {こんにちは、{name} さん} other {こんばんは、{name} さん}}",
+    "overdue": "期限切れ · {count}",
+    "dueToday": "今日が期限",
+    "lessonMeta": "{course} · <m>{minutes} 分</m>",
+    "showAll": "すべて表示（{count}）",
+    "empty": "今日が期限のレッスンはありません",
+    "emptyBody": "今日が期限のレッスンと期限切れのレッスンがここに表示されます。"
   }
 }

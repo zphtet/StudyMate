@@ -21,6 +21,8 @@ export function useInstantFormat() {
     day: formatWith(DAY),
     /** "24 Nov" */
     date: formatWith({ day: 'numeric', month: 'short' }),
+    /** "31 Dec 2026" */
+    fullDate: formatWith({ day: 'numeric', month: 'short', year: 'numeric' }),
     /** "Wed 18 Nov, 21:00" */
     dayTime: formatWith({ ...DAY, ...TIME }),
     /** "Wed 21:00" */

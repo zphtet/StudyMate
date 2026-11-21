@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Clash } from './types'
+import type { Clash, Today } from './types'
 
 // TanStack Query options for the 003 Route Handlers (contracts/route-handlers.md). Invalidation
 // after writes follows contracts/server-actions.md › Query invalidation.
@@ -31,3 +31,9 @@ export const clashQuery = (studentId: string, at: string, minutes: number) =>
         `/api/admin/students/${studentId}/clash?${new URLSearchParams({ at, minutes: String(minutes) })}`,
       ),
   })
+
+/** The student's Today lists; refetched on mount and focus like 002's student queries. */
+export const todayQuery = queryOptions({
+  queryKey: todayKeys.all,
+  queryFn: () => api<Today>('/api/today'),
+})

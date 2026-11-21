@@ -164,12 +164,12 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T044 [P] [US3] Repo tests against the dev database in src/features/assignments/student-repo.test.ts:
+- [X] T044 [P] [US3] Repo tests against the dev database in src/features/assignments/student-repo.test.ts:
   - Today groups by the student's local date: a deadline at 23:30 Yangon is "due today" for the Yangon student and the same instant is tomorrow for a Tokyo student;
   - overdue oldest first, due today earliest first;
   - only counting lessons (spec FR-006): Draft, soft-deleted, Archived-course and `removed`-assignment lessons are excluded; a soft-deleted lesson's deadline returns after restore (data-model.md › Lesson deadline lifecycle);
   - Courses: `dueAt` and `overdueCount` per active course; course screen: per-lesson `done` and `due`, Archived → `due` null.
-- [ ] T045 [P] [US3] Playwright tests in tests/e2e/us3-student-due.spec.ts (Tokyo and Yangon students, seeded deadlines and `markDone`):
+- [X] T045 [P] [US3] Playwright tests in tests/e2e/us3-student-due.spec.ts (Tokyo and Yangon students, seeded deadlines and `markDone`):
   - scenario 1: Today shows "Overdue · N" then "Due today" with the right chips; 7 overdue items show 5 + "Show all (7)";
   - scenarios 2–3: chips and colours on the course screen ("2 days late", "Overdue", "Due today · 21:00 tonight", "Due tomorrow", "Due 24 Nov", "Done", "Locked");
   - scenario 4: header "Assigned by {admin} · finish by {date}", and no "finish by" without a course deadline;
@@ -178,13 +178,13 @@ description: "Tasks for 003 Assigning Courses and Deadlines"
 
 ### Implementation for User Story 3
 
-- [ ] T046 [US3] Student deadline repo in src/features/assignments/student-repo.ts (`import 'server-only'`; `studentId: me.id` in every `where`): `loadDeadlineFacts(studentId)` (active assignments' data-model.md CourseAssignment.dueAt, LessonDeadline.dueAt, done set, in two or three queries), `getToday(student, now)` per contracts/route-handlers.md using `effectiveDue`, `deadlineStatus` and 002 locks; T044 Today cases pass
-- [ ] T047 [US3] Extend `listStudentCourses` and `getStudentCourse` in src/features/courses/student-repo.ts and their types in src/features/courses/types.ts with `dueAt`, `overdueCount`, `course.dueAt` and per-lesson `done` and `due` from `loadDeadlineFacts` (research.md R11; additive, 002 tests still pass); T044 passes
-- [ ] T048 [US3] Route Handler GET src/app/api/today/route.ts (`requireRole('student')`) and `todayQuery` in src/features/assignments/queries.ts
-- [ ] T049 [P] [US3] `DueChip` in src/features/assignments/components/due-chip.tsx: default variant with label and tone per contracts/ui-routes.md › Course screen table (dates and times in the viewer's zone, "Due today"/"Due tomorrow" by local date); `variant="today"` with "N days late"/"Overdue" (red) and "by {time}" (amber) per contracts/ui-routes.md › Today
-- [ ] T050 [US3] Student course UI updates per contracts/ui-routes.md: chip, detail line and number-circle colour in src/features/courses/components/student-lesson-row.tsx; "· finish by {date}" in the header of src/features/courses/components/student-course-view.tsx; "due {date}" / "no deadline" and red "· N overdue" in src/features/courses/components/student-course-list.tsx, matching screenshots/09-Course.png and screenshots/05-Courses.png (partial)
-- [ ] T051 [US3] `TodayView` in src/features/assignments/components/today-view.tsx (date line via the existing `TodayLabel`, greeting, "Overdue · N" and "Due today" sections with `DueChip` `variant="today"`, 5 rows then "Show all (N)", rows link to `/s/lessons/[id]`, empty state) and the Today page src/app/s/(tabs)/today/page.tsx (replace the placeholder; prefetch `todayQuery`), matching screenshots/04-Today.png (partial)
-- [ ] T052 [US3] Add the `today` strings and the course-row detail lines to src/i18n/messages/{en,my,ja}.json; T045 passes
+- [X] T046 [US3] Student deadline repo in src/features/assignments/student-repo.ts (`import 'server-only'`; `studentId: me.id` in every `where`): `loadDeadlineFacts(studentId)` (active assignments' data-model.md CourseAssignment.dueAt, LessonDeadline.dueAt, done set, in two or three queries), `getToday(student, now)` per contracts/route-handlers.md using `effectiveDue`, `deadlineStatus` and 002 locks; T044 Today cases pass
+- [X] T047 [US3] Extend `listStudentCourses` and `getStudentCourse` in src/features/courses/student-repo.ts and their types in src/features/courses/types.ts with `dueAt`, `overdueCount`, `course.dueAt` and per-lesson `done` and `due` from `loadDeadlineFacts` (research.md R11; additive, 002 tests still pass); T044 passes
+- [X] T048 [US3] Route Handler GET src/app/api/today/route.ts (`requireRole('student')`) and `todayQuery` in src/features/assignments/queries.ts
+- [X] T049 [P] [US3] `DueChip` in src/features/assignments/components/due-chip.tsx: default variant with label and tone per contracts/ui-routes.md › Course screen table (dates and times in the viewer's zone, "Due today"/"Due tomorrow" by local date); `variant="today"` with "N days late"/"Overdue" (red) and "by {time}" (amber) per contracts/ui-routes.md › Today
+- [X] T050 [US3] Student course UI updates per contracts/ui-routes.md: chip, detail line and number-circle colour in src/features/courses/components/student-lesson-row.tsx; "· finish by {date}" in the header of src/features/courses/components/student-course-view.tsx; "due {date}" / "no deadline" and red "· N overdue" in src/features/courses/components/student-course-list.tsx, matching screenshots/09-Course.png and screenshots/05-Courses.png (partial)
+- [X] T051 [US3] `TodayView` in src/features/assignments/components/today-view.tsx (date line via the existing `TodayLabel`, greeting, "Overdue · N" and "Due today" sections with `DueChip` `variant="today"`, 5 rows then "Show all (N)", rows link to `/s/lessons/[id]`, empty state) and the Today page src/app/s/(tabs)/today/page.tsx (replace the placeholder; prefetch `todayQuery`), matching screenshots/04-Today.png (partial)
+- [X] T052 [US3] Add the `today` strings and the course-row detail lines to src/i18n/messages/{en,my,ja}.json; T045 passes
 
 **Checkpoint**: US3 independently functional (students see due and late work everywhere)
 

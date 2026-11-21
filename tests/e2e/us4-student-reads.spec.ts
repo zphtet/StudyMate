@@ -67,7 +67,8 @@ test('the Courses tab lists assigned Active and Archived courses only', async ({
   )
   const card = page.getByRole('link', { name: /JLPT N4 Grammar/ })
   await expect(card).toBeVisible()
-  await expect(card).toContainText(/3 lessons · finish by/)
+  // Spec 003 US3 scenario 5: the card shows the student's own course deadline, not the target date.
+  await expect(card).toContainText('3 lessons · no deadline')
   await expect(page.getByText('Not ready')).toHaveCount(0)
   await expect(page.getByText('Someone else’s')).toHaveCount(0)
   await expectNoSeriousA11yViolations(page)
@@ -106,7 +107,8 @@ test('scenario 1: sections and Published lessons in order with minutes; no Draft
   await page.goto(`/s/courses/${courseId}`)
 
   await expect(page.getByRole('heading', { name: 'Grammar', level: 1 })).toBeVisible()
-  await expect(page.getByText(/Assigned by Zin · finish by/)).toBeVisible()
+  // Spec 003 US3 scenario 4: "finish by" only with a course deadline (the target date isn't one).
+  await expect(page.getByText('Assigned by Zin', { exact: true })).toBeVisible()
   expect(await shownOrder(page)).toEqual([
     { section: '', lessons: ['Intro'] },
     { section: 'Week 1', lessons: ['Particles'] },

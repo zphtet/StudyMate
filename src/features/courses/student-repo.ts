@@ -1,4 +1,6 @@
 import 'server-only'
+import { deadlineStatus } from '@/features/assignments/status'
+import { loadDeadlineFacts } from '@/features/assignments/student-repo'
 import { HttpError, NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
 import { todayIn } from '@/lib/time'
@@ -12,6 +14,8 @@ import type { LockInfo, StudentCourse, StudentCourseCard, StudentLesson } from '
 // Callers MUST have run a guard. Every query is scoped to the student's own active assignment, so a
 // student sees Active and Archived courses assigned to them, and only Published, non-deleted
 // lessons; Archived courses keep only the lessons that student completed (can_read_lesson).
+// Spec 003 (research R11) adds the student's deadlines, overdue counts and due statuses, from
+// assignments/student-repo.ts.
 
 type Student = { id: string; timezone: string }
 
@@ -84,10 +88,11 @@ function studentView(course: Structure, student: Student, now: Date) {
     today: today(student.timezone, now),
     archived,
   })
-  return { groups, ordered, locks }
+  return { groups, ordered, locks, done }
 }
 
-export async function listStudentCourses(studentId: string) {
+export async function listStudentCourses(studentId: string, now = new Date()) {
+  const facts = await loadDeadlineFacts(studentId)
   const courses = await prisma.course.findMany({
     where: readableCourse(studentId),
     orderBy: [{ targetDate: { sort: 'asc', nulls: 'last' } }, { title: 'asc' }],
@@ -121,6 +126,11 @@ export async function listStudentCourses(studentId: string) {
         ? c.lessons.filter((l) => l.progress.length > 0).length
         : c.lessons.length,
     admin: { displayName: c.owner.displayName },
+    dueAt: facts.courseDue.get(c.id)?.toISOString() ?? null,
+    overdueCount: c.lessons.filter((l) => {
+      const due = facts.dueOf({ id: l.id, courseId: c.id })
+      return l.progress.length === 0 && due !== null && due < now
+    }).length,
   })
   return {
     active: courses.filter((c) => c.status === 'active').map(card),
@@ -133,23 +143,26 @@ export async function getStudentCourse(
   courseId: string,
   now = new Date(),
 ): Promise<StudentCourse> {
-  const course = await prisma.course.findFirst({
-    where: { id: courseId, ...readableCourse(student.id) },
-    select: {
-      id: true,
-      title: true,
-      icon: true,
-      color: true,
-      description: true,
-      targetDate: true,
-      status: true,
-      owner: { select: { displayName: true } },
-      ...structure(student.id),
-    },
-  })
+  const [course, facts] = await Promise.all([
+    prisma.course.findFirst({
+      where: { id: courseId, ...readableCourse(student.id) },
+      select: {
+        id: true,
+        title: true,
+        icon: true,
+        color: true,
+        description: true,
+        targetDate: true,
+        status: true,
+        owner: { select: { displayName: true } },
+        ...structure(student.id),
+      },
+    }),
+    loadDeadlineFacts(student.id, courseId),
+  ])
   if (!course) throw new NotFound('course_not_found')
 
-  const { groups, ordered, locks } = studentView(course, student, now)
+  const { groups, ordered, locks, done } = studentView(course, student, now)
   const numbers = new Map(ordered.map((l, i) => [l.id, i + 1]))
   return {
     course: {
@@ -161,12 +174,21 @@ export async function getStudentCourse(
       targetDate: isoDate(course.targetDate),
       status: course.status === 'archived' ? 'archived' : 'active',
       admin: { displayName: course.owner.displayName },
+      dueAt: facts.courseDue.get(course.id)?.toISOString() ?? null,
     },
     lessonCount: ordered.length,
     groups: groups.map((g) => ({
       section: g.section ? { id: g.section.id, title: g.section.title } : null,
       lessons: g.lessons.map((l) => {
         const lock = locks.get(l.id)!
+        const dueAt = facts.dueOf({ id: l.id, courseId: course.id })
+        const status = deadlineStatus({
+          dueAt,
+          done: done.has(l.id),
+          locked: lock.state === 'locked',
+          now,
+          timeZone: student.timezone,
+        })
         return {
           id: l.id,
           number: numbers.get(l.id)!,
@@ -174,6 +196,8 @@ export async function getStudentCourse(
           estMinutes: l.estMinutes,
           state: lock.state,
           lock: lock.lock,
+          done: done.has(l.id),
+          due: dueAt ? { dueAt: dueAt.toISOString(), ...status } : null,
         }
       }),
     })),

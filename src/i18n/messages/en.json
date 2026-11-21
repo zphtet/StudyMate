@@ -115,7 +115,6 @@
     "qrBody": "Your student can scan this with their phone camera to open your invite link."
   },
   "empty": {
-    "today": "Your lessons and deadlines will appear here once your admin assigns a course.",
     "courses": "Courses your admin assigns will appear here.",
     "progress": "Your study streak and progress will appear here.",
     "shifts": "Add your work shifts here so reminders fit around them.",
@@ -439,7 +438,13 @@
     "minutes": "{count} min",
     "unlocksAfter": "unlocks after {number}",
     "opensOn": "opens {date}",
-    "locked": "Locked"
+    "locked": "Locked",
+    "due": "due {date}",
+    "noDeadline": "no deadline",
+    "overdueCount": "{count} overdue",
+    "wasDue": "was due {date}",
+    "tonight": "{time} tonight",
+    "todayAt": "{time} today"
   },
   "lessonView": {
     "back": "Back to course",
@@ -510,6 +515,17 @@
     "moveTo": "Move to {time}",
     "timeBoth": "{primary} ({primaryCity}) · {secondary} ({secondaryCity})",
     "timeOne": "{primary} ({primaryCity})",
-    "timeCompact": "{primary} · {secondary} yours"
+    "timeCompact": "{primary} · {secondary} yours",
+    "locked": "Locked"
+  },
+  "today": {
+    "dateLine": "<date></date> · {city}",
+    "greeting": "{period, select, morning {Good morning, {name}} afternoon {Good afternoon, {name}} other {Good evening, {name}}}",
+    "overdue": "Overdue · {count}",
+    "dueToday": "Due today",
+    "lessonMeta": "{course} · <m>{minutes} min</m>",
+    "showAll": "Show all ({count})",
+    "empty": "Nothing due today",
+    "emptyBody": "Lessons due today and anything overdue will show up here."
   }
 }

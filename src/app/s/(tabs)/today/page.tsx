@@ -1,8 +1,6 @@
-import { House } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
-import { TabPlaceholder } from '@/components/layout/tab-placeholder'
+import { TodayScreen } from '@/features/assignments/components/with-today'
 
-export default async function TodayPage() {
-  const [nav, empty] = await Promise.all([getTranslations('nav'), getTranslations('empty')])
-  return <TabPlaceholder title={nav('today')} body={empty('today')} icon={House} />
+// Student Today (screen 04-Today, partial; spec 003 US3 scenario 1).
+export default function TodayPage() {
+  return <TodayScreen />
 }
