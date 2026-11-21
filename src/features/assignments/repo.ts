@@ -1,11 +1,17 @@
 import 'server-only'
+import { flatten, groupCourse } from '@/features/courses/order'
 import { applyUnlockInOrder } from '@/features/courses/repo'
 import { fail } from '@/lib/action'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
 import { assignedNotice, deadlineNotice, defaultReminderMessages } from './notices'
-import type { SaveAssignmentsInput } from './schemas'
-import type { AssignSheet } from './types'
+import type {
+  SaveAssignmentsInput,
+  SetCourseDeadlineInput,
+  SetLessonDeadlineInput,
+} from './schemas'
+import { effectiveDue } from './status'
+import type { AdminStudentCourse, AssignSheet, StudentRef } from './types'
 
 // Assignments (spec 003 US1; research.md R5, R8, R9). Callers MUST have run the guards
 // (requireCourseOwner, requireAdminOfAll); every course `where` still has `ownerId: admin`.
@@ -162,4 +168,151 @@ export async function saveAssignments(admin: Admin, input: SaveAssignmentsInput)
     unassigned: outcome.unassigned,
     updated: outcome.changed.length,
   }
+}
+
+const noticeStudent = (studentId: string) =>
+  prisma.profile.findUniqueOrThrow({
+    where: { id: studentId },
+    select: { id: true, locale: true, timezone: true },
+  })
+
+const isEditable = (course: { status: string; deletedAt: Date | null }) =>
+  course.status === 'active' && !course.deletedAt
+
+/**
+ * One student's course deadline (spec 003 US2; research R6). Guard: requireAssignmentOwner. Records a
+ * `deadline` notice when the value changed (FR-012).
+ */
+export async function setCourseDeadline(admin: Admin, input: SetCourseDeadlineInput) {
+  const assignment = await prisma.courseAssignment.findFirst({
+    where: {
+      courseId: input.courseId,
+      studentId: input.studentId,
+      status: 'active',
+      course: { ownerId: admin.id },
+    },
+    select: {
+      id: true,
+      dueAt: true,
+      course: { select: { title: true, status: true, deletedAt: true } },
+    },
+  })
+  if (!assignment) fail('assignment_not_found')
+  if (!isEditable(assignment.course)) fail('course_not_active')
+  const dueAt = input.dueAt ? new Date(input.dueAt) : null
+  await prisma.courseAssignment.update({ where: { id: assignment.id }, data: { dueAt } })
+  if (!sameInstant(assignment.dueAt, dueAt)) {
+    await deadlineNotice({
+      student: await noticeStudent(input.studentId),
+      admin,
+      item: { kind: 'course', id: input.courseId, title: assignment.course.title },
+      dueAt,
+    })
+  }
+  return { dueAt: dueAt?.toISOString() ?? null }
+}
+
+/**
+ * One student's own deadline for a Published lesson; null removes it and the lesson falls back to
+ * the course deadline (FR-003, FR-004). Guard: requireLessonDeadlineTarget. Records a `deadline`
+ * notice when the EFFECTIVE deadline changed.
+ */
+export async function setLessonDeadline(admin: Admin, input: SetLessonDeadlineInput) {
+  const { lessonId, studentId } = input
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, status: 'published', deletedAt: null, course: { ownerId: admin.id } },
+    select: {
+      title: true,
+      course: {
+        select: {
+          status: true,
+          deletedAt: true,
+          assignments: { where: { studentId, status: 'active' }, select: { dueAt: true } },
+        },
+      },
+      deadlines: { where: { studentId }, select: { dueAt: true } },
+    },
+  })
+  if (!lesson) fail('lesson_not_found')
+  const [assignment] = lesson.course.assignments
+  if (!assignment) fail('assignment_not_found')
+  if (!isEditable(lesson.course)) fail('course_not_active')
+
+  const dueAt = input.dueAt ? new Date(input.dueAt) : null
+  if (dueAt) {
+    await prisma.lessonDeadline.upsert({
+      where: { lessonId_studentId: { lessonId, studentId } },
+      create: { lessonId, studentId, dueAt, setBy: admin.id },
+      update: { dueAt, setBy: admin.id },
+    })
+  } else {
+    await prisma.lessonDeadline.deleteMany({ where: { lessonId, studentId } })
+  }
+
+  const before = effectiveDue(lesson.deadlines[0]?.dueAt, assignment.dueAt)
+  const after = effectiveDue(dueAt, assignment.dueAt)
+  if (!sameInstant(before, after)) {
+    await deadlineNotice({
+      student: await noticeStudent(studentId),
+      admin,
+      item: { kind: 'lesson', id: lessonId, title: lesson.title },
+      dueAt: after,
+    })
+  }
+  return { dueAt: dueAt?.toISOString() ?? null, effectiveDueAt: after?.toISOString() ?? null }
+}
+
+/** The caller's actively linked students by name (Plan chips). */
+export async function listLinkedStudents(adminId: string): Promise<StudentRef[]> {
+  const links = await prisma.studentLink.findMany({
+    where: { adminId, status: 'active' },
+    orderBy: { student: { displayName: 'asc' } },
+    select: { student: { select: { id: true, displayName: true, timezone: true } } },
+  })
+  return links.map((l) => l.student)
+}
+
+/** The caller's Active courses assigned to the student, with Published lessons in course order. */
+export async function listStudentCoursesForAdmin(
+  adminId: string,
+  studentId: string,
+): Promise<AdminStudentCourse[]> {
+  const courses = await prisma.course.findMany({
+    where: {
+      ownerId: adminId,
+      status: 'active',
+      deletedAt: null,
+      assignments: { some: { studentId, status: 'active' } },
+    },
+    orderBy: { title: 'asc' },
+    select: {
+      id: true,
+      title: true,
+      assignments: { where: { studentId, status: 'active' }, select: { dueAt: true } },
+      sections: { select: { id: true, position: true } },
+      lessons: {
+        where: { status: 'published', deletedAt: null },
+        select: {
+          id: true,
+          title: true,
+          estMinutes: true,
+          sectionId: true,
+          position: true,
+          deadlines: { where: { studentId }, select: { dueAt: true } },
+        },
+      },
+    },
+  })
+  return courses.map((course) => ({
+    id: course.id,
+    title: course.title,
+    dueAt: course.assignments[0]?.dueAt?.toISOString() ?? null,
+    lessons: flatten(groupCourse(course.sections, course.lessons)).map((lesson, i) => ({
+      id: lesson.id,
+      number: i + 1,
+      title: lesson.title,
+      estMinutes: lesson.estMinutes,
+      dueAt: lesson.deadlines[0]?.dueAt.toISOString() ?? null,
+    })),
+  }))
 }

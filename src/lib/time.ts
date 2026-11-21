@@ -30,7 +30,7 @@ function parseDate(date: string) {
 }
 
 /** `YYYY-MM-DD` + n days, as calendar dates (no time zone involved). */
-function addDays(date: string, days: number) {
+export function addCalendarDays(date: string, days: number) {
   const { year, month, day } = parseDate(date)
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
 }
@@ -63,6 +63,13 @@ export function calendarDaysBetween(earlier: Date, later: Date, timeZone: string
   return days(todayIn(timeZone, later)) - days(todayIn(timeZone, earlier))
 }
 
+/** The Monday of a calendar date's week (`YYYY-MM-DD`; weeks run Monday to Sunday). */
+export function mondayOf(date: string) {
+  const { year, month, day } = parseDate(date)
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay() // 0 = Sunday
+  return addCalendarDays(date, -((weekday + 6) % 7))
+}
+
 /** The same local clock time on another local date (Plan drag; correct across DST changes). */
 export function moveToDay(instant: Date, date: string, timeZone: string): Date {
   return zonedToUtc(date, utcToZoned(instant, timeZone).time, timeZone)
@@ -77,7 +84,7 @@ export function startOfLocalDay(date: string, timeZone: string): Date {
 export function localDayRange(date: string, timeZone: string) {
   return {
     start: startOfLocalDay(date, timeZone),
-    end: startOfLocalDay(addDays(date, 1), timeZone),
+    end: startOfLocalDay(addCalendarDays(date, 1), timeZone),
   }
 }
 

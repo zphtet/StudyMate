@@ -119,7 +119,6 @@
     "progress": "Your study streak and progress will appear here.",
     "shifts": "Add your work shifts here so reminders fit around them.",
     "adminCourses": "Create courses and lessons for your students here.",
-    "plan": "Plan deadlines for your students here.",
     "alerts": "Set up reminders and messages for your students here.",
     "soon": "Coming soon"
   },
@@ -563,5 +562,30 @@
     "saved": "Assignments saved",
     "empty": "No linked students yet",
     "emptyLink": "Invite students"
+  },
+  "plan": {
+    "title": "Plan",
+    "addDeadline": "Deadline",
+    "students": "Students",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "timesIn": "Times in {city} time",
+    "hint": "Long-press a deadline and drag it to another day to reschedule. {name} gets a notification.",
+    "dragInstructions": "To move a deadline, press Space, use the up and down arrow keys to choose a day, then press Space again. Press Escape to cancel.",
+    "noStudents": "No linked students yet",
+    "noStudentsLink": "Invite students",
+    "sheetNew": "Add deadline",
+    "sheetEdit": "Change deadline",
+    "sheetSubtitle": "For {name} · times in {city} time",
+    "course": "Course",
+    "target": "Deadline for",
+    "wholeCourse": "Whole course",
+    "lessonOption": "{number} · {title}",
+    "due": "Due",
+    "save": "Save deadline",
+    "remove": "Remove deadline",
+    "saved": "Deadline saved",
+    "removed": "Deadline removed",
+    "noCourses": "Assign a course to {name} first."
   }
 }

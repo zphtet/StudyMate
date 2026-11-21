@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AssignSheet, Clash, Today } from './types'
+import type { AdminStudentCourse, AssignSheet, Clash, PlanWeek, StudentRef, Today } from './types'
 
 // TanStack Query options for the 003 Route Handlers (contracts/route-handlers.md). Invalidation
 // after writes follows contracts/server-actions.md › Query invalidation.
@@ -11,6 +11,15 @@ export const assignKeys = {
 
 export const planKeys = {
   all: ['plan'] as const,
+  student: (studentId: string) => ['plan', studentId] as const,
+  weeks: (studentId: string) => ['plan', studentId, 'week'] as const,
+  /** `week` null = the current week in the student's zone. */
+  week: (studentId: string, week: string | null) => ['plan', studentId, 'week', week] as const,
+}
+
+export const adminStudentKeys = {
+  list: ['admin-students'] as const,
+  courses: (studentId: string) => ['admin-student-courses', studentId] as const,
 }
 
 export const todayKeys = {
@@ -38,10 +47,31 @@ export const todayQuery = queryOptions({
   queryFn: () => api<Today>('/api/today'),
 })
 
-/** The Assign sheet; always fresh when the sheet opens. */
+/** Sheet data is fetched fresh when a sheet opens and never refetched while someone edits it. */
+const sheetData = { staleTime: 0, refetchOnWindowFocus: false } as const
+
 export const assignSheetQuery = (courseId: string) =>
   queryOptions({
     queryKey: assignKeys.sheet(courseId),
     queryFn: () => api<AssignSheet>(`/api/admin/courses/${courseId}/assign`),
-    staleTime: 0,
+    ...sheetData,
+  })
+
+export const linkedStudentsQuery = queryOptions({
+  queryKey: adminStudentKeys.list,
+  queryFn: () => api<StudentRef[]>('/api/admin/students'),
+})
+
+export const adminStudentCoursesQuery = (studentId: string) =>
+  queryOptions({
+    queryKey: adminStudentKeys.courses(studentId),
+    queryFn: () => api<AdminStudentCourse[]>(`/api/admin/students/${studentId}/courses`),
+    ...sheetData,
+  })
+
+export const planWeekQuery = (studentId: string, week: string | null) =>
+  queryOptions({
+    queryKey: planKeys.week(studentId, week),
+    queryFn: () =>
+      api<PlanWeek>(`/api/admin/plan?${new URLSearchParams({ studentId, ...(week && { week }) })}`),
   })

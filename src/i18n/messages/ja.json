@@ -119,7 +119,6 @@
     "progress": "連続学習日数と進捗がここに表示されます。",
     "shifts": "仕事のシフトを追加すると、リマインダーがシフトに合わせて届きます。",
     "adminCourses": "ここで学生のためのコースとレッスンを作成します。",
-    "plan": "ここで学生の期限を計画します。",
     "alerts": "ここで学生へのリマインダーとメッセージを設定します。",
     "soon": "近日公開"
   },
@@ -563,5 +562,30 @@
     "saved": "割り当てを保存しました",
     "empty": "連携している生徒はまだいません",
     "emptyLink": "生徒を招待"
+  },
+  "plan": {
+    "title": "計画",
+    "addDeadline": "期限",
+    "students": "生徒",
+    "previousWeek": "前の週",
+    "nextWeek": "次の週",
+    "timesIn": "{city} の時刻で表示",
+    "hint": "期限を長押しして別の日にドラッグすると予定を変更できます。{name} さんに通知されます。",
+    "dragInstructions": "期限を移動するには、Space キーを押し、上下の矢印キーで日を選んでから、もう一度 Space キーを押します。Escape キーでキャンセルします。",
+    "noStudents": "連携している生徒はまだいません",
+    "noStudentsLink": "生徒を招待",
+    "sheetNew": "期限を追加",
+    "sheetEdit": "期限を変更",
+    "sheetSubtitle": "{name} さん · {city} の時刻",
+    "course": "コース",
+    "target": "期限の対象",
+    "wholeCourse": "コース全体",
+    "lessonOption": "{number} · {title}",
+    "due": "期限",
+    "save": "期限を保存",
+    "remove": "期限を削除",
+    "saved": "期限を保存しました",
+    "removed": "期限を削除しました",
+    "noCourses": "先に {name} さんにコースを割り当ててください。"
   }
 }

@@ -53,10 +53,7 @@ export function AssignSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const t = useTranslations('assign')
   const isWide = useMediaQuery('(min-width: 1024px)')
-  const sheet = useQuery({ ...assignSheetQuery(courseId), enabled: open })
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -67,26 +64,33 @@ export function AssignSheet({
             : 'mx-auto max-h-[92dvh] max-w-xl overflow-y-auto rounded-t-3xl'
         }
       >
-        <SheetHeader className="text-left">
-          <SheetTitle className="text-2xl leading-tight font-bold">{t('title')}</SheetTitle>
-          <SheetDescription className="text-base">
-            {sheet.data ? t('subtitle', { course: sheet.data.course.title }) : t('loading')}
-          </SheetDescription>
-        </SheetHeader>
-        {sheet.data ? (
-          // Remounted per opening so the rows start from the saved state.
-          <AssignForm
-            key={sheet.dataUpdatedAt}
-            sheet={sheet.data}
-            onDone={() => onOpenChange(false)}
-          />
-        ) : (
-          <div className="flex justify-center p-8">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden />
-          </div>
-        )}
+        <AssignBody courseId={courseId} onDone={() => onOpenChange(false)} />
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** Mounted per opening (the sheet content unmounts when closed), so rows start from fresh data. */
+function AssignBody({ courseId, onDone }: { courseId: string; onDone: () => void }) {
+  const t = useTranslations('assign')
+  const sheet = useQuery(assignSheetQuery(courseId))
+  const data = sheet.isFetchedAfterMount ? sheet.data : undefined
+  return (
+    <>
+      <SheetHeader className="text-left">
+        <SheetTitle className="text-2xl leading-tight font-bold">{t('title')}</SheetTitle>
+        <SheetDescription className="text-base">
+          {data ? t('subtitle', { course: data.course.title }) : t('loading')}
+        </SheetDescription>
+      </SheetHeader>
+      {data ? (
+        <AssignForm sheet={data} onDone={onDone} />
+      ) : (
+        <div className="flex justify-center p-8">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden />
+        </div>
+      )}
+    </>
   )
 }
 

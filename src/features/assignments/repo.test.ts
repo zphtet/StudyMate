@@ -4,7 +4,8 @@
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 import { prisma } from '@/lib/prisma'
-import { getAssignSheet, saveAssignments } from './repo'
+import { getAssignSheet, saveAssignments, setCourseDeadline, setLessonDeadline } from './repo'
+import { effectiveDue } from './status'
 import type { SaveAssignmentsInput } from './schemas'
 
 vi.setConfig({ testTimeout: 60_000 })
@@ -270,5 +271,120 @@ describe('getAssignSheet', () => {
       { id: aki, displayName: 'Aki', timezone: 'Asia/Tokyo', assigned: false, dueAt: null },
       { id: may, displayName: 'May', timezone: 'Asia/Tokyo', assigned: true, dueAt: dueA },
     ])
+  })
+})
+
+// Spec 003 US2 (T033): course and lesson deadlines (research.md R2, R6, R8).
+describe('setCourseDeadline', () => {
+  test('updates the course deadline and records a notice only when it changed', async () => {
+    const course = await makeCourse()
+    await saveAssignments(
+      admin,
+      input(course.id, [{ studentId: may, assigned: true, dueAt: null }]),
+    )
+    await setCourseDeadline(admin, { courseId: course.id, studentId: may, dueAt: dueA })
+    expect((await assignments(course.id))[0].dueAt?.toISOString()).toBe(dueA)
+    expect(await notices(course.id)).toHaveLength(1)
+    await setCourseDeadline(admin, { courseId: course.id, studentId: may, dueAt: dueA })
+    const [notice] = await notices(course.id)
+    expect(notice.occurrenceKey).toBe('deadline')
+    expect(await notices(course.id)).toHaveLength(1)
+  })
+
+  test('a removed assignment → assignment_not_found', async () => {
+    const course = await makeCourse()
+    await saveAssignments(
+      admin,
+      input(course.id, [{ studentId: may, assigned: true, dueAt: null }]),
+    )
+    await saveAssignments(
+      admin,
+      input(course.id, [{ studentId: may, assigned: false, dueAt: null }]),
+    )
+    await expect(
+      setCourseDeadline(admin, { courseId: course.id, studentId: may, dueAt: dueA }),
+    ).rejects.toMatchObject({ code: 'assignment_not_found' })
+  })
+})
+
+describe('setLessonDeadline', () => {
+  async function assigned(courseDue: string | null = dueA) {
+    const course = await makeCourse()
+    await saveAssignments(
+      admin,
+      input(course.id, [{ studentId: may, assigned: true, dueAt: courseDue }]),
+    )
+    return course
+  }
+
+  test('upserts with set_by = admin; null removes it and the lesson falls back to the course deadline', async () => {
+    const course = await assigned()
+    const lessonId = course.lessonIds[0]
+    const lessonDue = '2026-12-01T12:00:00.000Z'
+    expect(await setLessonDeadline(admin, { lessonId, studentId: may, dueAt: lessonDue })).toEqual({
+      dueAt: lessonDue,
+      effectiveDueAt: lessonDue,
+    })
+    const row = await prisma.lessonDeadline.findUniqueOrThrow({
+      where: { lessonId_studentId: { lessonId, studentId: may } },
+    })
+    expect(row.setBy).toBe(admin.id)
+    expect(await setLessonDeadline(admin, { lessonId, studentId: may, dueAt: null })).toEqual({
+      dueAt: null,
+      effectiveDueAt: dueA,
+    })
+    expect(await prisma.lessonDeadline.count({ where: { lessonId, studentId: may } })).toBe(0)
+  })
+
+  test('a lesson deadline later than the course deadline is allowed', async () => {
+    const course = await assigned()
+    await expect(
+      setLessonDeadline(admin, { lessonId: course.lessonIds[1], studentId: may, dueAt: dueB }),
+    ).resolves.toEqual({ dueAt: dueB, effectiveDueAt: dueB })
+  })
+
+  test('no active assignment → assignment_not_found; a Draft lesson → lesson_not_found', async () => {
+    const course = await makeCourse()
+    await expect(
+      setLessonDeadline(admin, { lessonId: course.lessonIds[0], studentId: may, dueAt: dueA }),
+    ).rejects.toMatchObject({ code: 'assignment_not_found' })
+    await prisma.lesson.update({ where: { id: course.lessonIds[0] }, data: { status: 'draft' } })
+    await expect(
+      setLessonDeadline(admin, { lessonId: course.lessonIds[0], studentId: may, dueAt: dueA }),
+    ).rejects.toMatchObject({ code: 'lesson_not_found' })
+  })
+
+  test('a second change after the student read the first leaves one unread notice with the latest text', async () => {
+    const course = await assigned()
+    const lessonId = course.lessonIds[0]
+    await setLessonDeadline(admin, { lessonId, studentId: may, dueAt: '2026-12-01T12:00:00Z' })
+    const [first] = await notices(lessonId)
+    await prisma.notification.update({ where: { id: first.id }, data: { readAt: new Date() } })
+    await setLessonDeadline(admin, { lessonId, studentId: may, dueAt: '2026-12-02T12:00:00Z' })
+    const rows = await notices(lessonId)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].readAt).toBeNull()
+    expect(rows[0].title).not.toBe(first.title)
+    expect(rows[0].url).toBe(`/s/lessons/${lessonId}`)
+  })
+
+  test('the app’s effectiveDue gives the same result as SQL effective_due()', async () => {
+    const course = await assigned()
+    await setLessonDeadline(admin, {
+      lessonId: course.lessonIds[0],
+      studentId: may,
+      dueAt: '2026-12-01T12:00:00Z',
+    })
+    const [assignment] = await assignments(course.id)
+    for (const lessonId of course.lessonIds) {
+      const [sql] = await prisma.$queryRaw<{ due: Date | null }[]>`
+        select effective_due(${may}::uuid, ${lessonId}::uuid) as due`
+      const own = await prisma.lessonDeadline.findUnique({
+        where: { lessonId_studentId: { lessonId, studentId: may } },
+      })
+      expect(effectiveDue(own?.dueAt, assignment.dueAt)?.toISOString() ?? null).toBe(
+        sql.due?.toISOString() ?? null,
+      )
+    }
   })
 })

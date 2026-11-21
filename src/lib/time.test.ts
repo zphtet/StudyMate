@@ -3,9 +3,11 @@
 // spec 003 research.md R3: deadlines entered in the student's zone, days late by their calendar).
 import { describe, expect, test } from 'vitest'
 import {
+  addCalendarDays,
   calendarDaysBetween,
   cityOf,
   localDayRange,
+  mondayOf,
   moveToDay,
   roundUpToLocalHour,
   startOfLocalDay,
@@ -187,5 +189,21 @@ describe('cityOf', () => {
     ['UTC', 'UTC'],
   ])('%s → %s', (zone, city) => {
     expect(cityOf(zone)).toBe(city)
+  })
+})
+
+describe('addCalendarDays / mondayOf (Plan weeks, spec 003 research R10)', () => {
+  test('adds days across month and year ends', () => {
+    expect(addCalendarDays('2026-11-30', 1)).toBe('2026-12-01')
+    expect(addCalendarDays('2027-01-01', -1)).toBe('2026-12-31')
+    expect(addCalendarDays('2026-11-16', 7)).toBe('2026-11-23')
+  })
+  test.each([
+    ['2026-11-16', '2026-11-16'], // Monday
+    ['2026-11-20', '2026-11-16'], // Friday
+    ['2026-11-22', '2026-11-16'], // Sunday
+    ['2027-01-01', '2026-12-28'],
+  ])('the week of %s starts on %s', (date, monday) => {
+    expect(mondayOf(date)).toBe(monday)
   })
 })

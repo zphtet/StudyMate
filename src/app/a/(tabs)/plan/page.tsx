@@ -1,8 +1,10 @@
-import { CalendarDays } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
-import { TabPlaceholder } from '@/components/layout/tab-placeholder'
+import { PlanScreen } from '@/features/assignments/components/with-plan'
 
-export default async function PlanPage() {
-  const [nav, empty] = await Promise.all([getTranslations('nav'), getTranslations('empty')])
-  return <TabPlaceholder title={nav('plan')} body={empty('plan')} icon={CalendarDays} />
+// Admin Plan (screen 22-AdminPlan; spec 003 US2). ?student=<id>&week=<monday> (research R10).
+export default function PlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  return <PlanScreen searchParams={searchParams} />
 }
