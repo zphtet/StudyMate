@@ -27,7 +27,12 @@ export function fail(code: string, params?: Record<string, number | string>): ne
 
 function toError(error: unknown): ActionError {
   if (error instanceof ActionFailure) return { code: error.code, params: error.params }
-  if (error instanceof ZodError) return { code: 'invalid_input' }
+  if (error instanceof ZodError) {
+    // A schema rule can name an action error code directly (snake_case, e.g. `content_too_long`);
+    // form-only messages (camelCase `validation.*` keys) fall back to invalid_input.
+    const code = error.issues.map((i) => i.message).find((m) => /^[a-z]+(_[a-z]+)+$/.test(m))
+    return { code: code ?? 'invalid_input' }
+  }
   if (error instanceof AuthError) {
     return {
       code:

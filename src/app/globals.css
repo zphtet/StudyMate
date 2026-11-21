@@ -38,6 +38,19 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-course-indigo: var(--course-indigo);
+  --color-course-indigo-soft: var(--course-indigo-soft);
+  --color-course-teal: var(--course-teal);
+  --color-course-teal-soft: var(--course-teal-soft);
+  --color-course-rust: var(--course-rust);
+  --color-course-rust-soft: var(--course-rust-soft);
+  --color-course-berry: var(--course-berry);
+  --color-course-berry-soft: var(--course-berry-soft);
+  --color-course-green: var(--course-green);
+  --color-course-green-soft: var(--course-green-soft);
+  --color-course-slate: var(--course-slate);
+  --color-course-slate-soft: var(--course-slate-soft);
   --color-tint-1: var(--tint-1);
   --color-tint-1-foreground: var(--tint-1-foreground);
   --color-tint-2: var(--tint-2);
@@ -88,6 +101,20 @@
   --warning-foreground: #854d0e;
   --warning-border: #fde68a;
   --success: #15803d;
+  --success-soft: #dcfce7;
+  /* Course colours (spec 002 Course.color): glyph / tile */
+  --course-indigo: #3730a3;
+  --course-indigo-soft: #e0e7ff;
+  --course-teal: #115e59;
+  --course-teal-soft: #ccfbf1;
+  --course-rust: #9a3412;
+  --course-rust-soft: #ffedd5;
+  --course-berry: #9d174d;
+  --course-berry-soft: #fce7f3;
+  --course-green: #166534;
+  --course-green-soft: #dcfce7;
+  --course-slate: #44403c;
+  --course-slate-soft: #f5f5f4;
   --tint-1: #e0e7ff;
   --tint-1-foreground: #3730a3;
   --tint-2: #fef3c7;
@@ -130,6 +157,20 @@
   --warning-foreground: #fde68a;
   --warning-border: #854d0e;
   --success: #4ade80;
+  --success-soft: #14532d;
+  /* Course colours (spec 002 Course.color): glyph / tile */
+  --course-indigo: #c7d2fe;
+  --course-indigo-soft: #312e81;
+  --course-teal: #99f6e4;
+  --course-teal-soft: #134e4a;
+  --course-rust: #fed7aa;
+  --course-rust-soft: #7c2d12;
+  --course-berry: #fbcfe8;
+  --course-berry-soft: #831843;
+  --course-green: #bbf7d0;
+  --course-green-soft: #14532d;
+  --course-slate: #e7e5e4;
+  --course-slate-soft: #44403c;
   --tint-1: #312e81;
   --tint-1-foreground: #e0e7ff;
   --tint-2: #78350f;
@@ -156,4 +197,129 @@
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Lesson Markdown (spec 002 research R4): theme tokens only; tall line-height so Burmese stacked
+   letters don't clip; long words and URLs wrap at phone width. */
+@layer components {
+  .markdown {
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  .markdown > * + * {
+    margin-top: 0.9em;
+  }
+  .markdown > :first-child {
+    margin-top: 0;
+  }
+  .markdown h1,
+  .markdown h2,
+  .markdown h3 {
+    font-weight: 700;
+    line-height: 1.35;
+    margin-top: 1.4em;
+  }
+  .markdown h1 {
+    font-size: 1.5rem;
+  }
+  .markdown h2 {
+    font-size: 1.25rem;
+  }
+  .markdown h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+  .markdown ul {
+    list-style: disc;
+    padding-inline-start: 1.4em;
+  }
+  .markdown ol {
+    list-style: decimal;
+    padding-inline-start: 1.4em;
+  }
+  .markdown li + li {
+    margin-top: 0.3em;
+  }
+  .markdown a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .markdown blockquote {
+    background: var(--muted);
+    border-radius: calc(var(--radius) * 1.4);
+    padding: 1em 1.1em;
+  }
+  .markdown blockquote > * + * {
+    margin-top: 0.4em;
+  }
+  .markdown code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background: var(--muted);
+    border-radius: 0.375rem;
+    padding: 0.1em 0.35em;
+  }
+  .markdown pre {
+    background: var(--muted);
+    border-radius: var(--radius);
+    padding: 1em;
+    white-space: pre-wrap;
+  }
+  .markdown pre code {
+    background: none;
+    padding: 0;
+  }
+  .markdown table {
+    border-collapse: collapse;
+    min-width: 100%;
+  }
+  .markdown th,
+  .markdown td {
+    border: 1px solid var(--border);
+    padding: 0.5em 0.75em;
+    text-align: start;
+  }
+  .markdown th {
+    background: var(--muted);
+    font-weight: 600;
+  }
+  .markdown img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+  }
+  .markdown hr {
+    border-color: var(--border);
+  }
+}
+
+/* @uiw/react-md-editor inside the lesson editor card (spec 002 research R6): theme tokens, no frame
+   of its own, text large enough for Japanese and Burmese, and the same line-height as the preview. */
+.lesson-md-editor .w-md-editor {
+  --md-editor-font-family:
+    ui-monospace, 'SF Mono', Menlo, var(--font-noto-jp), var(--font-noto-my), monospace;
+  --md-editor-background-color: var(--card);
+  --color-fg-default: var(--foreground);
+  --color-canvas-default: var(--card);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+.lesson-md-editor .w-md-editor-text {
+  padding: 1rem 1.25rem !important;
+}
+.lesson-md-editor .w-md-editor-text,
+.lesson-md-editor .w-md-editor-text-input,
+.lesson-md-editor .w-md-editor-text-pre > code {
+  font-size: 1rem !important;
+  line-height: 1.7 !important;
+}
+.lesson-md-editor .w-md-editor-text-input::placeholder {
+  color: var(--muted-foreground);
+}
+.lesson-md-editor .w-md-editor-preview {
+  padding: 1rem 1.25rem;
+  box-shadow: inset 1px 0 0 0 var(--border);
 }

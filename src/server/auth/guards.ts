@@ -88,3 +88,50 @@ export async function requireCourseReader(courseId: string) {
   if (!course) throw new AuthError(404, 'Course not found')
   return { me, isOwner: course.ownerId === me.id }
 }
+
+/** Owner of the lesson's course, deleted lessons included (restore needs them). Spec 002. */
+export async function requireLessonOwner(lessonId: string) {
+  const me = await requireUser()
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, course: { ownerId: me.id } },
+    select: { courseId: true },
+  })
+  if (!lesson) throw new AuthError(404, 'Lesson not found')
+  return { me, courseId: lesson.courseId }
+}
+
+/**
+ * Read access to one lesson. Mirrors SQL can_read_lesson (spec 002 research R2): the owner reads
+ * everything; others need a Published, non-deleted lesson in a course they can read, and in an
+ * Archived course only the lessons they completed. Locking (pacing) is checked by callers.
+ */
+export async function requireLessonReader(lessonId: string) {
+  const me = await requireUser()
+  const visible = { status: 'published', deletedAt: null } as const
+  const assigned = { some: { studentId: me.id, status: 'active' } }
+  const lesson = await prisma.lesson.findFirst({
+    where: {
+      id: lessonId,
+      OR: [
+        { course: { ownerId: me.id } },
+        {
+          ...visible,
+          course: {
+            deletedAt: null,
+            isPersonal: true,
+            owner: { linksAsStudent: { some: { adminId: me.id, status: 'active' } } },
+          },
+        },
+        { ...visible, course: { deletedAt: null, status: 'active', assignments: assigned } },
+        {
+          ...visible,
+          course: { deletedAt: null, status: 'archived', assignments: assigned },
+          progress: { some: { studentId: me.id, status: 'done' } },
+        },
+      ],
+    },
+    select: { courseId: true, course: { select: { ownerId: true } } },
+  })
+  if (!lesson) throw new AuthError(404, 'Lesson not found')
+  return { me, courseId: lesson.courseId, isOwner: lesson.course.ownerId === me.id }
+}

@@ -201,6 +201,8 @@ model Course {
   levelTag      String?      @map("level_tag")
   targetDate    DateTime?    @map("target_date") @db.Date
   unlockInOrder Boolean      @default(true) @map("unlock_in_order")
+  /// "Students can add personal notes" (spec 002 clarification): stored only until a notes feature exists
+  allowStudentNotes Boolean  @default(true) @map("allow_student_notes")
   status        CourseStatus @default(draft)
   deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(6)
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)

@@ -1,8 +1,29 @@
-import { BookOpen } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { TabPlaceholder } from '@/components/layout/tab-placeholder'
+import Link from 'next/link'
+import { PageHeader } from '@/components/layout/page-header'
+import { Button } from '@/components/ui/button'
+import { AdminCourseList } from '@/features/courses/components/admin-course-list'
+import { WithAdminCourses } from '@/features/courses/components/with-admin-course'
 
-export default async function CoursesPage() {
-  const [nav, empty] = await Promise.all([getTranslations('nav'), getTranslations('empty')])
-  return <TabPlaceholder title={nav('courses')} body={empty('adminCourses')} icon={BookOpen} />
+// Admin Courses (screen 17-AdminCourses; spec 002 US1, FR-009).
+export default async function AdminCoursesPage() {
+  const t = await getTranslations('courses')
+  return (
+    <>
+      <PageHeader
+        title={t('title')}
+        actions={
+          <Button asChild size="touch" className="rounded-2xl px-5">
+            <Link href="/a/courses/new">
+              <Plus aria-hidden /> {t('new')}
+            </Link>
+          </Button>
+        }
+      />
+      <WithAdminCourses>
+        <AdminCourseList />
+      </WithAdminCourses>
+    </>
+  )
 }

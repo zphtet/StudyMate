@@ -53,3 +53,11 @@ supabase/.branches/
 
 # prisma client (pnpm prisma generate)
 /src/generated/
+
+# editors / OS / logs (speckit-implement setup check)
+.vscode/
+.idea/
+Thumbs.db
+*.log
+*.tmp
+*.swp

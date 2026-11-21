@@ -10,6 +10,8 @@ import {
   requireAdminOf,
   requireCourseOwner,
   requireCourseReader,
+  requireLessonOwner,
+  requireLessonReader,
   requireRole,
   requireSelfOrAdminOf,
   requireUser,
@@ -30,7 +32,23 @@ const id = {
   admin: randomUUID(),
   otherAdmin: randomUUID(),
 }
-const course = { admin: randomUUID(), adminDraft: randomUUID(), personal: randomUUID() }
+const course = {
+  admin: randomUUID(),
+  adminDraft: randomUUID(),
+  personal: randomUUID(),
+  archived: randomUUID(),
+  deleted: randomUUID(),
+}
+// Spec 002: same cases as supabase/tests/002_course_policies.test.sql (can_read_lesson).
+const lesson = {
+  published: randomUUID(),
+  draft: randomUUID(),
+  deleted: randomUUID(),
+  inDraftCourse: randomUUID(),
+  archivedDone: randomUUID(),
+  archivedOpen: randomUUID(),
+  inDeletedCourse: randomUUID(),
+}
 const run = Date.now()
 
 const signInAs = (userId: string, confirmed = true) => {
@@ -62,13 +80,79 @@ beforeAll(async () => {
       { id: course.admin, ownerId: id.admin, title: 'Admin course', status: 'active' },
       { id: course.adminDraft, ownerId: id.admin, title: 'Draft course', status: 'draft' },
       { id: course.personal, ownerId: id.student, title: 'My notes', isPersonal: true },
+      { id: course.archived, ownerId: id.admin, title: 'Archived course', status: 'archived' },
+      {
+        id: course.deleted,
+        ownerId: id.admin,
+        title: 'Deleted course',
+        status: 'active',
+        deletedAt: new Date(),
+      },
     ],
   })
   await prisma.courseAssignment.createMany({
+    data: [course.admin, course.adminDraft, course.archived, course.deleted].map((courseId) => ({
+      courseId,
+      studentId: id.student,
+      assignedBy: id.admin,
+    })),
+  })
+  const now = new Date()
+  await prisma.lesson.createMany({
     data: [
-      { courseId: course.admin, studentId: id.student, assignedBy: id.admin },
-      { courseId: course.adminDraft, studentId: id.student, assignedBy: id.admin },
+      {
+        id: lesson.published,
+        courseId: course.admin,
+        title: 'Published',
+        status: 'published',
+        position: 0,
+      },
+      { id: lesson.draft, courseId: course.admin, title: 'Draft', status: 'draft', position: 1 },
+      {
+        id: lesson.deleted,
+        courseId: course.admin,
+        title: 'Deleted',
+        status: 'published',
+        position: 2,
+        deletedAt: now,
+      },
+      {
+        id: lesson.inDraftCourse,
+        courseId: course.adminDraft,
+        title: 'In draft course',
+        status: 'published',
+        position: 0,
+      },
+      {
+        id: lesson.archivedDone,
+        courseId: course.archived,
+        title: 'Done',
+        status: 'published',
+        position: 0,
+      },
+      {
+        id: lesson.archivedOpen,
+        courseId: course.archived,
+        title: 'Open',
+        status: 'published',
+        position: 1,
+      },
+      {
+        id: lesson.inDeletedCourse,
+        courseId: course.deleted,
+        title: 'In deleted course',
+        status: 'published',
+        position: 0,
+      },
     ],
+  })
+  await prisma.lessonProgress.create({
+    data: {
+      studentId: id.student,
+      lessonId: lesson.archivedDone,
+      status: 'done',
+      completedAt: now,
+    },
   })
 })
 
@@ -181,5 +265,78 @@ describe('requireCourseReader', () => {
   test('another student → 404', async () => {
     signInAs(id.otherStudent)
     await expectStatus(requireCourseReader(course.admin), 404)
+  })
+})
+
+// Spec 002 (data-model.md › Guards): mirrors can_read_lesson / owns_course.
+describe('requireLessonOwner', () => {
+  test('the owner → allowed, with the course id', async () => {
+    signInAs(id.admin)
+    await expect(requireLessonOwner(lesson.published)).resolves.toMatchObject({
+      me: { id: id.admin },
+      courseId: course.admin,
+    })
+  })
+  test('the owner of a deleted lesson → allowed (restore needs it)', async () => {
+    signInAs(id.admin)
+    await expect(requireLessonOwner(lesson.deleted)).resolves.toMatchObject({
+      courseId: course.admin,
+    })
+  })
+  test('another admin → 404', async () => {
+    signInAs(id.otherAdmin)
+    await expectStatus(requireLessonOwner(lesson.published), 404)
+  })
+  test('an assigned student → 404', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonOwner(lesson.published), 404)
+  })
+})
+
+describe('requireLessonReader', () => {
+  test('owner reads a draft lesson as owner', async () => {
+    signInAs(id.admin)
+    await expect(requireLessonReader(lesson.draft)).resolves.toMatchObject({ isOwner: true })
+  })
+  test('assigned student reads a published lesson of an active course', async () => {
+    signInAs(id.student)
+    await expect(requireLessonReader(lesson.published)).resolves.toMatchObject({
+      isOwner: false,
+      courseId: course.admin,
+    })
+  })
+  test('assigned student, draft lesson → 404', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonReader(lesson.draft), 404)
+  })
+  test('assigned student, deleted lesson → 404', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonReader(lesson.deleted), 404)
+  })
+  test('assigned student, lesson of a draft course → 404', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonReader(lesson.inDraftCourse), 404)
+  })
+  test('assigned student, completed lesson of an archived course → allowed', async () => {
+    signInAs(id.student)
+    await expect(requireLessonReader(lesson.archivedDone)).resolves.toMatchObject({
+      isOwner: false,
+    })
+  })
+  test('assigned student, uncompleted lesson of an archived course → 404', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonReader(lesson.archivedOpen), 404)
+  })
+  test('assigned student, lesson of a deleted course → 404', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonReader(lesson.inDeletedCourse), 404)
+  })
+  test('unassigned student → 404', async () => {
+    signInAs(id.otherStudent)
+    await expectStatus(requireLessonReader(lesson.published), 404)
+  })
+  test('another admin → 404', async () => {
+    signInAs(id.otherAdmin)
+    await expectStatus(requireLessonReader(lesson.published), 404)
   })
 })

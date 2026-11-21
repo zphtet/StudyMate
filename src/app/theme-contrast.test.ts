@@ -52,6 +52,15 @@ const pairs: [string, string][] = [
   ['tint-2-foreground', 'tint-2'],
   ['tint-3-foreground', 'tint-3'],
   ['tint-4-foreground', 'tint-4'],
+  // Status chips (spec 002): Published / Active.
+  ['success', 'success-soft'],
+  // Course colours (spec 002 data-model.md Course.color): icon glyph on its tile.
+  ['course-indigo', 'course-indigo-soft'],
+  ['course-teal', 'course-teal-soft'],
+  ['course-rust', 'course-rust-soft'],
+  ['course-berry', 'course-berry-soft'],
+  ['course-green', 'course-green-soft'],
+  ['course-slate', 'course-slate-soft'],
 ]
 
 describe.each([

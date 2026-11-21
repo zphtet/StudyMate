@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > code 1`] = `
+"<div class="markdown"><pre><code>const word = "ことば"
+</code></pre>
+<p>Inline <code>は</code> too.</p></div>"
+`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > links 1`] = `"<div class="markdown"><p><a href="https://www3.nhk.or.jp/news/easy/" target="_blank" rel="noopener noreferrer nofollow">NHK Easy</a> and <a href="/s/courses">your courses</a>.</p></div>"`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > media 1`] = `
+"<div class="markdown"><p><img alt="Particle chart" loading="lazy" decoding="async" src="/api/lesson-files/11111111-1111-4111-8111-111111111111/chart.png"></p>
+<p><audio controls="" preload="none" src="/api/lesson-files/22222222-2222-4222-8222-222222222222/listening.mp3" aria-label="Listening" class="my-2 w-full">Listening</audio></p></div>"
+`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > scripts 1`] = `
+"<div class="markdown"><h2>は marks the topic</h2>
+<p>Use は for what you are talking about, often something <strong>already known</strong>.</p>
+<blockquote>
+<p>私<strong>は</strong>看護師です。
+As for me, I am a nurse.</p>
+</blockquote>
+<p>မင်္ဂလာပါ — Burmese greeting with stacked letters ကျွန်ုပ်</p></div>"
+`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > table 1`] = `"<div class="markdown"><div class="my-4 overflow-x-auto"><table><thead><tr><th>Particle</th><th>Use</th></tr></thead><tbody><tr><td>は</td><td>topic</td></tr><tr><td>が</td><td>subject</td></tr></tbody></table></div></div>"`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > unsafe 1`] = `
+"<div class="markdown">
+
+
+<p><a>click me</a></p></div>"
+`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > youtubeAlone 1`] = `"<div class="markdown"><div class="my-4 aspect-video w-full overflow-hidden rounded-xl bg-muted"><iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90" title="Video from YouTube" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen="" referrerpolicy="strict-origin-when-cross-origin" class="size-full border-0"></iframe></div></div>"`;
+
+exports[`Markdown > HTML snapshot of every sample (SC-002 baseline) > youtubeInline 1`] = `"<div class="markdown"><p>Watch <a href="https://youtu.be/dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer nofollow">this video</a> before class.</p></div>"`;
