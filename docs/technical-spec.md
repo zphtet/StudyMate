@@ -81,13 +81,13 @@ studymate/
 │  │  │  ├─ reset-password/page.tsx
 │  │  │  └─ auth/callback/route.ts     # OAuth + magic-link code exchange
 │  │  ├─ join/[code]/page.tsx          # invite link → join request
-│  │  ├─ s/                            # Student area (StudentLayout: 5 tabs)
-│  │  │  ├─ layout.tsx
-│  │  │  ├─ today/page.tsx
-│  │  │  ├─ courses/page.tsx · courses/[courseId]/page.tsx · lessons/[lessonId]/page.tsx
-│  │  │  ├─ progress/page.tsx
-│  │  │  ├─ shifts/page.tsx · shifts/new/page.tsx · shifts/[shiftId]/page.tsx
-│  │  │  └─ me/page.tsx · me/appearance/page.tsx · me/reminders/page.tsx
+│  │  ├─ s/                            # Student area
+│  │  │  ├─ (tabs)/                    # StudentLayout with the 5 tabs (route group, no URL segment)
+│  │  │  │  ├─ layout.tsx
+│  │  │  │  ├─ today/page.tsx · courses/page.tsx · progress/page.tsx
+│  │  │  │  ├─ shifts/page.tsx · shifts/new/page.tsx · shifts/[shiftId]/page.tsx
+│  │  │  │  └─ me/page.tsx · me/appearance/page.tsx · me/reminders/page.tsx
+│  │  │  └─ courses/[courseId]/page.tsx · lessons/[lessonId]/page.tsx   # full screen, outside (tabs)
 │  │  ├─ a/                            # Admin area (AdminLayout: 4 tabs)
 │  │  │  ├─ layout.tsx
 │  │  │  ├─ welcome/page.tsx
@@ -362,8 +362,9 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 - Prisma bypasses RLS: guards before every query (§6.1); a review checklist rejects any Route Handler or Server Action without a guard. RLS on every table remains for supabase-js access.
 - Use a dedicated Postgres role for Prisma (Supabase docs: create a `prisma` user) instead of `postgres`, and keep `DATABASE_URL` server-only.
 - Markdown sanitized (`rehype-sanitize`); no raw HTML.
-- File uploads: type allow-list (images, pdf, audio), size limits, Storage policies by path.
-- Content-Security-Policy via `next.config.ts` headers: self, Supabase URL, push endpoints; `frame-ancestors 'none'`.
+- File uploads: type allow-list (images, pdf, audio), size limits, Storage policies by path. Lesson files live at `lesson-files/<course_id>/<lesson_id>/<uuid>.<ext>` (10 MB bucket limit); policies read the folders with `uuid_folder()` and check `owns_course` / `can_read_lesson` (spec 002).
+- Content-Security-Policy via `next.config.ts` headers: self, Supabase URL, push endpoints; `frame-ancestors 'none'`; `frame-src https://www.youtube-nocookie.com` for the lesson YouTube player (spec 002 research R5).
+- Daily purge (spec 002): Vercel Cron calls `GET /api/cron/purge` with `Authorization: Bearer CRON_SECRET` (constant-time compare). It removes files with the server-only secret-key client (`src/server/supabase-admin.ts`), then the rows of content deleted more than 30 days ago.
 - Auth: email confirmation required, OTP attempts limited, neutral reset messages, sign out other sessions on reset.
 - Keep Next.js on the latest 16.x patch (security releases are scheduled; subscribe to advisories).
 
@@ -408,7 +409,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 | Spec | Main routes | DB objects | Notable tech |
 | --- | --- | --- | --- |
 | 001 auth | `(auth)/*`, `/join/[code]`, `/a/welcome`, `/s/me` | profiles, admin_invites, student_links, `request_join`, token hook | `@supabase/ssr`, `proxy.ts`, InputOTP |
-| 002 courses | `/a/courses/**`, `/s/courses/**`, `/s/lessons/[id]` | courses, course_sections, lessons, lesson_resources, Storage | react-markdown, dnd-kit, soft delete |
+| 002 courses | `/a/courses/**` (incl. `/a/courses/deleted`), `/s/courses/**`, `/s/lessons/[id]`, `/api/cron/purge` | courses, course_sections, lessons, lesson_resources, `can_read_lesson`, Storage | react-markdown, dnd-kit, soft delete, daily purge via Vercel Cron (`vercel.json`) |
 | 003 assign | `/a/courses/[id]` assign sheet, `/a/plan`, `/s/today` | course_assignments, lesson_deadlines, `effective_due` | DayBar, drag deadlines |
 | 004 progress | `/s/lessons/[id]`, `/s/progress`, `/a/students` | lesson_progress, submissions, comments, study_sessions, `course_progress` | optimistic updates, Realtime |
 | 005 shifts | `/s/shifts/**`, `/a/plan`, `/a/students` | shifts, shift_patterns, `busy_segments`, `next_free_at`, `status_now` | exclusion constraint, overnight math |

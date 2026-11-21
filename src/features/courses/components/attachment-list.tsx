@@ -8,13 +8,13 @@ import { useId, useState, type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import type { z } from 'zod'
+import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { Field, inputClass } from '@/components/shared/field'
 import { Segmented } from '@/components/shared/segmented'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Sheet,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
@@ -128,7 +128,7 @@ export function AttachmentList({
                 <Plus aria-hidden /> {t('addAttachment')}
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-3xl">
+            <BottomSheetContent>
               <SheetHeader>
                 <SheetTitle>{t('sheetTitle')}</SheetTitle>
                 <SheetDescription>{t('sheetDescription')}</SheetDescription>
@@ -140,7 +140,7 @@ export function AttachmentList({
                   onDone={() => setOpen(false)}
                 />
               )}
-            </SheetContent>
+            </BottomSheetContent>
           </Sheet>
         </li>
       </ul>

@@ -337,17 +337,17 @@ description: "Tasks for 002 Courses and Lessons"
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T071 [P] Documentation:
+- [X] T071 [P] Documentation:
   - docs/data-model.md: `allow_student_notes` in the `courses` row; `can_read_lesson` and the new CHECKs in §4.
   - docs/technical-spec.md: §3 the `s/(tabs)` group and `lesson-files` path layout; §9 / §17 daily purge via Vercel Cron; §14 CSP must allow `frame-src https://www.youtube-nocookie.com`.
   - .env.example: note that `CRON_SECRET` also protects `/api/cron/purge`.
-- [ ] T072 [P] Review every new `my` and `ja` string for completeness and tone; list strings needing a native speaker under a `_review` note in specs/002-courses-lessons/quickstart.md
-- [ ] T073 [P] Accessibility and layout pass at 390×844 and 1280×800: 44 px targets, labels, `aria-label` on icon buttons, focus order in sheets and dialogs, keyboard reorder, every swipe action also available without swiping, editor split view at ≥ 1024 px. Fix findings in src/features/courses/components/ and src/components/shared/
-- [ ] T074 Compare each screen in src/app/a/(tabs)/courses/, src/app/a/courses/, src/app/s/(tabs)/courses/, src/app/s/courses/ and src/app/s/lessons/ with screenshots/05, 09, 10, 17, 18, 19, 20, 21 at 390×844, and fix layout, hierarchy and copy, keeping only the "partial" differences documented in contracts/ui-routes.md
+- [X] T072 [P] Review every new `my` and `ja` string for completeness and tone; list strings needing a native speaker under a `_review` note in specs/002-courses-lessons/quickstart.md
+- [X] T073 [P] Accessibility and layout pass at 390×844 and 1280×800: 44 px targets, labels, `aria-label` on icon buttons, focus order in sheets and dialogs, keyboard reorder, every swipe action also available without swiping, editor split view at ≥ 1024 px. Fix findings in src/features/courses/components/ and src/components/shared/
+- [X] T074 Compare each screen in src/app/a/(tabs)/courses/, src/app/a/courses/, src/app/s/(tabs)/courses/, src/app/s/courses/ and src/app/s/lessons/ with screenshots/05, 09, 10, 17, 18, 19, 20, 21 at 390×844, and fix layout, hierarchy and copy, keeping only the "partial" differences documented in contracts/ui-routes.md
 - [ ] T075 Performance: confirm with `pnpm build` output that `@uiw/react-md-editor` and `@dnd-kit/*` load only on admin course and editor routes; Lighthouse performance on `/s/lessons/[id]` (mobile) ≥ 90; record both results in specs/002-courses-lessons/quickstart.md §6
-- [ ] T076 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`
-- [ ] T077 Walk through specs/002-courses-lessons/quickstart.md §4 scenarios 1–16 and §5 (purge), and note any failures
-- [ ] T078 Set **Status** to `Implemented` in specs/002-courses-lessons/spec.md (constitution quality gate)
+- [X] T076 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`
+- [X] T077 Walk through specs/002-courses-lessons/quickstart.md §4 scenarios 1–16 and §5 (purge), and note any failures
+- [X] T078 Set **Status** to `Implemented` in specs/002-courses-lessons/spec.md (constitution quality gate)
 
 ---
 

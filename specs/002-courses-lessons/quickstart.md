@@ -54,6 +54,8 @@ Run `pnpm dev`, sign in as the fixture admin in one window and the fixture stude
 | 15 | US3.4 | Archive an active course with one lesson done by the student | It moves to the student's **Archived** chip; only the completed lesson is listed and opens |
 | 16 | SC-003 | As the student, request `/api/lesson-files/<id of a Draft lesson's file>/x.pdf` | 404 |
 
+**Walkthrough 2026-11-21 (T077)**: no failures. Scenarios 1–16 are covered by the Playwright specs (us1–us4), all passing at 390×844 and 1280×800 against `pnpm build`. Still manual: scenario 11's 4000 px photo resize (the size maths is unit-tested in `upload.test.ts`, the canvas resize isn't), and §5 below, which wasn't run because it purges every expired item in the shared dev database; `purge.test.ts` covers it, scoped to its own fixtures.
+
 ## 5. Purge check
 
 ```bash
@@ -63,6 +65,19 @@ curl -i -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/p
 
 Expected: `200 {"courses":1,"lessons":…,"files":…}`; the course rows and its Storage folder are gone. Without the header: `401`.
 
-## 6. Done means
+## 6. Translation review (`_review`)
+
+Checked by script on 2026-11-21 (T072): `en`, `my` and `ja` have the same keys, the same `{placeholders}` and rich-text tags, and no 002 string is left in English. The `my` and `ja` texts were written without a native speaker, so these need one before release:
+
+- **US3 strings (newest):** `deleteFlow.*`, `recentlyDeleted.*`, `courses.archive`, `courses.unarchive`, `courses.deleteCourse`, `courses.archivedToast`, `courses.unarchivedToast`, `courses.recentlyDeleted`.
+- **Terms to confirm across all 002 screens:** Burmese "course" = သင်ခန်းစာအစုံ, "archive" = သိမ်းဆည်း, "unpublish" = ထုတ်ဝေမှု ရုပ်သိမ်း, "recently deleted" = မကြာသေးမီက ဖျက်ထားသည်များ; Japanese "unpublish" = 非公開にする, "recently deleted" = 最近削除した項目.
+- **Sentences built around formatted values:** `recentlyDeleted.meta` ("{relative}に削除", "{relative} က ဖျက်ခဲ့သည်") with next-intl's relative time, and `deleteFlow.body` with the lesson number.
+
+## 7. Performance (T075, 2026-11-21)
+
+- **Bundles (passed)**: in the `pnpm build` output, the `@dnd-kit` chunk is referenced only by `/a/courses/[courseId]`, and the `@uiw/react-md-editor` chunk only by the lesson editor's dynamic-import manifest (`/a/courses/[courseId]/lessons/[lessonId]/edit`). Student routes load neither.
+- **Lighthouse on `/s/lessons/[id]` (mobile, target ≥ 90): still to run by hand.** A headless run couldn't keep the signed-in session (the page navigated away before first paint), so no score is recorded. To run it: sign in as a student in Chrome, open a lesson, DevTools → Lighthouse → Mobile, Performance only, against `pnpm build && pnpm start`. Record the score here.
+
+## 8. Done means
 
 US1–US4 Playwright specs pass. pgTAP and guard tests pass. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and `pnpm build` are clean. Screens match screenshots 05, 09, 10 and 17–21 at phone width, apart from the documented differences (contracts/ui-routes.md "partial" notes). Spec **Status** is set to `Implemented`.
