@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-courses-lessons`
 **Created**: 2026-11-20
-**Status**: Draft
+**Status**: Implemented
 **Screens**: `17-AdminCourses.png`, `18-AdminCourse.png`, `19-AdminCourseForm.png`, `20-AdminLessonEdit.png`, `21-AdminDelete.png`, Student view `05-Courses.png`, `09-Course.png`, `10-Lesson.png`
 
 ## Clarifications

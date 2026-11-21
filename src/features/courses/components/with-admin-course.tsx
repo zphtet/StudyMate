@@ -6,8 +6,13 @@ import { NotFound } from '@/lib/http'
 import { Prefetched } from '@/lib/query/prefetch'
 import { requirePageUser } from '@/server/auth/page-guard'
 import { getAdminLesson } from '../lesson-repo'
-import { adminCourseQuery, adminCoursesQuery, adminLessonQuery } from '../queries'
-import { getAdminCourse, listAdminCourses } from '../repo'
+import {
+  adminCourseQuery,
+  adminCoursesQuery,
+  adminLessonQuery,
+  recentlyDeletedQuery,
+} from '../queries'
+import { getAdminCourse, listAdminCourses, listRecentlyDeleted } from '../repo'
 
 // Server-side seeds for the admin course screens: same data as the Route Handlers, read with the
 // caller's id (the /a layout already checked the role), handed to the client cache.
@@ -24,6 +29,20 @@ async function SeedList({ children }: { children: ReactNode }) {
   const me = await requirePageUser()
   const courses = await listAdminCourses(me.id)
   return <Prefetched entries={[[adminCoursesQuery.queryKey, courses]]}>{children}</Prefetched>
+}
+
+export function WithRecentlyDeleted({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <SeedRecentlyDeleted>{children}</SeedRecentlyDeleted>
+    </Suspense>
+  )
+}
+
+async function SeedRecentlyDeleted({ children }: { children: ReactNode }) {
+  const me = await requirePageUser()
+  const deleted = await listRecentlyDeleted(me.id)
+  return <Prefetched entries={[[recentlyDeletedQuery.queryKey, deleted]]}>{children}</Prefetched>
 }
 
 export function WithAdminCourse({

@@ -258,7 +258,13 @@
     "emptyDrafts": "下書きはありません",
     "emptyArchived": "アーカイブしたコースはありません",
     "emptyBody": "コースを作成してレッスンを追加し、公開すると生徒に割り当てられます。",
-    "noMatches": "「{query}」に一致するコースはありません。"
+    "noMatches": "「{query}」に一致するコースはありません。",
+    "archive": "アーカイブ",
+    "unarchive": "アーカイブを解除",
+    "deleteCourse": "コースを削除",
+    "archivedToast": "コースをアーカイブしました",
+    "unarchivedToast": "コースを公開中に戻しました",
+    "recentlyDeleted": "最近削除した項目"
   },
   "courseForm": {
     "newTitle": "新しいコース",
@@ -445,5 +451,43 @@
     "lockedAfter": "レッスン {number}「{title}」の後に公開されます。",
     "lockedOnDate": "{date} に公開されます。",
     "backToCourse": "コースに戻る"
+  },
+  "deleteFlow": {
+    "title": "「{title}」を削除しますか?",
+    "body": "{course} のレッスン {number}。このレッスンへの生徒の取り組みも、「最近削除した項目」で30日たつと削除されます。",
+    "checking": "生徒の取り組みを確認しています…",
+    "work": {
+      "not_started": "未着手",
+      "in_progress": "学習中",
+      "done": "完了",
+      "draft_assignment": "課題の下書き",
+      "submitted": "提出済み",
+      "reviewed": "確認済み"
+    },
+    "keepWork": "生徒の取り組みを残したい場合は、<b>非公開</b>にするとレッスンが生徒から見えなくなり、すべて保持されます。",
+    "deleteLesson": "レッスンを削除",
+    "unpublishInstead": "代わりに非公開にする",
+    "cancel": "キャンセル",
+    "courseFootnote": "コース全体を削除するときは、先にコース名の入力が必要です。",
+    "lessonDeleted": "レッスンを削除しました。30日間は「最近削除した項目」から復元できます。",
+    "unpublished": "レッスンを非公開にしました。生徒には表示されません。",
+    "deleteCourseTitle": "{title} を削除しますか?",
+    "deleteCourseBody": "生徒はアクセスできなくなります。30日間は「最近削除した項目」から復元できます。",
+    "typeName": "確認のためコース名を入力してください",
+    "deleteCourse": "コースを削除",
+    "courseDeleted": "コースを削除しました。30日間は「最近削除した項目」から復元できます。"
+  },
+  "recentlyDeleted": {
+    "title": "最近削除した項目",
+    "back": "コース一覧に戻る",
+    "intro": "削除したコースとレッスンは30日間ここに残ります。復元すると、生徒の進捗と取り組みも元に戻ります。",
+    "empty": "過去30日間に削除した項目はありません。",
+    "courses": "コース",
+    "lessons": "レッスン",
+    "inCourse": "{course} 内",
+    "meta": "{relative}に削除 · {date} に完全に削除されます",
+    "restore": "復元",
+    "restoreLabel": "{title} を復元",
+    "restored": "復元しました"
   }
 }

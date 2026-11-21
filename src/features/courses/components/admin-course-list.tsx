@@ -10,9 +10,12 @@ import { cn } from '@/lib/utils'
 import { adminCoursesQuery } from '../queries'
 import type { AdminCourseListItem, CourseStatus } from '../types'
 import { CourseCard } from './course-card'
+import { CourseLifecycleItems } from './course-lifecycle-items'
+import { DeleteCourseDialog } from './delete-course-dialog'
 
 // Admin Courses (screen 17-AdminCourses, FR-009): search over title and level tag, status chips with
-// counts. Filtering happens here on the one cached list (research.md R10).
+// counts. Filtering happens here on the one cached list (research.md R10). Each card's ⋯ menu adds
+// Archive / Unarchive and Delete course (US3).
 
 const FILTERS: { status: CourseStatus; label: 'active' | 'drafts' | 'archived'; empty: string }[] =
   [
@@ -24,18 +27,12 @@ const FILTERS: { status: CourseStatus; label: 'active' | 'drafts' | 'archived'; 
 /** Case-insensitive, and full-width / half-width forms match (NFKC). */
 const normalize = (text: string) => text.normalize('NFKC').toLocaleLowerCase()
 
-export function AdminCourseList({
-  cardMenu,
-  footer,
-}: {
-  /** Extra ⋯ items per course (US3: Archive / Delete). */
-  cardMenu?: (course: AdminCourseListItem) => ReactNode
-  footer?: ReactNode
-}) {
+export function AdminCourseList({ footer }: { footer?: ReactNode }) {
   const t = useTranslations('courses')
   const { data: courses } = useSuspenseQuery(adminCoursesQuery)
   const [status, setStatus] = useState<CourseStatus>('active')
   const [query, setQuery] = useState('')
+  const [deleting, setDeleting] = useState<AdminCourseListItem | null>(null)
   const search = normalize(useDeferredValue(query).trim())
 
   const shown = courses.filter(
@@ -85,7 +82,12 @@ export function AdminCourseList({
         <ul className="flex flex-col gap-3">
           {shown.map((course) => (
             <li key={course.id}>
-              <CourseCard course={course} extraItems={cardMenu?.(course)} />
+              <CourseCard
+                course={course}
+                extraItems={
+                  <CourseLifecycleItems course={course} onDelete={() => setDeleting(course)} />
+                }
+              />
             </li>
           ))}
         </ul>
@@ -97,6 +99,7 @@ export function AdminCourseList({
         </EmptyState>
       )}
       {footer}
+      <DeleteCourseDialog course={deleting} onClose={() => setDeleting(null)} />
     </div>
   )
 }

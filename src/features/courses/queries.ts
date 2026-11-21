@@ -4,6 +4,8 @@ import type {
   AdminCourseDetail,
   AdminCourseList,
   AdminLesson,
+  LessonImpact,
+  RecentlyDeleted,
   StudentCourse,
   StudentCourseList,
   StudentLesson,
@@ -14,11 +16,13 @@ import type {
 export const courseKeys = {
   admin: ['courses', 'admin'] as const,
   adminList: ['courses', 'admin', 'list'] as const,
+  deleted: ['courses', 'admin', 'deleted'] as const,
   adminCourse: (courseId: string) => ['courses', 'admin', courseId] as const,
 }
 
 export const lessonKeys = {
   admin: (lessonId: string) => ['lessons', 'admin', lessonId] as const,
+  impact: (lessonId: string) => ['lessons', 'admin', lessonId, 'impact'] as const,
   student: (lessonId: string) => ['lessons', 'student', lessonId] as const,
 }
 
@@ -43,6 +47,19 @@ export const adminLessonQuery = (lessonId: string) =>
     queryKey: lessonKeys.admin(lessonId),
     queryFn: () => api<AdminLesson>(`/api/admin/lessons/${lessonId}`),
   })
+
+/** Who would lose work if the lesson were deleted; always fresh when the sheet opens. */
+export const lessonImpactQuery = (lessonId: string) =>
+  queryOptions({
+    queryKey: lessonKeys.impact(lessonId),
+    queryFn: () => api<LessonImpact>(`/api/admin/lessons/${lessonId}/impact`),
+    staleTime: 0,
+  })
+
+export const recentlyDeletedQuery = queryOptions({
+  queryKey: courseKeys.deleted,
+  queryFn: () => api<RecentlyDeleted>('/api/admin/courses/deleted'),
+})
 
 // ── Student ─────────────────────────────────────────────────────────────────────────────────
 

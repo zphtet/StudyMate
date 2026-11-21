@@ -2,12 +2,12 @@
 
 import { useTranslations } from 'next-intl'
 import { useId, useState } from 'react'
+import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { Field, inputClass } from '@/components/shared/field'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Sheet,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
@@ -64,7 +64,7 @@ export function IconPicker({
         </SheetTrigger>
         <span className="text-sm text-muted-foreground">{t('icon')}</span>
       </div>
-      <SheetContent side="bottom" className="rounded-t-3xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle>{t('iconSheet')}</SheetTitle>
           <SheetDescription className="sr-only">{t('iconInput')}</SheetDescription>
@@ -105,7 +105,7 @@ export function IconPicker({
             {t('iconDone')}
           </Button>
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   )
 }

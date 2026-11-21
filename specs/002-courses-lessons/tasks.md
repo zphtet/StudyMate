@@ -295,16 +295,16 @@ description: "Tasks for 002 Courses and Lessons"
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T060 [P] [US3] Tests in src/features/courses/purge.test.ts against the dev database, with an injected `now` and the Storage removal mocked:
+- [X] T060 [P] [US3] Tests in src/features/courses/purge.test.ts against the dev database, with an injected `now` and the Storage removal mocked:
   - selects courses and lessons whose data-model.md Course.deletedAt / Lesson.deletedAt is more than 30 days old, and nothing at 30 days or less;
   - collects `lesson-files` prefixes and `submissions.attachments` paths;
   - rows stay when file removal fails; a second run is a no-op.
-- [ ] T061 [P] [US3] Repo tests in src/features/courses/delete.test.ts against the dev database:
+- [X] T061 [P] [US3] Repo tests in src/features/courses/delete.test.ts against the dev database:
   - `deleteCourse` with a wrong title → `title_mismatch`;
   - `restoreCourse` within 30 days brings back lessons and leaves progress rows untouched; after 30 days → `restore_expired`;
   - `deleteLesson` renumbers its group; `restoreLesson` returns to its old position, or "no section" if the section is gone;
   - `getLessonImpact` follows the data-model.md › Student work table.
-- [ ] T062 [P] [US3] Playwright tests in tests/e2e/us3-delete-restore.spec.ts:
+- [X] T062 [P] [US3] Playwright tests in tests/e2e/us3-delete-restore.spec.ts:
   - 3.1: editor 🗑 on a Published lesson with a seeded draft submission lists the student as "Draft assignment"; "Unpublish instead" sets it Draft; deleting removes it from the course page;
   - 3.3: Recently deleted lists the lesson, and Restore puts it back in place;
   - 3.2: ⋯ → Delete course is enabled only for the exact name;
@@ -314,22 +314,22 @@ description: "Tasks for 002 Courses and Lessons"
 
 ### Implementation for User Story 3
 
-- [ ] T063 [US3] Repo functions:
+- [X] T063 [US3] Repo functions:
   - `deleteCourse` (trimmed title must equal data-model.md Course.title), `restoreCourse` and `listRecentlyDeleted` in src/features/courses/repo.ts;
   - `deleteLesson`, `restoreLesson` and `getLessonImpact` in src/features/courses/lesson-repo.ts.
 
   All set or clear data-model.md Course.deletedAt / Lesson.deletedAt per research.md R8 and renumber with order.ts. T061 passes.
-- [ ] T064 [US3] Server Actions `deleteCourse` and `restoreCourse` in src/features/courses/actions.ts, and `deleteLesson` and `restoreLesson` in src/features/courses/lesson-actions.ts (contracts/server-actions.md). Route Handlers GET src/app/api/admin/lessons/[lessonId]/impact/route.ts (`requireLessonOwner`) and GET src/app/api/admin/courses/deleted/route.ts (`requireRole('admin')`), with `lessonImpactQuery` and `recentlyDeletedQuery` in src/features/courses/queries.ts
-- [ ] T065 [US3] `purgeExpired(now)` in src/features/courses/purge.ts, plus `removeStorageObjects(bucket, paths)` and `listStoragePrefix(bucket, prefix)` in src/server/supabase-admin.ts (secret-key client, server-only). Files are removed before rows, per research.md R8. T060 passes
-- [ ] T066 [US3] Cron Route Handler src/app/api/cron/purge/route.ts: constant-time comparison of `Authorization: Bearer ${CRON_SECRET}`, 401 otherwise; returns `PurgeResult`. Add vercel.json with `crons: [{ path: '/api/cron/purge', schedule: '0 3 * * *' }]`
-- [ ] T067 [P] [US3] `DeleteLessonSheet` in src/features/courses/components/delete-lesson-sheet.tsx (matches screenshots/21-AdminDelete.png; gender-neutral copy; impact list; "Unpublish instead" only for Published lessons) and `DeleteCourseDialog` in src/features/courses/components/delete-course-dialog.tsx (typed name, button disabled until it matches)
-- [ ] T068 [US3] Wire the delete and archive entry points:
+- [X] T064 [US3] Server Actions `deleteCourse` and `restoreCourse` in src/features/courses/actions.ts, and `deleteLesson` and `restoreLesson` in src/features/courses/lesson-actions.ts (contracts/server-actions.md). Route Handlers GET src/app/api/admin/lessons/[lessonId]/impact/route.ts (`requireLessonOwner`) and GET src/app/api/admin/courses/deleted/route.ts (`requireRole('admin')`), with `lessonImpactQuery` and `recentlyDeletedQuery` in src/features/courses/queries.ts
+- [X] T065 [US3] `purgeExpired(now)` in src/features/courses/purge.ts, plus `removeStorageObjects(bucket, paths)` and `listStoragePrefix(bucket, prefix)` in src/server/supabase-admin.ts (secret-key client, server-only). Files are removed before rows, per research.md R8. T060 passes
+- [X] T066 [US3] Cron Route Handler src/app/api/cron/purge/route.ts: constant-time comparison of `Authorization: Bearer ${CRON_SECRET}`, 401 otherwise; returns `PurgeResult`. Add vercel.json with `crons: [{ path: '/api/cron/purge', schedule: '0 3 * * *' }]`
+- [X] T067 [P] [US3] `DeleteLessonSheet` in src/features/courses/components/delete-lesson-sheet.tsx (matches screenshots/21-AdminDelete.png; gender-neutral copy; impact list; "Unpublish instead" only for Published lessons) and `DeleteCourseDialog` in src/features/courses/components/delete-course-dialog.tsx (typed name, button disabled until it matches)
+- [X] T068 [US3] Wire the delete and archive entry points:
   - 🗑 in the lesson editor (T047) and swipe Delete in `SortableLessonList` (T048) open `DeleteLessonSheet`;
   - `CourseCard` ⋯ gains Archive / Unarchive and Delete course;
   - src/app/a/courses/[courseId]/page.tsx gets the Archived banner with Unarchive;
   - src/app/a/courses/[courseId]/edit/page.tsx gets "Delete course".
-- [ ] T069 [US3] Recently deleted page src/app/a/courses/deleted/page.tsx (lists, "Deleted {relative} · removed for good on {date}" in the viewer's zone, Restore, empty state) and a "Recently deleted" footer link on src/app/a/(tabs)/courses/page.tsx
-- [ ] T070 [US3] Add the `deleteFlow`, `recentlyDeleted` and `courses` (archive / delete) strings to src/i18n/messages/{en,my,ja}.json; T062 passes
+- [X] T069 [US3] Recently deleted page src/app/a/courses/deleted/page.tsx (lists, "Deleted {relative} · removed for good on {date}" in the viewer's zone, Restore, empty state) and a "Recently deleted" footer link on src/app/a/(tabs)/courses/page.tsx
+- [X] T070 [US3] Add the `deleteFlow`, `recentlyDeleted` and `courses` (archive / delete) strings to src/i18n/messages/{en,my,ja}.json; T062 passes
 
 **Checkpoint**: all stories in scope functional
 
@@ -337,17 +337,17 @@ description: "Tasks for 002 Courses and Lessons"
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T071 [P] Documentation:
+- [X] T071 [P] Documentation:
   - docs/data-model.md: `allow_student_notes` in the `courses` row; `can_read_lesson` and the new CHECKs in §4.
   - docs/technical-spec.md: §3 the `s/(tabs)` group and `lesson-files` path layout; §9 / §17 daily purge via Vercel Cron; §14 CSP must allow `frame-src https://www.youtube-nocookie.com`.
   - .env.example: note that `CRON_SECRET` also protects `/api/cron/purge`.
-- [ ] T072 [P] Review every new `my` and `ja` string for completeness and tone; list strings needing a native speaker under a `_review` note in specs/002-courses-lessons/quickstart.md
-- [ ] T073 [P] Accessibility and layout pass at 390×844 and 1280×800: 44 px targets, labels, `aria-label` on icon buttons, focus order in sheets and dialogs, keyboard reorder, every swipe action also available without swiping, editor split view at ≥ 1024 px. Fix findings in src/features/courses/components/ and src/components/shared/
-- [ ] T074 Compare each screen in src/app/a/(tabs)/courses/, src/app/a/courses/, src/app/s/(tabs)/courses/, src/app/s/courses/ and src/app/s/lessons/ with screenshots/05, 09, 10, 17, 18, 19, 20, 21 at 390×844, and fix layout, hierarchy and copy, keeping only the "partial" differences documented in contracts/ui-routes.md
+- [X] T072 [P] Review every new `my` and `ja` string for completeness and tone; list strings needing a native speaker under a `_review` note in specs/002-courses-lessons/quickstart.md
+- [X] T073 [P] Accessibility and layout pass at 390×844 and 1280×800: 44 px targets, labels, `aria-label` on icon buttons, focus order in sheets and dialogs, keyboard reorder, every swipe action also available without swiping, editor split view at ≥ 1024 px. Fix findings in src/features/courses/components/ and src/components/shared/
+- [X] T074 Compare each screen in src/app/a/(tabs)/courses/, src/app/a/courses/, src/app/s/(tabs)/courses/, src/app/s/courses/ and src/app/s/lessons/ with screenshots/05, 09, 10, 17, 18, 19, 20, 21 at 390×844, and fix layout, hierarchy and copy, keeping only the "partial" differences documented in contracts/ui-routes.md
 - [ ] T075 Performance: confirm with `pnpm build` output that `@uiw/react-md-editor` and `@dnd-kit/*` load only on admin course and editor routes; Lighthouse performance on `/s/lessons/[id]` (mobile) ≥ 90; record both results in specs/002-courses-lessons/quickstart.md §6
-- [ ] T076 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`
-- [ ] T077 Walk through specs/002-courses-lessons/quickstart.md §4 scenarios 1–16 and §5 (purge), and note any failures
-- [ ] T078 Set **Status** to `Implemented` in specs/002-courses-lessons/spec.md (constitution quality gate)
+- [X] T076 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`
+- [X] T077 Walk through specs/002-courses-lessons/quickstart.md §4 scenarios 1–16 and §5 (purge), and note any failures
+- [X] T078 Set **Status** to `Implemented` in specs/002-courses-lessons/spec.md (constitution quality gate)
 
 ---
 

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 import { lessonFileUrl } from './files'
 import { flatten, groupCourse, mergeOrder, numberLessons, renumber } from './order'
+import { isExpired } from './retention'
 import {
   isStoragePathFor,
   readUnlockRule,
@@ -13,7 +14,8 @@ import {
   type ResourceFields,
   type UnlockRule,
 } from './schemas'
-import type { AdminLesson, Resource, ResourceKind } from './types'
+import type { AdminLesson, LessonImpact, Resource, ResourceKind } from './types'
+import { studentWork } from './work'
 
 // Sections, lessons and resources for the admin builder (spec 002 US2, contracts/server-actions.md
 // › Sections and › Lessons). Callers MUST have run a guard; every query is scoped to the caller's own,
@@ -277,6 +279,99 @@ export async function reorderLessons(adminId: string, courseId: string, groups: 
     await touchCourse(tx, courseId)
     return {}
   })
+}
+
+// ── Delete and restore (US3, research.md R8) ────────────────────────────────────────────────
+
+/**
+ * Soft delete: sets data-model.md Lesson.deletedAt and renumbers the rest of its group. The lesson
+ * keeps its old Lesson.position so a restore can put it back there.
+ */
+export async function deleteLesson(adminId: string, lessonId: string) {
+  return prisma.$transaction(async (tx) => {
+    const lesson = await findLesson(tx, adminId, lessonId)
+    await tx.lesson.update({ where: { id: lessonId }, data: { deletedAt: new Date() } })
+    await renumberGroup(tx, lesson.courseId, lesson.sectionId)
+    await touchCourse(tx, lesson.courseId)
+    return {}
+  })
+}
+
+/**
+ * Within 30 days, and only while its course isn't deleted (lessons of a deleted course come back
+ * with it): the lesson returns to its old position in its group. If its section was deleted in the
+ * meantime, the FK already moved it to "no section".
+ */
+export async function restoreLesson(adminId: string, lessonId: string, now = new Date()) {
+  return prisma.$transaction(async (tx) => {
+    const lesson = await tx.lesson.findFirst({
+      where: { id: lessonId, deletedAt: { not: null }, course: ownCourse(adminId) },
+      select: { id: true, courseId: true, sectionId: true, position: true, deletedAt: true },
+    })
+    if (!lesson?.deletedAt) fail('lesson_not_found')
+    if (isExpired(lesson.deletedAt, now)) fail('restore_expired')
+
+    const siblings = await tx.lesson.findMany({
+      where: { courseId: lesson.courseId, sectionId: lesson.sectionId, deletedAt: null },
+      orderBy: [{ position: 'asc' }, { updatedAt: 'asc' }],
+      select: { id: true, position: true },
+    })
+    const ids = siblings.map((s) => s.id)
+    ids.splice(Math.min(lesson.position, ids.length), 0, lesson.id)
+    const current = new Map(siblings.map((s) => [s.id, s.position]))
+
+    await tx.lesson.update({ where: { id: lessonId }, data: { deletedAt: null } })
+    for (const [position, id] of ids.entries()) {
+      if (id === lessonId || current.get(id) !== position) {
+        await tx.lesson.update({ where: { id }, data: { position } })
+      }
+    }
+    await touchCourse(tx, lesson.courseId)
+    return {}
+  })
+}
+
+/** Actively assigned students and their work on the lesson, by name (data-model.md › Student work). */
+export async function getLessonImpact(adminId: string, lessonId: string): Promise<LessonImpact> {
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, deletedAt: null, course: ownCourse(adminId) },
+    select: {
+      course: {
+        select: {
+          assignments: {
+            where: { status: 'active' },
+            select: { student: { select: { id: true, displayName: true } } },
+          },
+        },
+      },
+    },
+  })
+  if (!lesson) throw new NotFound('lesson_not_found')
+
+  const students = lesson.course.assignments.map((a) => a.student)
+  const studentIds = students.map((s) => s.id)
+  const [submissions, progress] = await Promise.all([
+    prisma.submission.findMany({
+      where: { lessonId, studentId: { in: studentIds } },
+      select: { studentId: true, status: true },
+    }),
+    prisma.lessonProgress.findMany({
+      where: { lessonId, studentId: { in: studentIds } },
+      select: { studentId: true, status: true },
+    }),
+  ])
+  const submissionOf = new Map(submissions.map((s) => [s.studentId, s.status]))
+  const progressOf = new Map(progress.map((p) => [p.studentId, p.status]))
+
+  return {
+    students: [...students]
+      .sort((a, b) => a.displayName.localeCompare(b.displayName))
+      .map((s) => ({
+        id: s.id,
+        displayName: s.displayName,
+        work: studentWork(submissionOf.get(s.id) ?? null, progressOf.get(s.id) ?? null),
+      })),
+  }
 }
 
 // ── Reads ───────────────────────────────────────────────────────────────────────────────────

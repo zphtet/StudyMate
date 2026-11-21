@@ -36,7 +36,7 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 | `profiles` (Profile) | One per auth user; settings | `id` = auth.users.id, `role`, `display_name`, `timezone`, `locale`, `color_mode`, `theme_id`, `font_id`, `font_scale`, `sleep_minutes`, `after_shift_buffer`, `waking_start/end`, `quiet_start/end`, `weekly_goal_days` | 001, 005, 007 |
 | `admin_invites` (AdminInvite) | Admin's join code | `admin_id`, `code` (6 chars, unique), `active` | 001 |
 | `student_links` (StudentLink) | Student ↔ admin | `student_id`, `admin_id`, `status` pending/active/declined/removed | 001 |
-| `courses` (Course) | Course | `owner_id`, `is_personal`, `title`, `icon`, `color`, `level_tag`, `target_date`, `unlock_in_order`, `status` draft/active/archived, `deleted_at` | 002 |
+| `courses` (Course) | Course | `owner_id`, `is_personal`, `title`, `icon`, `color`, `level_tag`, `target_date`, `unlock_in_order`, `allow_student_notes` (stored only until a notes feature), `status` draft/active/archived, `deleted_at` | 002 |
 | `course_sections` (CourseSection) | Group lessons | `course_id`, `title`, `position` | 002 |
 | `lessons` (Lesson) | Markdown lesson | `course_id`, `section_id`, `content_md`, `est_minutes`, `assignment_prompt`, `require_submission`, `unlock_rule` (json), `status` draft/published, `position`, `deleted_at` | 002 |
 | `lesson_resources` (LessonResource) | Files, links, audio | `lesson_id`, `kind`, `storage_path`/`url` | 002 |
@@ -67,12 +67,12 @@ Prisma can't describe these, so they stay in the SQL migration. When Prisma gene
 
 | Kind | What | Why |
 | --- | --- | --- |
-| CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h, `sequence` format | Data integrity |
+| CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h, `sequence` format; spec 002: `courses_color_check`, `courses_description_check`, `courses_level_tag_check`, `course_sections_title_check`, `course_sections_position_check`, `lessons_position_check`, `lessons_assignment_prompt_check`, `lessons_unlock_rule_check`, `lesson_resources_name_check`, `lesson_resources_size_check`, `lesson_resources_target_check` | Data integrity |
 | EXCLUDE constraint | `shifts`: no overlapping working shifts per student (`btree_gist`) | Overlap rule from spec 005 |
 | Partial unique indexes | one active invite per admin; one active admin link per student | Spec 001 |
-| Partial indexes | active courses/lessons, active assignments, undelivered messages | Performance |
+| Partial indexes | active courses/lessons, active assignments, undelivered messages; spec 002: `courses_deleted`, `lessons_deleted` (Recently deleted and the daily purge) | Performance |
 | Triggers | `handle_new_user` (profile + invite on sign-up), `prevent_role_change` | Spec 001 |
-| Functions | `is_admin_of`, `can_read_course`, `request_join`, `respond_join`, `preview_invite`, `effective_due`, `busy_segments`, `next_free_at`, `status_at`, `status_now`, `custom_access_token_hook` | Shared logic |
+| Functions | `is_admin_of`, `can_read_course`, `can_read_lesson` (002: Published, non-deleted, readable course, and completed-only in Archived courses; used by `lessons`, `lesson_resources` and `lesson-files` policies), `uuid_folder` (002: Storage path folder as uuid), `request_join`, `respond_join`, `preview_invite`, `effective_due`, `busy_segments`, `next_free_at`, `status_at`, `status_now`, `custom_access_token_hook` | Shared logic |
 | RLS policies | every table + Storage buckets | Protects supabase-js access (Realtime, Storage, any client query) |
 | FK to `auth.users` | `profiles.id` | Prisma only manages `public` |
 

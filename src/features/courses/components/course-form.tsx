@@ -9,7 +9,7 @@ import { useId, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
-import { Field, inputClass } from '@/components/shared/field'
+import { checkboxClass, checkboxLabelClass, Field, inputClass } from '@/components/shared/field'
 import { Segmented } from '@/components/shared/segmented'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -230,7 +230,7 @@ export function CourseForm(props: Props) {
         {(['unlockInOrder', 'allowStudentNotes'] as const).map((name) => (
           <div key={name} className="flex flex-col border-b py-3 last:border-b-0">
             <div className="flex min-h-11 items-center justify-between gap-4">
-              <Label htmlFor={`${uid}course-${name}`} className="text-base font-normal">
+              <Label htmlFor={`${uid}course-${name}`} className={checkboxLabelClass}>
                 {t(name === 'unlockInOrder' ? 'unlockInOrder' : 'allowNotes')}
               </Label>
               <Controller
@@ -241,7 +241,7 @@ export function CourseForm(props: Props) {
                     id={`${uid}course-${name}`}
                     checked={field.value}
                     onCheckedChange={(checked) => field.onChange(checked === true)}
-                    className="size-7 rounded-md"
+                    className={checkboxClass}
                   />
                 )}
               />

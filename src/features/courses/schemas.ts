@@ -119,6 +119,7 @@ export type LessonFieldsInput = z.input<typeof lessonFieldsSchema>
 export type LessonFields = z.output<typeof lessonFieldsSchema>
 
 export const lessonStatusSchema = z.enum(['draft', 'published'])
+export type LessonStatus = z.infer<typeof lessonStatusSchema>
 
 // ── Resources ───────────────────────────────────────────────────────────────────────────────
 
