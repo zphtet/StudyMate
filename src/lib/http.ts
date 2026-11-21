@@ -41,9 +41,9 @@ export async function handle(fn: () => Promise<unknown>): Promise<Response> {
     if (error instanceof NotFound) return json(404, error.code, 'Not found')
     if (error instanceof HttpError) return json(error.status, error.code, error.code, error.details)
     if (error instanceof AuthError) {
-      if (error.status === 401) return json(401, 'unauthenticated', error.message)
-      if (error.status === 403) return json(403, 'forbidden', error.message)
-      return json(404, 'not_found', error.message)
+      if (error.status === 401) return json(401, error.code ?? 'unauthenticated', error.message)
+      if (error.status === 403) return json(403, error.code ?? 'forbidden', error.message)
+      return json(404, error.code ?? 'not_found', error.message)
     }
     console.error('[route] unexpected error', error)
     return json(500, 'unexpected', 'Something went wrong')

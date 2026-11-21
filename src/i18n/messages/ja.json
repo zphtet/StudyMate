@@ -181,7 +181,9 @@
     "file_not_found": "このファイルは利用できません。",
     "file_too_large": "ファイルは10MBまでです。",
     "file_type_not_allowed": "画像、PDF、音声ファイルを使ってください。",
-    "upload_failed": "ファイルをアップロードできませんでした。もう一度お試しください。"
+    "upload_failed": "ファイルをアップロードできませんでした。もう一度お試しください。",
+    "course_not_active": "割り当てや期限の設定ができるのは公開中のコースだけです。",
+    "assignment_not_found": "このコースはその生徒に割り当てられていません。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -489,5 +491,25 @@
     "restore": "復元",
     "restoreLabel": "{title} を復元",
     "restored": "復元しました"
+  },
+  "deadlines": {
+    "done": "完了",
+    "daysLate": "{count, plural, other {# 日遅れ}}",
+    "overdue": "期限切れ",
+    "dueToday": "今日まで",
+    "dueTomorrow": "明日まで",
+    "dueOn": "{date} まで",
+    "byTime": "{time} まで",
+    "dueDate": "期限日",
+    "dueTime": "時刻",
+    "noDeadline": "期限なし",
+    "alreadyOverdue": "すでに期限を過ぎています",
+    "laterThanCourse": "コースの期限より後です",
+    "onShift": "{name} さんはその時間シフト中です",
+    "asleep": "{name} さんはその時間睡眠中です",
+    "moveTo": "{time} に移動",
+    "timeBoth": "{primary}（{primaryCity}）· {secondary}（{secondaryCity}）",
+    "timeOne": "{primary}（{primaryCity}）",
+    "timeCompact": "{primary} · あなたの時間 {secondary}"
   }
 }

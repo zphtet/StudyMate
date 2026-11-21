@@ -99,11 +99,66 @@ export async function seedCourse({
   return { courseId, sectionIds, lessonIds }
 }
 
-export async function assignCourse(courseId: string, studentId: string, assignedBy: string) {
+/** Spec 003: optional course deadline (ISO instant) and status (`removed` = unassigned). */
+export async function assignCourse(
+  courseId: string,
+  studentId: string,
+  assignedBy: string,
+  {
+    dueAt = null,
+    status = 'active',
+  }: { dueAt?: string | null; status?: 'active' | 'removed' } = {},
+) {
   await sql(
-    `insert into course_assignments (course_id, student_id, assigned_by) values ($1, $2, $3)`,
-    [courseId, studentId, assignedBy],
+    `insert into course_assignments (course_id, student_id, assigned_by, due_at, status)
+     values ($1, $2, $3, $4, $5)`,
+    [courseId, studentId, assignedBy, dueAt, status],
   )
+}
+
+/** Spec 003: one student's own deadline for one lesson (upsert). */
+export async function setLessonDeadline(
+  lessonId: string,
+  studentId: string,
+  dueAt: string,
+  setBy: string,
+) {
+  await sql(
+    `insert into lesson_deadlines (lesson_id, student_id, due_at, set_by) values ($1, $2, $3, $4)
+     on conflict (lesson_id, student_id) do update set due_at = excluded.due_at, set_by = excluded.set_by`,
+    [lessonId, studentId, dueAt, setBy],
+  )
+}
+
+/** Spec 003 (shifts come with 005): one working shift, optionally followed by a sleep block. */
+export async function seedShift(
+  studentId: string,
+  {
+    startAt,
+    endAt,
+    type = 'night',
+    sleepMinutes = 0,
+  }: {
+    startAt: string
+    endAt: string
+    type?: 'day' | 'evening' | 'night' | 'off' | 'custom'
+    sleepMinutes?: number
+  },
+) {
+  await sql(
+    `insert into shifts (student_id, type, start_at, end_at, sleep_minutes) values ($1, $2, $3, $4, $5)`,
+    [studentId, type, startAt, endAt, sleepMinutes],
+  )
+}
+
+/** Spec 003: the profile's IANA time zone (deadlines are judged by it). */
+export async function setTimezone(userId: string, timezone: string) {
+  await sql(`update profiles set timezone = $2 where id = $1`, [userId, timezone])
+}
+
+/** Spec 003: soft-deletes a lesson as 002's Delete does (its deadlines are kept, hidden). */
+export async function softDeleteLesson(lessonId: string) {
+  await sql(`update lessons set deleted_at = now() where id = $1`, [lessonId])
 }
 
 export async function markDone(studentId: string, lessonId: string) {

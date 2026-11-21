@@ -8,8 +8,11 @@ import { prisma } from '@/lib/prisma'
 import {
   AuthError,
   requireAdminOf,
+  requireAdminOfAll,
+  requireAssignmentOwner,
   requireCourseOwner,
   requireCourseReader,
+  requireLessonDeadlineTarget,
   requireLessonOwner,
   requireLessonReader,
   requireRole,
@@ -31,6 +34,10 @@ const id = {
   otherStudent: randomUUID(),
   admin: randomUUID(),
   otherAdmin: randomUUID(),
+  // Spec 003: linked but unassigned, pending link, and assigned to the admin's course but not linked.
+  secondStudent: randomUUID(),
+  pendingStudent: randomUUID(),
+  unlinkedStudent: randomUUID(),
 }
 const course = {
   admin: randomUUID(),
@@ -38,6 +45,8 @@ const course = {
   personal: randomUUID(),
   archived: randomUUID(),
   deleted: randomUUID(),
+  removed: randomUUID(), // spec 003: active course, the student's assignment is `removed`
+  otherAdmins: randomUUID(),
 }
 // Spec 002: same cases as supabase/tests/002_course_policies.test.sql (can_read_lesson).
 const lesson = {
@@ -48,6 +57,8 @@ const lesson = {
   archivedDone: randomUUID(),
   archivedOpen: randomUUID(),
   inDeletedCourse: randomUUID(),
+  inRemoved: randomUUID(), // spec 003
+  otherAdmins: randomUUID(), // spec 003
 }
 const run = Date.now()
 
@@ -66,14 +77,21 @@ beforeAll(async () => {
     [id.otherStudent, 'student', 'Guard Other Student'],
     [id.admin, 'admin', 'Guard Admin'],
     [id.otherAdmin, 'admin', 'Guard Other Admin'],
+    [id.secondStudent, 'student', 'Guard Second Student'],
+    [id.pendingStudent, 'student', 'Guard Pending Student'],
+    [id.unlinkedStudent, 'student', 'Guard Unlinked Student'],
   ] as const
   for (const [userId, role, name] of users) {
     const meta = JSON.stringify({ role, display_name: name })
     await prisma.$executeRaw`insert into auth.users (id, email, raw_user_meta_data)
       values (${userId}::uuid, ${`guard-${run}-${userId}@example.test`}, ${meta}::jsonb)`
   }
-  await prisma.studentLink.create({
-    data: { studentId: id.student, adminId: id.admin, status: 'active' },
+  await prisma.studentLink.createMany({
+    data: [
+      { studentId: id.student, adminId: id.admin, status: 'active' },
+      { studentId: id.secondStudent, adminId: id.admin, status: 'active' },
+      { studentId: id.pendingStudent, adminId: id.admin, status: 'pending' },
+    ],
   })
   await prisma.course.createMany({
     data: [
@@ -88,14 +106,21 @@ beforeAll(async () => {
         status: 'active',
         deletedAt: new Date(),
       },
+      { id: course.removed, ownerId: id.admin, title: 'Removed course', status: 'active' },
+      { id: course.otherAdmins, ownerId: id.otherAdmin, title: 'Other course', status: 'active' },
     ],
   })
   await prisma.courseAssignment.createMany({
-    data: [course.admin, course.adminDraft, course.archived, course.deleted].map((courseId) => ({
-      courseId,
-      studentId: id.student,
-      assignedBy: id.admin,
-    })),
+    data: [
+      ...[course.admin, course.adminDraft, course.archived, course.deleted].map((courseId) => ({
+        courseId,
+        studentId: id.student,
+        assignedBy: id.admin,
+      })),
+      { courseId: course.removed, studentId: id.student, assignedBy: id.admin, status: 'removed' },
+      { courseId: course.otherAdmins, studentId: id.student, assignedBy: id.otherAdmin },
+      { courseId: course.admin, studentId: id.unlinkedStudent, assignedBy: id.admin },
+    ],
   })
   const now = new Date()
   await prisma.lesson.createMany({
@@ -141,6 +166,20 @@ beforeAll(async () => {
         id: lesson.inDeletedCourse,
         courseId: course.deleted,
         title: 'In deleted course',
+        status: 'published',
+        position: 0,
+      },
+      {
+        id: lesson.inRemoved,
+        courseId: course.removed,
+        title: 'In removed course',
+        status: 'published',
+        position: 0,
+      },
+      {
+        id: lesson.otherAdmins,
+        courseId: course.otherAdmins,
+        title: 'Other admin lesson',
         status: 'published',
         position: 0,
       },
@@ -338,5 +377,127 @@ describe('requireLessonReader', () => {
   test('another admin → 404', async () => {
     signInAs(id.otherAdmin)
     await expectStatus(requireLessonReader(lesson.published), 404)
+  })
+})
+
+// Spec 003 (data-model.md › Guards): same allowed and denied cases as
+// supabase/tests/003_assign_policies.test.sql (assign_write, the tightened deadlines_write).
+async function expectCode(promise: Promise<unknown>, status: number, code: string) {
+  await expect(promise).rejects.toBeInstanceOf(AuthError)
+  await expect(promise).rejects.toMatchObject({ status, code })
+}
+
+describe('requireAdminOfAll', () => {
+  test('every student actively linked → allowed', async () => {
+    signInAs(id.admin)
+    await expect(requireAdminOfAll([id.student, id.secondStudent])).resolves.toMatchObject({
+      id: id.admin,
+    })
+  })
+  test('the same student twice still counts once', async () => {
+    signInAs(id.admin)
+    await expect(requireAdminOfAll([id.student, id.student])).resolves.toMatchObject({
+      id: id.admin,
+    })
+  })
+  test('one student not linked → 403', async () => {
+    signInAs(id.admin)
+    await expectStatus(requireAdminOfAll([id.student, id.otherStudent]), 403)
+  })
+  test('one link still pending → 403', async () => {
+    signInAs(id.admin)
+    await expectStatus(requireAdminOfAll([id.student, id.pendingStudent]), 403)
+  })
+  test('another admin → 403', async () => {
+    signInAs(id.otherAdmin)
+    await expectStatus(requireAdminOfAll([id.student]), 403)
+  })
+  test('a student → 403', async () => {
+    signInAs(id.student)
+    await expectStatus(requireAdminOfAll([id.student]), 403)
+  })
+})
+
+describe('requireAssignmentOwner', () => {
+  test('owner, linked student, active assignment → the assignment', async () => {
+    signInAs(id.admin)
+    await expect(requireAssignmentOwner(course.admin, id.student)).resolves.toMatchObject({
+      me: { id: id.admin },
+      assignment: { courseId: course.admin, studentId: id.student, dueAt: null },
+    })
+  })
+  test('a removed assignment → 404 assignment_not_found', async () => {
+    signInAs(id.admin)
+    await expectCode(
+      requireAssignmentOwner(course.removed, id.student),
+      404,
+      'assignment_not_found',
+    )
+  })
+  test('a linked student without an assignment → 404 assignment_not_found', async () => {
+    signInAs(id.admin)
+    await expectCode(
+      requireAssignmentOwner(course.admin, id.secondStudent),
+      404,
+      'assignment_not_found',
+    )
+  })
+  test('another admin’s course → 404', async () => {
+    signInAs(id.admin)
+    await expectStatus(requireAssignmentOwner(course.otherAdmins, id.student), 404)
+  })
+  test('the owner, but the student is not linked to them → 403', async () => {
+    signInAs(id.admin)
+    await expectStatus(requireAssignmentOwner(course.admin, id.unlinkedStudent), 403)
+  })
+  test('a student → 403', async () => {
+    signInAs(id.student)
+    await expectStatus(requireAssignmentOwner(course.admin, id.student), 403)
+  })
+})
+
+describe('requireLessonDeadlineTarget', () => {
+  test('owner’s Published lesson, linked student with an active assignment → allowed', async () => {
+    signInAs(id.admin)
+    await expect(requireLessonDeadlineTarget(lesson.published, id.student)).resolves.toMatchObject({
+      me: { id: id.admin },
+      courseId: course.admin,
+    })
+  })
+  test.each([
+    ['a Draft lesson', () => lesson.draft],
+    ['a deleted lesson', () => lesson.deleted],
+    ['another admin’s lesson', () => lesson.otherAdmins],
+  ])('%s → 404 lesson_not_found', async (_, lessonId) => {
+    signInAs(id.admin)
+    await expectCode(requireLessonDeadlineTarget(lessonId(), id.student), 404, 'lesson_not_found')
+  })
+  test('no active assignment (removed) → 404 assignment_not_found', async () => {
+    signInAs(id.admin)
+    await expectCode(
+      requireLessonDeadlineTarget(lesson.inRemoved, id.student),
+      404,
+      'assignment_not_found',
+    )
+  })
+  test('a linked student who is not assigned → 404 assignment_not_found', async () => {
+    signInAs(id.admin)
+    await expectCode(
+      requireLessonDeadlineTarget(lesson.published, id.secondStudent),
+      404,
+      'assignment_not_found',
+    )
+  })
+  test('an assigned student who is not linked to the admin → 403', async () => {
+    signInAs(id.admin)
+    await expectStatus(requireLessonDeadlineTarget(lesson.published, id.unlinkedStudent), 403)
+  })
+  test('another admin → 404', async () => {
+    signInAs(id.otherAdmin)
+    await expectStatus(requireLessonDeadlineTarget(lesson.published, id.student), 404)
+  })
+  test('a student → 403', async () => {
+    signInAs(id.student)
+    await expectStatus(requireLessonDeadlineTarget(lesson.published, id.student), 403)
   })
 })

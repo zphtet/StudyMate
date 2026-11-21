@@ -41,7 +41,7 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 | `lessons` (Lesson) | Markdown lesson | `course_id`, `section_id`, `content_md`, `est_minutes`, `assignment_prompt`, `require_submission`, `unlock_rule` (json), `status` draft/published, `position`, `deleted_at` | 002 |
 | `lesson_resources` (LessonResource) | Files, links, audio | `lesson_id`, `kind`, `storage_path`/`url` | 002 |
 | `course_assignments` (CourseAssignment) | Course → student + course deadline | `course_id`, `student_id`, `assigned_by`, `due_at`; unique (course, student) | 003 |
-| `lesson_deadlines` (LessonDeadline) | Per-lesson deadline override | PK (`lesson_id`, `student_id`), `due_at`, `set_by` | 003 |
+| `lesson_deadlines` (LessonDeadline) | Per-lesson deadline override | PK (`lesson_id`, `student_id`), `due_at`, `set_by`; index `lesson_deadlines_student_due` (`student_id`, `due_at`) | 003 |
 | `lesson_progress` (LessonProgress) | Completion | PK (`student_id`, `lesson_id`), `status`, `completed_at`, `completed_by`, `minutes_spent`, `client_op_id` | 004 |
 | `submissions` (Submission) | Student assignment | `student_id`, `lesson_id` (unique pair), `body_md`, `attachments` (json), `status` | 004 |
 | `comments` (Comment) | Feedback thread | `author_id`, `student_id`, `target_type`, `target_id`, `body` | 004 |
@@ -69,11 +69,11 @@ Prisma can't describe these, so they stay in the SQL migration. When Prisma gene
 | --- | --- | --- |
 | CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h, `sequence` format; spec 002: `courses_color_check`, `courses_description_check`, `courses_level_tag_check`, `course_sections_title_check`, `course_sections_position_check`, `lessons_position_check`, `lessons_assignment_prompt_check`, `lessons_unlock_rule_check`, `lesson_resources_name_check`, `lesson_resources_size_check`, `lesson_resources_target_check` | Data integrity |
 | EXCLUDE constraint | `shifts`: no overlapping working shifts per student (`btree_gist`) | Overlap rule from spec 005 |
-| Partial unique indexes | one active invite per admin; one active admin link per student | Spec 001 |
+| Partial unique indexes | one active invite per admin; one active admin link per student; spec 003: `notification_rules_default_once` (`admin_id`, `student_id`, `trigger`) where `config->>'preset' = 'default'` (default reminders at most once) | Spec 001, 003 |
 | Partial indexes | active courses/lessons, active assignments, undelivered messages; spec 002: `courses_deleted`, `lessons_deleted` (Recently deleted and the daily purge) | Performance |
 | Triggers | `handle_new_user` (profile + invite on sign-up), `prevent_role_change` | Spec 001 |
 | Functions | `is_admin_of`, `can_read_course`, `can_read_lesson` (002: Published, non-deleted, readable course, and completed-only in Archived courses; used by `lessons`, `lesson_resources` and `lesson-files` policies), `uuid_folder` (002: Storage path folder as uuid), `request_join`, `respond_join`, `preview_invite`, `effective_due`, `busy_segments`, `next_free_at`, `status_at`, `status_now`, `custom_access_token_hook` | Shared logic |
-| RLS policies | every table + Storage buckets | Protects supabase-js access (Realtime, Storage, any client query) |
+| RLS policies | every table + Storage buckets; spec 003 replaced `deadlines_write` (owner's Published, non-deleted lesson with an active assignment for that student, `set_by` = caller; mirrors `requireLessonDeadlineTarget`) | Protects supabase-js access (Realtime, Storage, any client query) |
 | FK to `auth.users` | `profiles.id` | Prisma only manages `public` |
 
 Call SQL functions from Prisma with typed raw queries, e.g.

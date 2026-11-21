@@ -308,6 +308,8 @@ model LessonDeadline {
   setter  Profile @relation("DeadlineSetBy", fields: [setBy], references: [id], onDelete: NoAction)
 
   @@id([lessonId, studentId])
+  // Plan ranges and Today look deadlines up by student and time (spec 003 data-model.md).
+  @@index([studentId, dueAt], map: "lesson_deadlines_student_due")
   @@map("lesson_deadlines")
 }
 
@@ -440,6 +442,8 @@ model NotificationRule {
   admin   Profile  @relation("RuleAdmin", fields: [adminId], references: [id], onDelete: Cascade)
   student Profile? @relation("RuleStudent", fields: [studentId], references: [id], onDelete: Cascade)
 
+  // + unique index notification_rules_default_once (admin_id, student_id, trigger)
+  //   WHERE config->>'preset' = 'default' — in SQL (spec 003 FR-013)
   @@map("notification_rules")
 }
 

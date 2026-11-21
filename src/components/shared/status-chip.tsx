@@ -1,10 +1,13 @@
 import { cn } from '@/lib/utils'
 
-// Small status label (Published / Draft / Active / Archived / Locked). Theme tokens only.
+// Small status label (Published / Draft / Active / Archived / Locked; spec 003 deadline chips: Done,
+// "2 days late", "Due today"). Theme tokens only.
 const TONES = {
   success: 'bg-success-soft text-success',
   muted: 'bg-muted text-muted-foreground',
   accent: 'bg-accent text-accent-foreground',
+  danger: 'bg-destructive-soft text-destructive',
+  warning: 'bg-warning text-warning-foreground',
 } as const
 
 export function StatusChip({

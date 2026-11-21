@@ -19,6 +19,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -39,6 +40,9 @@
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
+  --color-avail-shift: var(--avail-shift);
+  --color-avail-sleep: var(--avail-sleep);
+  --color-avail-free: var(--avail-free);
   --color-course-indigo: var(--course-indigo);
   --color-course-indigo-soft: var(--course-indigo-soft);
   --color-course-teal: var(--course-teal);
@@ -91,6 +95,7 @@
   --accent: #eef2ff;
   --accent-foreground: #312e81;
   --destructive: #b91c1c;
+  --destructive-soft: #fee2e2;
   --border: #e7e5e4;
   --input: #d6d3d1;
   --ring: #6366f1;
@@ -102,6 +107,11 @@
   --warning-border: #fde68a;
   --success: #15803d;
   --success-soft: #dcfce7;
+  /* Availability bar (spec 003 DayBar; research R13): derived from the theme, so every theme and
+     mode gets them. Free time is the gaps. */
+  --avail-shift: var(--primary);
+  --avail-sleep: var(--muted);
+  --avail-free: var(--success-soft);
   /* Course colours (spec 002 Course.color): glyph / tile */
   --course-indigo: #3730a3;
   --course-indigo-soft: #e0e7ff;
@@ -147,6 +157,7 @@
   --accent: #1e1b4b;
   --accent-foreground: #e0e7ff;
   --destructive: #f87171;
+  --destructive-soft: #450a0a;
   --border: #292524;
   --input: #44403c;
   --ring: #818cf8;

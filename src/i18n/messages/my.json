@@ -181,7 +181,9 @@
     "file_not_found": "ဤဖိုင်ကို ဖွင့်၍မရပါ။",
     "file_too_large": "ဖိုင်များသည် 10 MB အထိသာ ဖြစ်ရမည်။",
     "file_type_not_allowed": "ပုံ၊ PDF သို့မဟုတ် အသံဖိုင်ကို သုံးပါ။",
-    "upload_failed": "ဖိုင်ကို တင်၍မရပါ။ ထပ်ကြိုးစားပါ။"
+    "upload_failed": "ဖိုင်ကို တင်၍မရပါ။ ထပ်ကြိုးစားပါ။",
+    "course_not_active": "အသုံးပြုနေသော သင်ခန်းစာအစုံများကိုသာ ပေးအပ်နိုင်ပြီး နောက်ဆုံးရက် သတ်မှတ်နိုင်သည်။",
+    "assignment_not_found": "ဤသင်ခန်းစာအစုံကို ထိုကျောင်းသားထံ ပေးအပ်ထားခြင်း မရှိတော့ပါ။"
   },
   "validation": {
     "nameRequired": "သင့်အမည် ထည့်ပါ",
@@ -489,5 +491,25 @@
     "restore": "ပြန်ယူရန်",
     "restoreLabel": "{title} ကို ပြန်ယူရန်",
     "restored": "ပြန်ယူပြီးပါပြီ"
+  },
+  "deadlines": {
+    "done": "ပြီးပြီ",
+    "daysLate": "{count, plural, other {# ရက် နောက်ကျ}}",
+    "overdue": "ရက်လွန်",
+    "dueToday": "ယနေ့ နောက်ဆုံး",
+    "dueTomorrow": "မနက်ဖြန် နောက်ဆုံး",
+    "dueOn": "{date} နောက်ဆုံး",
+    "byTime": "{time} မတိုင်မီ",
+    "dueDate": "နောက်ဆုံးရက်",
+    "dueTime": "အချိန်",
+    "noDeadline": "နောက်ဆုံးရက် မရှိ",
+    "alreadyOverdue": "ရက်လွန်နေပြီ",
+    "laterThanCourse": "သင်ခန်းစာအစုံ၏ နောက်ဆုံးရက်ထက် နောက်ကျသည်",
+    "onShift": "ထိုအချိန်တွင် {name} အလုပ်ဆိုင်း ဝင်နေသည်",
+    "asleep": "ထိုအချိန်တွင် {name} အိပ်နေသည်",
+    "moveTo": "{time} သို့ ရွှေ့ရန်",
+    "timeBoth": "{primary} ({primaryCity}) · {secondary} ({secondaryCity})",
+    "timeOne": "{primary} ({primaryCity})",
+    "timeCompact": "{primary} · သင့်အချိန် {secondary}"
   }
 }

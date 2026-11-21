@@ -52,8 +52,10 @@ const pairs: [string, string][] = [
   ['tint-2-foreground', 'tint-2'],
   ['tint-3-foreground', 'tint-3'],
   ['tint-4-foreground', 'tint-4'],
-  // Status chips (spec 002): Published / Active.
+  // Status chips (spec 002): Published / Active. Spec 003 deadline chips: Done, late, due soon.
   ['success', 'success-soft'],
+  ['destructive', 'destructive-soft'],
+  ['warning-foreground', 'warning'],
   // Course colours (spec 002 data-model.md Course.color): icon glyph on its tile.
   ['course-indigo', 'course-indigo-soft'],
   ['course-teal', 'course-teal-soft'],

@@ -11,6 +11,8 @@ export class AuthError extends Error {
   constructor(
     public status: 401 | 403 | 404,
     message: string,
+    /** Error code for the client when the generic one (`not_found`, `forbidden`) isn't enough. */
+    public code?: string,
   ) {
     super(message)
   }
@@ -43,6 +45,20 @@ export async function requireAdminOf(studentId: string) {
     select: { id: true },
   })
   if (!link) throw new AuthError(403, 'Not your student')
+  return me
+}
+
+/**
+ * Admin acting on several students at once: every one must be actively linked to this admin (one
+ * query; the count must match). Spec 003 Assign sheet; mirrors is_admin_of per row in assign_write.
+ */
+export async function requireAdminOfAll(studentIds: readonly string[]) {
+  const me = await requireRole('admin')
+  const unique = [...new Set(studentIds)]
+  const linked = await prisma.studentLink.count({
+    where: { adminId: me.id, studentId: { in: unique }, status: 'active' },
+  })
+  if (linked !== unique.length) throw new AuthError(403, 'Not your student')
   return me
 }
 
@@ -134,4 +150,62 @@ export async function requireLessonReader(lessonId: string) {
   })
   if (!lesson) throw new AuthError(404, 'Lesson not found')
   return { me, courseId: lesson.courseId, isOwner: lesson.course.ownerId === me.id }
+}
+
+const activeLink = (studentId: string) => ({ where: { studentId, status: 'active' as const } })
+const activeAssignment = (studentId: string) => ({ where: { studentId, status: 'active' } })
+
+/**
+ * Course deadline edits (spec 003 data-model.md › Guards, mirrors assign_write): the caller owns the
+ * course, the student is linked to them and the assignment is `active`. One query; returns the
+ * assignment. 404 for someone else's course, 403 for an unlinked student, 404
+ * `assignment_not_found` when there is no active assignment.
+ */
+export async function requireAssignmentOwner(courseId: string, studentId: string) {
+  const me = await requireRole('admin')
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, ownerId: me.id },
+    select: {
+      status: true,
+      deletedAt: true,
+      owner: { select: { linksAsAdmin: { ...activeLink(studentId), select: { id: true } } } },
+      assignments: {
+        ...activeAssignment(studentId),
+        select: { id: true, courseId: true, studentId: true, dueAt: true },
+      },
+    },
+  })
+  if (!course) throw new AuthError(404, 'Course not found')
+  if (course.owner.linksAsAdmin.length === 0) throw new AuthError(403, 'Not your student')
+  const [assignment] = course.assignments
+  if (!assignment) throw new AuthError(404, 'No active assignment', 'assignment_not_found')
+  return { me, assignment, course: { status: course.status, deletedAt: course.deletedAt } }
+}
+
+/**
+ * Lesson deadline edits (spec 003 FR-003, mirrors the deadlines_write policy): a Published,
+ * non-deleted lesson in a course the caller owns, a student linked to them, and an active assignment
+ * of that course for the student. One query. 404 `lesson_not_found`, 403 for an unlinked student,
+ * 404 `assignment_not_found`.
+ */
+export async function requireLessonDeadlineTarget(lessonId: string, studentId: string) {
+  const me = await requireRole('admin')
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, status: 'published', deletedAt: null, course: { ownerId: me.id } },
+    select: {
+      courseId: true,
+      course: {
+        select: {
+          owner: { select: { linksAsAdmin: { ...activeLink(studentId), select: { id: true } } } },
+          assignments: { ...activeAssignment(studentId), select: { id: true } },
+        },
+      },
+    },
+  })
+  if (!lesson) throw new AuthError(404, 'Lesson not found', 'lesson_not_found')
+  if (lesson.course.owner.linksAsAdmin.length === 0) throw new AuthError(403, 'Not your student')
+  if (lesson.course.assignments.length === 0) {
+    throw new AuthError(404, 'No active assignment', 'assignment_not_found')
+  }
+  return { me, courseId: lesson.courseId }
 }

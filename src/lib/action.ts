@@ -36,7 +36,12 @@ function toError(error: unknown): ActionError {
   if (error instanceof AuthError) {
     return {
       code:
-        error.status === 401 ? 'unauthenticated' : error.status === 403 ? 'forbidden' : 'not_found',
+        error.code ??
+        (error.status === 401
+          ? 'unauthenticated'
+          : error.status === 403
+            ? 'forbidden'
+            : 'not_found'),
     }
   }
   console.error('[action] unexpected error', error)

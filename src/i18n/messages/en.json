@@ -181,7 +181,9 @@
     "file_not_found": "This file isn't available.",
     "file_too_large": "Files can be up to 10 MB.",
     "file_type_not_allowed": "Use an image, PDF or audio file.",
-    "upload_failed": "The file couldn't be uploaded. Try again."
+    "upload_failed": "The file couldn't be uploaded. Try again.",
+    "course_not_active": "Only Active courses can be assigned or given deadlines.",
+    "assignment_not_found": "This course is no longer assigned to that student."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -489,5 +491,25 @@
     "restore": "Restore",
     "restoreLabel": "Restore {title}",
     "restored": "Restored"
+  },
+  "deadlines": {
+    "done": "Done",
+    "daysLate": "{count, plural, one {# day late} other {# days late}}",
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "dueTomorrow": "Due tomorrow",
+    "dueOn": "Due {date}",
+    "byTime": "by {time}",
+    "dueDate": "Due date",
+    "dueTime": "Time",
+    "noDeadline": "No deadline",
+    "alreadyOverdue": "Already overdue",
+    "laterThanCourse": "Later than the course deadline",
+    "onShift": "{name} is on shift then",
+    "asleep": "{name} is asleep then",
+    "moveTo": "Move to {time}",
+    "timeBoth": "{primary} ({primaryCity}) · {secondary} ({secondaryCity})",
+    "timeOne": "{primary} ({primaryCity})",
+    "timeCompact": "{primary} · {secondary} yours"
   }
 }
