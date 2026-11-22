@@ -1,6 +1,5 @@
 import { resizeImage } from '@/lib/image'
 import { ActionResultError } from '@/lib/result'
-import { createBrowserClient } from '@/lib/supabase/client'
 import { MAX_IMAGE_BYTES, type Attachment } from './schemas'
 
 // Assignment photos (spec 004 FR-003, research.md R7). The browser resizes each photo to 1600 px and
@@ -9,6 +8,10 @@ import { MAX_IMAGE_BYTES, type Attachment } from './schemas'
 // records `{ path, name, size }`. The bucket enforces the same 2 MB and WebP/JPEG limits.
 
 const BUCKET = 'submissions'
+
+/** supabase-js loads on the first photo, not with the lesson screen (spec 004 T082). */
+const bucket = async () =>
+  (await import('@/lib/supabase/client')).createBrowserClient().storage.from(BUCKET)
 /** The bucket's allowed_mime_types; anything else (PNG, HEIC…) is re-encoded. */
 const STORED_TYPES: Record<string, string> = { 'image/webp': 'webp', 'image/jpeg': 'jpg' }
 /** Photos straight from a phone camera may be large before they are resized. */
@@ -45,15 +48,15 @@ export async function uploadSubmissionImage(
   if (body.size > MAX_IMAGE_BYTES) throw new ActionResultError('file_too_large')
 
   const path = `${studentId}/${lessonId}/${crypto.randomUUID()}.${extension}`
-  const { error } = await createBrowserClient()
-    .storage.from(BUCKET)
-    .upload(path, body, { contentType: body.type, upsert: false })
+  const { error } = await (
+    await bucket()
+  ).upload(path, body, { contentType: body.type, upsert: false })
   if (error) throw new ActionResultError(navigator.onLine ? 'upload_failed' : 'offline')
   return { path, name: displayName(file.name, extension), size: body.size }
 }
 
 /** Deletes a photo the student removed (research.md R7). Throws offline / upload_failed. */
 export async function removeSubmissionImage(path: string) {
-  const { error } = await createBrowserClient().storage.from(BUCKET).remove([path])
+  const { error } = await (await bucket()).remove([path])
   if (error) throw new ActionResultError(navigator.onLine ? 'upload_failed' : 'offline')
 }

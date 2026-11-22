@@ -2,7 +2,6 @@
 
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import { useEffect, useId, useRef } from 'react'
-import { createBrowserClient } from './supabase/client'
 
 // Live screens without push (spec 004 research.md R10; technical spec §7). Subscribes to row changes
 // of one table and refetches the given queries when one arrives. Realtime applies the subscriber's
@@ -56,14 +55,18 @@ export function useRealtimeInvalidate({
   })
 
   useEffect(() => {
-    const supabase = createBrowserClient()
-    let channel: ReturnType<typeof supabase.channel> | null = null
     let closed = false
-    // Join with the user's token: a channel that joins before the session is read stays anonymous,
-    // and RLS then hides every change from it.
-    void supabase.realtime.setAuth().then(() => {
+    let unsubscribe: (() => void) | undefined
+    // supabase-js loads after the first paint: it was the largest unused script on the lesson
+    // screen's first load (spec 004 T082).
+    void import('./supabase/client').then(async ({ createBrowserClient }) => {
       if (closed) return
-      channel = supabase
+      const supabase = createBrowserClient()
+      // Join with the user's token: a channel that joins before the session is read stays
+      // anonymous, and RLS then hides every change from it.
+      await supabase.realtime.setAuth()
+      if (closed) return
+      const channel = supabase
         .channel(`${table}:${filter ?? 'all'}:${id}`)
         .on(
           'postgres_changes',
@@ -75,10 +78,11 @@ export function useRealtimeInvalidate({
           },
         )
         .subscribe()
+      unsubscribe = () => void supabase.removeChannel(channel)
     })
     return () => {
       closed = true
-      if (channel) void supabase.removeChannel(channel)
+      unsubscribe?.()
     }
   }, [table, filter, id, queryClient])
 }
