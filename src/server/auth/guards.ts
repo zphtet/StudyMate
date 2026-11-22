@@ -210,3 +210,24 @@ export async function requireAdminLessonTarget(lessonId: string, studentId: stri
   }
   return { me, courseId: lesson.courseId }
 }
+
+/**
+ * The Admin reviewing a submission (spec 004 FR-004, data-model.md › Guards; mirrors
+ * subs_admin_review): not a Draft, the student actively linked to the caller, and the lesson in a
+ * course the caller owns. One query. Anything else is 404 `submission_not_found`, so a guessed id
+ * reveals nothing; a student caller is 403.
+ */
+export async function requireSubmissionReviewer(submissionId: string) {
+  const me = await requireRole('admin')
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: submissionId,
+      status: { not: 'draft' },
+      student: { linksAsStudent: { some: { adminId: me.id, status: 'active' } } },
+      lesson: { course: { ownerId: me.id } },
+    },
+    select: { id: true, studentId: true, lessonId: true, status: true },
+  })
+  if (!submission) throw new AuthError(404, 'Submission not found', 'submission_not_found')
+  return { me, submission }
+}

@@ -7,16 +7,17 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vit
 import { prisma } from '@/lib/prisma'
 import {
   AuthError,
+  requireAdminLessonTarget,
   requireAdminOf,
   requireAdminOfAll,
   requireAssignmentOwner,
   requireCourseOwner,
   requireCourseReader,
-  requireAdminLessonTarget,
   requireLessonOwner,
   requireLessonReader,
   requireRole,
   requireSelfOrAdminOf,
+  requireSubmissionReviewer,
   requireUser,
 } from './guards'
 
@@ -59,6 +60,13 @@ const lesson = {
   inDeletedCourse: randomUUID(),
   inRemoved: randomUUID(), // spec 003
   otherAdmins: randomUUID(), // spec 003
+}
+// Spec 004: same cases as supabase/tests/004_progress_policies.test.sql (subs_admin_review).
+const submission = {
+  submitted: randomUUID(),
+  draft: randomUUID(),
+  otherAdminsCourse: randomUUID(),
+  unlinked: randomUUID(),
 }
 const run = Date.now()
 
@@ -192,6 +200,37 @@ beforeAll(async () => {
       status: 'done',
       completedAt: now,
     },
+  })
+  await prisma.submission.createMany({
+    data: [
+      {
+        id: submission.submitted,
+        studentId: id.student,
+        lessonId: lesson.published,
+        status: 'submitted',
+        submittedAt: now,
+      },
+      {
+        id: submission.draft,
+        studentId: id.student,
+        lessonId: lesson.archivedOpen,
+        status: 'draft',
+      },
+      {
+        id: submission.otherAdminsCourse,
+        studentId: id.student,
+        lessonId: lesson.otherAdmins,
+        status: 'submitted',
+        submittedAt: now,
+      },
+      {
+        id: submission.unlinked,
+        studentId: id.unlinkedStudent,
+        lessonId: lesson.published,
+        status: 'submitted',
+        submittedAt: now,
+      },
+    ],
   })
 })
 
@@ -499,5 +538,34 @@ describe('requireAdminLessonTarget', () => {
   test('a student → 403', async () => {
     signInAs(id.student)
     await expectStatus(requireAdminLessonTarget(lesson.published, id.student), 403)
+  })
+})
+
+// Spec 004 data-model.md › Guards: mirrors subs_admin_review. Anything the Admin may not review is
+// 404 submission_not_found, so a guess at another student's submission id learns nothing.
+describe('requireSubmissionReviewer', () => {
+  test('linked Admin, Submitted, lesson in their course → returns the submission', async () => {
+    signInAs(id.admin)
+    await expect(requireSubmissionReviewer(submission.submitted)).resolves.toMatchObject({
+      me: { id: id.admin },
+      submission: { id: submission.submitted, studentId: id.student, lessonId: lesson.published },
+    })
+  })
+  test.each([
+    ['a Draft', () => submission.draft],
+    ['a lesson in another admin’s course', () => submission.otherAdminsCourse],
+    ['a student who is not linked to the admin', () => submission.unlinked],
+    ['an unknown id', () => randomUUID()],
+  ])('%s → 404 submission_not_found', async (_, submissionId) => {
+    signInAs(id.admin)
+    await expectCode(requireSubmissionReviewer(submissionId()), 404, 'submission_not_found')
+  })
+  test('another admin → 404 submission_not_found', async () => {
+    signInAs(id.otherAdmin)
+    await expectCode(requireSubmissionReviewer(submission.submitted), 404, 'submission_not_found')
+  })
+  test('a student → 403', async () => {
+    signInAs(id.student)
+    await expectStatus(requireSubmissionReviewer(submission.submitted), 403)
   })
 })

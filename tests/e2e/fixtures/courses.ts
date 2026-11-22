@@ -161,11 +161,26 @@ export async function softDeleteLesson(lessonId: string) {
   await sql(`update lessons set deleted_at = now() where id = $1`, [lessonId])
 }
 
-export async function markDone(studentId: string, lessonId: string) {
+/**
+ * A completed lesson (data-model.md LessonProgress.completed_at, LessonProgress.completed_by,
+ * LessonProgress.minutes_spent). Spec 004 seeds history with `completedAt`; the defaults keep the
+ * 002/003 two-argument calls working (done now, nobody recorded, no minutes credited).
+ */
+export async function markDone(
+  studentId: string,
+  lessonId: string,
+  {
+    completedAt = new Date(),
+    completedBy = null,
+    minutesSpent = 0,
+  }: { completedAt?: Date; completedBy?: string | null; minutesSpent?: number } = {},
+) {
   await sql(
-    `insert into lesson_progress (student_id, lesson_id, status, completed_at) values ($1, $2, 'done', now())
-     on conflict (student_id, lesson_id) do update set status = 'done', completed_at = now()`,
-    [studentId, lessonId],
+    `insert into lesson_progress (student_id, lesson_id, status, completed_at, completed_by, minutes_spent)
+     values ($1, $2, 'done', $3, $4, $5)
+     on conflict (student_id, lesson_id) do update
+       set status = 'done', completed_at = $3, completed_by = $4, minutes_spent = $5, updated_at = now()`,
+    [studentId, lessonId, completedAt, completedBy, minutesSpent],
   )
 }
 
@@ -173,10 +188,54 @@ export async function seedSubmission(
   studentId: string,
   lessonId: string,
   status: 'draft' | 'submitted' | 'reviewed' | 'needs_redo',
+  { bodyMd = 'My answer' }: { bodyMd?: string } = {},
 ) {
+  const [row] = await sql<{ id: string }>(
+    `insert into submissions (student_id, lesson_id, status, body_md, submitted_at)
+     values ($1, $2, $3::submission_status, $4, case when $3::submission_status = 'draft' then null else now() end) returning id`,
+    [studentId, lessonId, status, bodyMd],
+  )
+  return row.id
+}
+
+/**
+ * Spec 004: a focus session (data-model.md StudySession.started_at, StudySession.planned_minutes,
+ * StudySession.ended_at). No `endedAt` = still open; one past its plan counts `plannedMinutes`.
+ */
+export async function seedSession(
+  studentId: string,
+  lessonId: string,
+  {
+    startedAt,
+    plannedMinutes,
+    endedAt = null,
+  }: { startedAt: Date; plannedMinutes: 15 | 25; endedAt?: Date | null },
+) {
+  const [row] = await sql<{ id: string }>(
+    `insert into study_sessions (student_id, lesson_id, started_at, ended_at, planned_minutes)
+     values ($1, $2, $3, $4, $5) returning id`,
+    [studentId, lessonId, startedAt, endedAt, plannedMinutes],
+  )
+  return row.id
+}
+
+/** Spec 004: a Notes post (`lesson`) or a review comment (`submission`). */
+export async function seedComment({
+  authorId,
+  studentId,
+  targetType,
+  targetId,
+  body,
+}: {
+  authorId: string
+  studentId: string
+  targetType: 'lesson' | 'submission'
+  targetId: string
+  body: string
+}) {
   await sql(
-    `insert into submissions (student_id, lesson_id, status, body_md) values ($1, $2, $3, 'My answer')`,
-    [studentId, lessonId, status],
+    `insert into comments (author_id, student_id, target_type, target_id, body) values ($1, $2, $3, $4, $5)`,
+    [authorId, studentId, targetType, targetId, body],
   )
 }
 
@@ -207,6 +266,20 @@ export async function uploadLessonFile(
 }
 
 /** Removes every lesson-files object under the given courses (teardown; rows cascade with users). */
+/** Spec 004: submission images live in Storage (submissions/<student>/<lesson>/…), which doesn't cascade. */
+export async function removeSubmissionFiles(studentIds: string[]) {
+  const bucket = supabaseAdmin().storage.from('submissions')
+  for (const studentId of studentIds) {
+    const { data: lessons } = await bucket.list(studentId, { limit: 1000 })
+    for (const folder of lessons ?? []) {
+      const prefix = `${studentId}/${folder.name}`
+      const { data: files } = await bucket.list(prefix, { limit: 1000 })
+      const paths = (files ?? []).map((f) => `${prefix}/${f.name}`)
+      if (paths.length) await bucket.remove(paths)
+    }
+  }
+}
+
 export async function removeCourseFiles(courseIds: string[]) {
   const bucket = supabaseAdmin().storage.from('lesson-files')
   for (const courseId of courseIds) {

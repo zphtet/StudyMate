@@ -48,7 +48,7 @@ description: "Tasks for 004 Completion, Assignments and Progress"
 
 ### Tests first (write, run, see them fail where the code doesn't exist yet)
 
-- [ ] T003 [P] Write pgTAP tests in supabase/tests/004_progress_policies.test.sql (research.md R11, R17), wrapped in `begin … rollback`. Switch users with `set local role authenticated` and `request.jwt.claims`, as in 003_assign_policies.test.sql. Cases:
+- [X] T003 [P] Write pgTAP tests in supabase/tests/004_progress_policies.test.sql (research.md R11, R17), wrapped in `begin … rollback`. Switch users with `set local role authenticated` and `request.jwt.claims`, as in 003_assign_policies.test.sql. Cases:
   - **`lesson_progress`**: the student inserts and updates their own row for a readable lesson with `completed_by` = self or null; it is denied with another `completed_by`, or for an unreadable lesson (data-model.md LessonProgress.completed_by, LessonProgress.status). The linked Admin inserts and updates rows for a lesson in their own course with `completed_by` = self; denied for another admin, an unlinked admin, or another admin's course. Nobody can DELETE.
   - **`submissions`**: the student inserts as `draft` or `submitted` but not `reviewed`. They update from `draft`/`needs_redo` to `draft`/`submitted` and can't update from `submitted` or `reviewed`, or set `reviewed`/`needs_redo` (data-model.md Submission.status, Submission.reviewed_at). The Admin reads non-Draft only, updates a non-Draft to `reviewed`/`needs_redo`, and can't update a Draft or set `submitted`. Another admin is denied.
   - **`comments`**: a lesson target in a course with an active assignment for `student_id` is allowed for that student and their Admin. A student posts on a lesson of their own personal course (`can_read_lesson`, research.md R11); their linked Admin can't post there. Denied: a lesson of an unassigned course; a submission target written by a student; a submission target whose submission belongs to another student or is a Draft; `author_id` ≠ caller (data-model.md Comment.author_id, Comment.student_id, Comment.target_type, Comment.target_id, Comment.body). There is no UPDATE or DELETE.
@@ -56,7 +56,7 @@ description: "Tasks for 004 Completion, Assignments and Progress"
   - **`storage.objects`, bucket `submissions`**: the student reads and writes `<self>/<lesson>/x.webp` but not another student's folder. The linked Admin reads a file only when a non-Draft submission exists for (folder 1, folder 2). The bucket has `file_size_limit` 2097152 and the two MIME types (data-model.md Submission.attachments).
   - **`course_progress`**: a course whose lessons are all Draft gives `percent` null.
   - **Realtime**: `pg_publication_tables` lists `submissions`, `comments`, `lesson_progress` for `supabase_realtime`.
-- [ ] T004 [P] Extend guard tests in src/server/auth/guards.test.ts (data-model.md › Guards):
+- [X] T004 [P] Extend guard tests in src/server/auth/guards.test.ts (data-model.md › Guards):
   - rename every `requireLessonDeadlineTarget` case to `requireAdminLessonTarget` with the same expectations;
   - add `requireSubmissionReviewer`:
     - linked Admin with a `submitted` submission → returns `{ me, submission }`;
@@ -64,19 +64,21 @@ description: "Tasks for 004 Completion, Assignments and Progress"
     - another admin, or an unlinked admin → 404/403;
     - the lesson in another admin's course → 404;
     - a student caller → 403.
-- [ ] T005 [P] Write unit tests in src/features/progress/schemas.test.ts for every input schema in contracts/server-actions.md › Field schemas and each action:
+- [X] T005 [P] Write unit tests in src/features/progress/schemas.test.ts for every input schema in contracts/server-actions.md › Field schemas and each action:
   - attachments: 0–5 accepted, 6 → `too_many_images`; `size` above 2 097 152 → `file_too_large` (data-model.md Submission.attachments);
   - `bodyMd` over `MAX_CONTENT_BYTES` → `content_too_long` (data-model.md Submission.body_md);
   - comment body: blank → `commentRequired`, 2001 characters → `commentTooLong` (data-model.md Comment.body);
   - `minutes` only 15 or 25 (data-model.md StudySession.planned_minutes);
   - `reviewSubmission.status` only `reviewed`/`needs_redo`;
-  - weekly goal days 1–7;
-  - uuids enforced.
-- [ ] T006 [P] Write a component test in src/components/shared/progress-bar.test.tsx: `role="progressbar"` with `aria-valuenow`; `percent` null renders "—" with no fill; the accent prop maps to a token class, not a hex colour.
+  - uuids enforced;
+  - `isOwnSubmissionPath`.
+
+  The weekly-goal schema (days 1–7) lives in features/profile/schemas.ts, so its test goes with T061.
+- [X] T006 [P] Write a component test in src/components/shared/progress-bar.test.tsx: `role="progressbar"` with `aria-valuenow`; `percent` null renders "—" with no fill; the fill is a token class (`bg-primary` by default, or the `fillClassName` a course passes, e.g. `COURSE_COLOR_CLASSES[color].solid`), never a hex colour.
 
 ### Implementation
 
-- [ ] T007 Edit prisma/schema.prisma:
+- [X] T007 Edit prisma/schema.prisma:
   - `StudySession.plannedMinutes Int @map("planned_minutes") @db.SmallInt`;
   - `@@index([studentId, completedAt], map: "lesson_progress_student_completed")` on LessonProgress;
   - `@@index([studentId, targetType, targetId, createdAt], map: "comments_thread")` on Comment;
@@ -90,24 +92,24 @@ description: "Tasks for 004 Completion, Assignments and Progress"
   5. the Realtime publication.
 
   Never drop SQL-only objects.
-- [ ] T008 Apply and verify: `pnpm prisma migrate deploy`, `pnpm prisma generate`, `pnpm test:db`. T003 passes and the 001–003 pgTAP files still pass.
-- [ ] T009 Rename `requireLessonDeadlineTarget` to `requireAdminLessonTarget` in src/server/auth/guards.ts and its callers src/features/assignments/actions.ts and src/features/assignments/repo.ts (research.md R11). No behaviour change; update the doc comment to name 003 deadlines and the 004 admin lesson actions. Commit on its own; the 003 tests and T004's renamed cases pass.
-- [ ] T010 Add `requireSubmissionReviewer(submissionId)` to src/server/auth/guards.ts (data-model.md › Guards; mirrors `subs_admin_review`). One Prisma query: a submission whose status isn't `draft`, whose student is actively linked to the caller, and whose lesson is in a course the caller owns. Throw `AuthError(404, …, 'submission_not_found')` otherwise. T004 passes.
-- [ ] T011 [P] Create src/features/progress/schemas.ts:
+- [X] T008 Apply and verify: `pnpm prisma migrate deploy`, `pnpm prisma generate`, `pnpm test:db`. T003 passes and the 001–003 pgTAP files still pass.
+- [X] T009 Rename `requireLessonDeadlineTarget` to `requireAdminLessonTarget` in src/server/auth/guards.ts and its callers src/features/assignments/actions.ts and src/features/assignments/repo.ts (research.md R11). No behaviour change; update the doc comment to name 003 deadlines and the 004 admin lesson actions. Commit on its own; the 003 tests and T004's renamed cases pass.
+- [X] T010 Add `requireSubmissionReviewer(submissionId)` to src/server/auth/guards.ts (data-model.md › Guards; mirrors `subs_admin_review`). One Prisma query: a submission whose status isn't `draft`, whose student is actively linked to the caller, and whose lesson is in a course the caller owns. Throw `AuthError(404, …, 'submission_not_found')` otherwise. T004 passes.
+- [X] T011 [P] Create src/features/progress/schemas.ts:
   - all schemas from contracts/server-actions.md;
   - the server-side path check helper `isOwnSubmissionPath(path, studentId, lessonId)` (data-model.md Submission.attachments);
   - the body limit (data-model.md Submission.body_md).
 
   Import `MAX_CONTENT_BYTES` and `utf8Bytes` from src/features/courses/schemas.ts for now (T037 moves them). T005 passes.
-- [ ] T012 [P] Create src/features/progress/types.ts (`z.infer` and Prisma-derived types only; contracts/route-handlers.md shared types) and src/features/progress/queries.ts. The latter is a query-key factory covering every key in the contracts/server-actions.md invalidation table (`['lesson',id,'work']`, `['lesson',id,'notes',studentId]`, `['focus']`, `['progress',view]`, `['progress','summary']`, `['admin','students',…]`). No `queryOptions` yet; stories add them.
-- [ ] T013 [P] Create the `ProgressBar` component in src/components/shared/progress-bar.tsx (contracts/ui-routes.md › Shared components). Props: `{ percent: number | null; accent?: CourseAccent; label: string }`. It uses theme tokens and is 8 px tall. T006 passes.
-- [ ] T014 [P] Extend the e2e fixtures in tests/e2e/fixtures/courses.ts:
+- [X] T012 [P] Create src/features/progress/types.ts (`z.infer` and Prisma-derived types only; contracts/route-handlers.md shared types) and src/features/progress/queries.ts. The latter is a query-key factory covering every key in the contracts/server-actions.md invalidation table (`['lesson',id,'work']`, `['lesson',id,'notes',studentId]`, `['focus']`, `['progress',view]`, `['progress','summary']`, `['admin','students',…]`). No `queryOptions` yet; stories add them.
+- [X] T013 [P] Create the `ProgressBar` component in src/components/shared/progress-bar.tsx (contracts/ui-routes.md › Shared components). Props: `{ percent: number | null; label: string; fillClassName?: string }` (a shared component can't import `features/courses`, so callers pass the course colour class). It uses theme tokens and is 8 px tall. T006 passes.
+- [X] T014 [P] Extend the e2e fixtures in tests/e2e/fixtures/courses.ts:
   - `markDone(studentId, lessonId, { completedAt?, completedBy?, minutesSpent? })`, keeping the old two-argument call working (data-model.md LessonProgress.completed_at, LessonProgress.completed_by, LessonProgress.minutes_spent);
   - `seedSession(studentId, lessonId, { startedAt, plannedMinutes, endedAt? })` (data-model.md StudySession.started_at, StudySession.planned_minutes, StudySession.ended_at);
   - `seedComment({ authorId, studentId, targetType, targetId, body })`;
   - `seedSubmission` gains optional `bodyMd`.
 
-  Extend tests/e2e/global-teardown.ts to delete the run's `comments`, `study_sessions` and `audit_log` rows before the users, because `audit_log.actor_id` doesn't cascade.
+  Extend tests/e2e/global-teardown.ts to remove the run's submission files from Storage and delete the rows that don't cascade (`lesson_progress.completed_by`, `audit_log.actor_id`) before the users. `comments` and `study_sessions` cascade with their users.
 
 **Checkpoint**: the migration is applied, policies are tested, guards are ready, schemas are tested. Stories can start.
 

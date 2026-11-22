@@ -1,4 +1,4 @@
-import { removeCourseFiles } from './fixtures/courses'
+import { removeCourseFiles, removeSubmissionFiles } from './fixtures/courses'
 import { closeDb, sql } from './fixtures/db'
 import { supabaseAdmin } from './fixtures/supabase-admin'
 import { runPrefix } from './fixtures/users'
@@ -33,10 +33,18 @@ async function beforeUserDelete(userIds: string[]) {
     [userIds],
   )
   await removeCourseFiles(courses.map((c) => c.id))
+  await removeSubmissionFiles(userIds)
   // course_assignments.assigned_by has no cascade, so remove this run's assignments first.
   await sql(
     `delete from course_assignments where student_id = any($1::uuid[]) or assigned_by = any($1::uuid[])`,
     [userIds],
   )
+  // Spec 004: lesson_progress.completed_by and audit_log.actor_id don't cascade either, so an Admin
+  // who marked a lesson done (or anyone with audit rows) could not be deleted before the student.
+  await sql(
+    `delete from lesson_progress where student_id = any($1::uuid[]) or completed_by = any($1::uuid[])`,
+    [userIds],
+  )
+  await sql(`delete from audit_log where actor_id = any($1::uuid[])`, [userIds])
   await closeDb()
 }
