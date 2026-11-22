@@ -331,6 +331,8 @@ model LessonProgress {
   completer Profile? @relation("ProgressCompletedBy", fields: [completedBy], references: [id], onDelete: NoAction)
 
   @@id([studentId, lessonId])
+  /// daily and monthly completion counts (spec 004 research R2)
+  @@index([studentId, completedAt], map: "lesson_progress_student_completed")
   @@map("lesson_progress")
 }
 
@@ -367,20 +369,26 @@ model Comment {
   author  Profile @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   student Profile @relation("CommentStudent", fields: [studentId], references: [id], onDelete: Cascade)
 
+  /// one thread, oldest first, and its count (spec 004 research R8)
+  @@index([studentId, targetType, targetId, createdAt], map: "comments_thread")
   @@map("comments")
 }
 
 model StudySession {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId  String    @map("student_id") @db.Uuid
-  lessonId   String?   @map("lesson_id") @db.Uuid
-  startedAt  DateTime  @map("started_at") @db.Timestamptz(6)
-  endedAt    DateTime? @map("ended_at") @db.Timestamptz(6)
-  clientOpId String?   @unique @map("client_op_id") @db.Uuid
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String    @map("student_id") @db.Uuid
+  lessonId       String?   @map("lesson_id") @db.Uuid
+  startedAt      DateTime  @map("started_at") @db.Timestamptz(6)
+  endedAt        DateTime? @map("ended_at") @db.Timestamptz(6)
+  /// 15 or 25; ended_at <= started_at + planned_minutes (CHECKs in SQL, spec 004 FR-007)
+  plannedMinutes Int       @map("planned_minutes") @db.SmallInt
+  clientOpId     String?   @unique @map("client_op_id") @db.Uuid
 
   student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
   lesson  Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
+  @@index([studentId, startedAt], map: "study_sessions_student_started")
+  // + partial unique index study_sessions_one_running (student_id) WHERE ended_at IS NULL — in SQL
   @@map("study_sessions")
 }
 
