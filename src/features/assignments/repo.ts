@@ -214,7 +214,7 @@ export async function setCourseDeadline(admin: Admin, input: SetCourseDeadlineIn
 
 /**
  * One student's own deadline for a Published lesson; null removes it and the lesson falls back to
- * the course deadline (FR-003, FR-004). Guard: requireLessonDeadlineTarget. Records a `deadline`
+ * the course deadline (FR-003, FR-004). Guard: requireAdminLessonTarget. Records a `deadline`
  * notice when the EFFECTIVE deadline changed.
  */
 export async function setLessonDeadline(admin: Admin, input: SetLessonDeadlineInput) {

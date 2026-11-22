@@ -12,7 +12,7 @@ import {
   requireAssignmentOwner,
   requireCourseOwner,
   requireCourseReader,
-  requireLessonDeadlineTarget,
+  requireAdminLessonTarget,
   requireLessonOwner,
   requireLessonReader,
   requireRole,
@@ -456,10 +456,10 @@ describe('requireAssignmentOwner', () => {
   })
 })
 
-describe('requireLessonDeadlineTarget', () => {
+describe('requireAdminLessonTarget', () => {
   test('owner’s Published lesson, linked student with an active assignment → allowed', async () => {
     signInAs(id.admin)
-    await expect(requireLessonDeadlineTarget(lesson.published, id.student)).resolves.toMatchObject({
+    await expect(requireAdminLessonTarget(lesson.published, id.student)).resolves.toMatchObject({
       me: { id: id.admin },
       courseId: course.admin,
     })
@@ -470,12 +470,12 @@ describe('requireLessonDeadlineTarget', () => {
     ['another admin’s lesson', () => lesson.otherAdmins],
   ])('%s → 404 lesson_not_found', async (_, lessonId) => {
     signInAs(id.admin)
-    await expectCode(requireLessonDeadlineTarget(lessonId(), id.student), 404, 'lesson_not_found')
+    await expectCode(requireAdminLessonTarget(lessonId(), id.student), 404, 'lesson_not_found')
   })
   test('no active assignment (removed) → 404 assignment_not_found', async () => {
     signInAs(id.admin)
     await expectCode(
-      requireLessonDeadlineTarget(lesson.inRemoved, id.student),
+      requireAdminLessonTarget(lesson.inRemoved, id.student),
       404,
       'assignment_not_found',
     )
@@ -483,21 +483,21 @@ describe('requireLessonDeadlineTarget', () => {
   test('a linked student who is not assigned → 404 assignment_not_found', async () => {
     signInAs(id.admin)
     await expectCode(
-      requireLessonDeadlineTarget(lesson.published, id.secondStudent),
+      requireAdminLessonTarget(lesson.published, id.secondStudent),
       404,
       'assignment_not_found',
     )
   })
   test('an assigned student who is not linked to the admin → 403', async () => {
     signInAs(id.admin)
-    await expectStatus(requireLessonDeadlineTarget(lesson.published, id.unlinkedStudent), 403)
+    await expectStatus(requireAdminLessonTarget(lesson.published, id.unlinkedStudent), 403)
   })
   test('another admin → 404', async () => {
     signInAs(id.otherAdmin)
-    await expectStatus(requireLessonDeadlineTarget(lesson.published, id.student), 404)
+    await expectStatus(requireAdminLessonTarget(lesson.published, id.student), 404)
   })
   test('a student → 403', async () => {
     signInAs(id.student)
-    await expectStatus(requireLessonDeadlineTarget(lesson.published, id.student), 403)
+    await expectStatus(requireAdminLessonTarget(lesson.published, id.student), 403)
   })
 })

@@ -5,7 +5,7 @@ import {
   requireAdminOfAll,
   requireAssignmentOwner,
   requireCourseOwner,
-  requireLessonDeadlineTarget,
+  requireAdminLessonTarget,
 } from '@/server/auth/guards'
 import * as repo from './repo'
 import { saveAssignmentsSchema, setCourseDeadlineSchema, setLessonDeadlineSchema } from './schemas'
@@ -28,6 +28,6 @@ export const setCourseDeadline = action(setCourseDeadlineSchema, async (input) =
 
 /** One student's own lesson deadline (US2); null falls back to the course deadline. */
 export const setLessonDeadline = action(setLessonDeadlineSchema, async (input) => {
-  const { me } = await requireLessonDeadlineTarget(input.lessonId, input.studentId)
+  const { me } = await requireAdminLessonTarget(input.lessonId, input.studentId)
   return repo.setLessonDeadline(me, input)
 })

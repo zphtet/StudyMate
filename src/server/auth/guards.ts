@@ -183,12 +183,13 @@ export async function requireAssignmentOwner(courseId: string, studentId: string
 }
 
 /**
- * Lesson deadline edits (spec 003 FR-003, mirrors the deadlines_write policy): a Published,
- * non-deleted lesson in a course the caller owns, a student linked to them, and an active assignment
- * of that course for the student. One query. 404 `lesson_not_found`, 403 for an unlinked student,
- * 404 `assignment_not_found`.
+ * The Admin acting on one student's lesson: deadlines (spec 003 FR-003), marking done or reopening,
+ * reviewing and Notes (spec 004 FR-002, FR-010). A Published, non-deleted lesson in a course the
+ * caller owns, a student linked to them, and an active assignment of that course for the student.
+ * Mirrors the deadlines_write policy and SQL admin_lesson_target(). One query. 404 `lesson_not_found`,
+ * 403 for an unlinked student, 404 `assignment_not_found`.
  */
-export async function requireLessonDeadlineTarget(lessonId: string, studentId: string) {
+export async function requireAdminLessonTarget(lessonId: string, studentId: string) {
   const me = await requireRole('admin')
   const lesson = await prisma.lesson.findFirst({
     where: { id: lessonId, status: 'published', deletedAt: null, course: { ownerId: me.id } },
