@@ -60,13 +60,18 @@ export function ReviewBar({ review }: { review: AdminLessonReview }) {
           <>
             <p className="flex min-w-0 flex-1 items-center gap-1.5 font-medium text-success">
               <Check className="size-5 shrink-0" aria-hidden />
+              {/* Two lines: the time with both clocks doesn't fit beside Reopen at 390 px. */}
               <span className="min-w-0">
-                {progress.completedAt && progress.completedByName
-                  ? t('doneBy', {
-                      date: timeBoth(progress.completedAt, student.timezone),
-                      name: progress.completedByName,
-                    })
-                  : t('done')}
+                {progress.completedAt && progress.completedByName ? (
+                  <>
+                    {t('doneBy', { name: progress.completedByName })}
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {timeBoth(progress.completedAt, student.timezone)}
+                    </span>
+                  </>
+                ) : (
+                  t('done')
+                )}
               </span>
             </p>
             <Button

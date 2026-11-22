@@ -23,7 +23,7 @@ export function StreakAndGoalCards() {
         <p className="text-2xl font-bold tracking-tight">
           {t('streakDays', { count: data.streak.current })}
         </p>
-        <p className="text-muted-foreground">{t('streak')}</p>
+        <p className="text-sm text-muted-foreground">{t('streak')}</p>
       </div>
       <div className="flex flex-col gap-2 rounded-3xl border bg-card p-4">
         <div className="flex h-6 items-center gap-1.5" aria-hidden>
@@ -37,7 +37,7 @@ export function StreakAndGoalCards() {
         <p className="text-2xl font-bold tracking-tight">
           {t('goal', { count: activeDays, goal })}
         </p>
-        <p className="text-muted-foreground">{t('goalLabel')}</p>
+        <p className="text-sm text-muted-foreground">{t('goalLabel')}</p>
       </div>
     </div>
   )

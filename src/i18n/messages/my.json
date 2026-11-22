@@ -673,7 +673,7 @@
     "actions": "သင်ခန်းစာ လုပ်ဆောင်ချက်များ",
     "markDone": "ပြီးဆုံးကြောင်း မှတ်ရန်",
     "reopen": "ပြန်ဖွင့်ရန်",
-    "doneBy": "ပြီးပြီ · {date} · {name}",
+    "doneBy": "ပြီးပြီ · {name}",
     "toReview": "စစ်ဆေးရန် · {count}",
     "toReviewChip": "စစ်ဆေးရန် {count} ခု",
     "submittedRelative": "{course} · {time} တင်သွင်းခဲ့သည်",
@@ -753,7 +753,7 @@
     "dayStudied": "{duration} လေ့လာခဲ့သည်",
     "dayNone": "မလေ့လာရ",
     "weekBars": "နေ့အလိုက် လေ့လာချိန်",
-    "forecastTitle": "သင်တန်းများ · ပြီးဆုံးမည့် ခန့်မှန်းချက်",
+    "forecastTitle": "သင်ခန်းစာအစုံများ · ပြီးဆုံးမည့် ခန့်မှန်းချက်",
     "forecast": {
       "on_track": "အချိန်မီ · ~{finish} တွင် ပြီးမည်၊ နောက်ဆုံးရက် {due}",
       "behind": "နောက်ကျနေ · ဤနှုန်းဖြင့် ~{finish}၊ နောက်ဆုံးရက် {due}",

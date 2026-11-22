@@ -64,17 +64,18 @@ function Stat({
   detailClassName?: string
 }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-3xl border bg-card px-3.5 py-3">
+    // 06-Progress: three cards fit 390 px with each value on one line ("7 h 40 m").
+    <div className="flex min-w-0 flex-col rounded-3xl border bg-card px-3 py-3">
       <span
         className={cn(
-          'text-2xl leading-tight font-bold tracking-tight tabular-nums',
+          'text-xl leading-tight font-bold tracking-tight whitespace-nowrap tabular-nums',
           valueClassName,
         )}
       >
         {value}
       </span>
-      <span className="mt-1 text-sm leading-snug">{label}</span>
-      <span className={cn('text-sm leading-snug text-muted-foreground', detailClassName)}>
+      <span className="mt-1 text-[0.8125rem] leading-snug">{label}</span>
+      <span className={cn('text-[0.8125rem] leading-snug text-muted-foreground', detailClassName)}>
         {detail}
       </span>
     </div>

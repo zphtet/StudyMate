@@ -50,12 +50,16 @@ export function HeatCalendar({
         month={month}
         today={today}
         dayClassName={(date) =>
-          date > today
-            ? 'border border-dashed bg-transparent font-normal text-muted-foreground'
-            : cn(
-                SHADE[byDate.get(date)?.level ?? 0],
-                date === today && 'ring-2 ring-foreground ring-inset',
-              )
+          cn(
+            // 06-Progress: rounded squares with the number centred; still 44 px tall (constitution V).
+            'min-h-11 justify-center rounded-lg py-0',
+            date > today
+              ? 'border border-dashed bg-transparent font-normal text-muted-foreground'
+              : cn(
+                  SHADE[byDate.get(date)?.level ?? 0],
+                  date === today && 'ring-2 ring-foreground ring-inset',
+                ),
+          )
         }
         badge={(date) => {
           if (date > today) return null

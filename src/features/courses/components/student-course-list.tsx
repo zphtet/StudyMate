@@ -75,7 +75,7 @@ function CourseLink({ course, archived }: { course: StudentCourseCard; archived:
   return (
     <Link
       href={`/s/courses/${course.id}`}
-      className="flex items-center gap-4 rounded-3xl border bg-card p-5 outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="flex items-center gap-3 rounded-3xl border bg-card p-4 outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <CourseIcon icon={course.icon} color={course.color} />
       <div className="min-w-0 flex-1">
@@ -95,7 +95,8 @@ function CourseLink({ course, archived }: { course: StudentCourseCard; archived:
             className="my-2"
           />
         )}
-        <p className="text-muted-foreground">
+        {/* 05-Courses: "12 of 20 · due 31 Dec · 1 overdue" fits one line at 390 px. */}
+        <p className="text-sm text-muted-foreground">
           {archived
             ? t('lessonCount', { count: course.lessonCount })
             : t('doneOf', { done: course.doneCount, total: course.lessonCount })}

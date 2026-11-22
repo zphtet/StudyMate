@@ -463,7 +463,7 @@
     "percent": "{percent}%",
     "doneOf": "{total}中{done}",
     "lessonsDoneOf": "{total}レッスン中{done}レッスン完了",
-    "progress": "進み具合"
+    "progress": "進捗"
   },
   "lessonView": {
     "back": "コースに戻る",
@@ -673,7 +673,7 @@
     "actions": "レッスンの操作",
     "markDone": "完了にする",
     "reopen": "未完了に戻す",
-    "doneBy": "完了 · {date} · {name}",
+    "doneBy": "完了 · {name}",
     "toReview": "確認待ち · {count}",
     "toReviewChip": "確認待ち {count} 件",
     "submittedRelative": "{course} · {time}に提出",

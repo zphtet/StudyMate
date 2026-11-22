@@ -55,7 +55,7 @@ function StudentProgressCard({ student }: { student: AdminStudentCard }) {
   return (
     <article
       aria-label={student.displayName}
-      className="relative flex flex-col gap-4 rounded-3xl border bg-card p-5 hover:bg-muted/40 has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+      className="relative flex flex-col gap-4 rounded-3xl border bg-card p-4 hover:bg-muted/40 has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
     >
       <div className="flex items-center gap-3">
         <InitialAvatar name={student.displayName} seed={student.id} className="size-12" />
@@ -96,8 +96,8 @@ function StudentProgressCard({ student }: { student: AdminStudentCard }) {
 export function CourseRow({ course }: { course: CourseProgress }) {
   const t = useTranslations('adminStudents')
   return (
-    <li className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_3rem] items-center gap-3">
-      <span className="truncate">{course.title}</span>
+    <li className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3rem] items-center gap-3">
+      <span className="truncate text-sm">{course.title}</span>
       <ProgressBar
         percent={course.percent}
         label={course.title}
@@ -112,9 +112,10 @@ export function CourseRow({ course }: { course: CourseProgress }) {
 
 function Tile({ value, label }: { value: string | number; label: string }) {
   return (
-    <div className="flex min-w-0 flex-col-reverse rounded-2xl bg-muted px-3 py-2.5">
-      <dt className="truncate text-sm text-muted-foreground">{label}</dt>
-      <dd className="text-xl font-bold tracking-tight tabular-nums">{value}</dd>
+    // 16-AdminStudents: the value on one line at the top ("3 h 10 m"); a long label wraps below it.
+    <div className="flex min-w-0 flex-col-reverse justify-end rounded-2xl bg-muted px-3 py-2.5">
+      <dt className="text-[0.8125rem] leading-snug text-muted-foreground">{label}</dt>
+      <dd className="text-lg font-bold tracking-tight whitespace-nowrap tabular-nums">{value}</dd>
     </div>
   )
 }

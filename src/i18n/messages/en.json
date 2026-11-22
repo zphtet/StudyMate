@@ -673,7 +673,7 @@
     "actions": "Lesson actions",
     "markDone": "Mark done",
     "reopen": "Reopen",
-    "doneBy": "Done · {date} by {name}",
+    "doneBy": "Done by {name}",
     "toReview": "To review · {count}",
     "toReviewChip": "{count} to review",
     "submittedRelative": "{course} · submitted {time}",
