@@ -1,8 +1,27 @@
-import { BarChart3 } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
-import { TabPlaceholder } from '@/components/layout/tab-placeholder'
+import { Suspense } from 'react'
+import { z } from 'zod'
+import { PageSkeleton } from '@/components/layout/page-skeleton'
+import { ProgressView } from '@/features/progress/components/progress-view'
+import { WithProgress } from '@/features/progress/components/with-progress'
 
-export default async function ProgressPage() {
-  const [nav, empty] = await Promise.all([getTranslations('nav'), getTranslations('empty')])
-  return <TabPlaceholder title={nav('progress')} body={empty('progress')} icon={BarChart3} />
+// Student Progress (screen 06-Progress; spec 004 US3). `?view=week|month`, Month by default.
+const viewSchema = z.enum(['month', 'week']).catch('month')
+
+type SearchParams = Promise<{ view?: string | string[] }>
+
+export default function ProgressPage({ searchParams }: { searchParams: SearchParams }) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Progress searchParams={searchParams} />
+    </Suspense>
+  )
+}
+
+async function Progress({ searchParams }: { searchParams: SearchParams }) {
+  const view = viewSchema.parse((await searchParams).view)
+  return (
+    <WithProgress view={view}>
+      <ProgressView view={view} />
+    </WithProgress>
+  )
 }

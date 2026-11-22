@@ -12,7 +12,11 @@
     "password": "Password",
     "signOut": "Sign out",
     "student": "Student",
-    "admin": "Admin"
+    "admin": "Admin",
+    "duration": {
+      "minutes": "{minutes} min",
+      "hours": "{hours} h {minutes} m"
+    }
   },
   "nav": {
     "main": "Main",
@@ -137,7 +141,8 @@
     "appearance": "Appearance",
     "appearanceValue": "Indigo · Inter · {mode, select, light {Light} dark {Dark} other {Auto}}",
     "account": "Account and password",
-    "export": "Export my data"
+    "export": "Export my data",
+    "study": "Study"
   },
   "errors": {
     "invalid_input": "Please check the highlighted fields.",
@@ -669,7 +674,11 @@
     "needsRedo": "Needs redo",
     "reviewed": "Reviewed",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "overdue": "{count} overdue",
+    "tileStreak": "Day streak",
+    "tileWeek": "This week",
+    "tileLessons": "Lessons done"
   },
   "submission": {
     "answer": "Your answer",
@@ -710,5 +719,57 @@
     "emptyStudentNoAdmin": "Ask a question or leave a note.",
     "emptyAdmin": "No notes yet. Write to {student}.",
     "you": "You"
+  },
+  "progress": {
+    "title": "Progress",
+    "view": "Period",
+    "week": "Week",
+    "month": "Month",
+    "streak": "Day streak",
+    "best": "Best: {count}",
+    "studied": "Studied",
+    "studyDays": "{count, plural, one {# study day} other {# study days}}",
+    "lessonsDone": "Lessons done",
+    "monthMore": "+{count} vs {month}",
+    "monthLess": "−{count} vs {month}",
+    "monthSame": "Same as {month}",
+    "weekMore": "+{count} vs last week",
+    "weekLess": "−{count} vs last week",
+    "weekSame": "Same as last week",
+    "weeklyGoal": "Weekly goal: {count} of {goal} days",
+    "legend": "Study time per day",
+    "less": "Less",
+    "more": "More",
+    "dayStudied": "{duration} studied",
+    "dayNone": "no study",
+    "weekBars": "Study time by day",
+    "forecastTitle": "Courses · finish forecast",
+    "forecast": {
+      "on_track": "On track · finishes ~{finish}, due {due}",
+      "behind": "Behind · ~{finish} at this pace, due {due}",
+      "no_deadline": "No deadline · ~{count, plural, one {# lesson} other {# lessons}} left",
+      "no_pace": "No study in the last 2 weeks · {count, plural, one {# lesson} other {# lessons}} left",
+      "finished": "Finished",
+      "empty": "No lessons yet"
+    },
+    "percent": "{percent}%",
+    "studiedWeek": "Studied this week",
+    "weekLessons": "{count, plural, one {# lesson done} other {# lessons done}}"
+  },
+  "todayProgress": {
+    "streakDays": "{count, plural, one {# day} other {# days}}",
+    "streak": "Study streak",
+    "goal": "{count} of {goal}",
+    "goalLabel": "Study days this week",
+    "continue": "Continue",
+    "continueLesson": "Lesson {number} · {lesson}",
+    "continueCourse": "{course} · {done} of {total} done",
+    "continueAction": "Continue {lesson}"
+  },
+  "weeklyGoal": {
+    "row": "Weekly goal",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "title": "Weekly goal",
+    "description": "Days a week you want to study"
   }
 }

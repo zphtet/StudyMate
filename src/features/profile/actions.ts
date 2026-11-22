@@ -4,9 +4,14 @@ import { setPreferenceCookies } from '@/features/auth/preferences'
 import { action } from '@/lib/action'
 import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
-import { requireUser } from '@/server/auth/guards'
+import { requireRole, requireUser } from '@/server/auth/guards'
 import { deleteAuthUser } from '@/server/supabase-admin'
-import { colorModeSchema, deleteAccountSchema, updateProfileSchema } from './schemas'
+import {
+  colorModeSchema,
+  deleteAccountSchema,
+  updateProfileSchema,
+  weeklyGoalSchema,
+} from './schemas'
 
 // Profile actions (contracts/server-actions.md). Each starts with a guard; writes touch only the
 // caller's own profile.
@@ -27,6 +32,13 @@ export const setColorMode = action(colorModeSchema, async ({ colorMode }) => {
   const me = await requireUser()
   await prisma.profile.update({ where: { id: me.id }, data: { colorMode } })
   return { colorMode }
+})
+
+/** Spec 004 FR-008: the student's weekly goal ("{n} of {goal}" on Today and Progress). */
+export const setWeeklyGoal = action(weeklyGoalSchema, async ({ days }) => {
+  const me = await requireRole('student')
+  await prisma.profile.update({ where: { id: me.id }, data: { weeklyGoalDays: days } })
+  return { days }
 })
 
 /**

@@ -1,11 +1,15 @@
 import 'server-only'
 import { z } from 'zod'
 import { Prisma, type SubmissionStatus } from '@/generated/prisma/client'
-import { placeStudentLesson } from '@/features/courses/student-repo'
+import type { CourseColor } from '@/features/courses/schemas'
+import { getStudentCourse, placeStudentLesson } from '@/features/courses/student-repo'
 import { fail } from '@/lib/action'
 import { HttpError, NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
+import { addCalendarDays, addMonths, datesOfMonth, mondayOf, todayIn } from '@/lib/time'
 import { completionBlock } from './completion'
+import { forecast } from './forecast'
+import { heatLevel } from './heat'
 import { reviewedNotice, submittedNotice } from './notices'
 import {
   attachmentSchema,
@@ -13,8 +17,23 @@ import {
   type Attachment,
   type SaveDraftInput,
 } from './schemas'
+import {
+  activeDates,
+  bestStreak,
+  currentStreak,
+  isActiveDay,
+  weekActiveDays,
+  type DayActivity,
+} from './streak'
 import { adminCanReview, studentNext } from './submission-status'
-import type { CommentView, LessonWork, SubmissionView } from './types'
+import type {
+  CommentView,
+  LessonWork,
+  ProgressResponse,
+  ProgressSummary,
+  ProgressView,
+  SubmissionView,
+} from './types'
 
 // The student's work on lessons (spec 004; research.md R1, R2, R7, R8). Callers MUST have run a
 // guard: students `requireLessonReader`, Admins `requireAdminLessonTarget` or
@@ -525,4 +544,252 @@ export async function postNote(
     select: commentSelect,
   })
   return { comment: toCommentView(row, author.id) }
+}
+
+// ── Progress (US3; research.md R2, R4–R6, R13) ───────────────────────────────────────────────
+
+type ActivityRow = { student_id: string; date: string; seconds: number; completions: number }
+
+/**
+ * Study seconds and completions per local day: counted focus seconds on the day a session started,
+ * plus the completion credit and one completion on the day a lesson was completed (research.md R2).
+ * `zone` is a time zone parameter or the students' own `p.timezone`; `from` / `to` are local dates.
+ */
+function activityRows(
+  studentIds: string[],
+  zone: Prisma.Sql,
+  { from, to }: { from?: string; to?: string },
+) {
+  return prisma.$queryRaw<ActivityRow[]>`
+    select student_id::text, day::text as date, sum(seconds)::int as seconds,
+           sum(completions)::int as completions
+    from (
+      select s.student_id, (s.started_at at time zone ${zone})::date as day,
+             ${COUNTED_SECONDS} as seconds, 0 as completions
+      from study_sessions s join profiles p on p.id = s.student_id
+      where s.student_id = any(${studentIds}::uuid[])
+      union all
+      select lp.student_id, (lp.completed_at at time zone ${zone})::date,
+             lp.minutes_spent * 60, 1
+      from lesson_progress lp join profiles p on p.id = lp.student_id
+      where lp.student_id = any(${studentIds}::uuid[]) and lp.status = 'done'
+        and lp.completed_at is not null
+    ) a
+    where (${from ?? null}::date is null or day >= ${from ?? null}::date)
+      and (${to ?? null}::date is null or day <= ${to ?? null}::date)
+    group by student_id, day
+    order by student_id, day`
+}
+
+const toDay = ({ date, seconds, completions }: ActivityRow): DayActivity => ({
+  date,
+  seconds,
+  completions,
+})
+
+/** One student's days with any activity, oldest first (all of them without `from` / `to`). */
+export async function dailyActivity(
+  studentId: string,
+  timeZone: string,
+  range: { from?: string; to?: string } = {},
+) {
+  return (await activityRows([studentId], Prisma.sql`${timeZone}`, range)).map(toDay)
+}
+
+/** The Admin cards: every student's days in their own zone, in one query (no N+1). */
+export async function dailyActivityForStudents(
+  studentIds: string[],
+  range: { from?: string; to?: string } = {},
+) {
+  const byStudent = new Map<string, DayActivity[]>(studentIds.map((id) => [id, []]))
+  if (studentIds.length === 0) return byStudent
+  for (const row of await activityRows(studentIds, Prisma.sql`p.timezone`, range)) {
+    byStudent.get(row.student_id)?.push(toDay(row))
+  }
+  return byStudent
+}
+
+/** Streak and this local week's totals from a student's days (Admin cards, Today, Progress). */
+export function weekFacts(days: DayActivity[], today: string) {
+  const active = activeDates(days)
+  const monday = mondayOf(today)
+  const week = days.filter((d) => d.date >= monday && d.date <= addCalendarDays(monday, 6))
+  return {
+    streak: { current: currentStreak(active, today), best: bestStreak(active) },
+    monday,
+    active,
+    weekSeconds: week.reduce((sum, d) => sum + d.seconds, 0),
+    weekLessonsDone: week.reduce((sum, d) => sum + d.completions, 0),
+    weekActiveDays: weekActiveDays(active, monday),
+  }
+}
+
+/** The local month or week containing `today`, and the one before it. */
+function periodsOf(view: ProgressView, today: string) {
+  if (view === 'week') {
+    const monday = mondayOf(today)
+    const dates = Array.from({ length: 7 }, (_, i) => addCalendarDays(monday, i))
+    return {
+      dates,
+      previous: { from: addCalendarDays(monday, -7), to: addCalendarDays(monday, -1) },
+    }
+  }
+  const month = today.slice(0, 7)
+  const before = datesOfMonth(addMonths(month, -1))
+  return {
+    dates: datesOfMonth(month),
+    previous: { from: before[0], to: before.at(-1) ?? before[0] },
+  }
+}
+
+/** Active courses assigned to the student with progress, deadline and forecast, by title. */
+async function coursesWithForecast(student: Student, today: string) {
+  const since = addCalendarDays(today, -13) // the last 14 local days, today included
+  const rows = await prisma.$queryRaw<
+    {
+      course_id: string
+      title: string
+      color: string
+      total: number | null
+      done: number | null
+      percent: number | null
+      due_at: Date | null
+      recent: number
+    }[]
+  >`select c.id as course_id, c.title, c.color, cp.published_lessons::int as total,
+           cp.done_lessons::int as done, cp.percent::int as percent, ca.due_at,
+           (select count(*) from lesson_progress lp join lessons l on l.id = lp.lesson_id
+            where l.course_id = c.id and l.status = 'published' and l.deleted_at is null
+              and lp.student_id = ca.student_id and lp.status = 'done'
+              and (lp.completed_at at time zone ${student.timezone})::date >= ${since}::date
+           )::int as recent
+    from course_assignments ca
+    join courses c on c.id = ca.course_id and c.status = 'active' and c.deleted_at is null
+    left join course_progress cp on cp.course_id = ca.course_id and cp.student_id = ca.student_id
+    where ca.student_id = ${student.id}::uuid and ca.status = 'active'
+    order by c.title`
+  return rows.map((r) => {
+    const total = r.total ?? 0
+    const done = r.done ?? 0
+    return {
+      courseId: r.course_id,
+      title: r.title,
+      // Course.color is checked by the course form schema (002), as in courses/repo.ts.
+      color: r.color as CourseColor,
+      percent: r.percent,
+      done,
+      total,
+      dueAt: r.due_at?.toISOString() ?? null,
+      forecast: forecast({
+        published: total,
+        done,
+        doneLast14: r.recent,
+        today,
+        dueOn: r.due_at ? todayIn(student.timezone, r.due_at) : null,
+      }),
+    }
+  })
+}
+
+const goalOf = (studentId: string) =>
+  prisma.profile
+    .findUniqueOrThrow({ where: { id: studentId }, select: { weeklyGoalDays: true } })
+    .then((p) => p.weeklyGoalDays)
+
+/** GET /api/progress?view=month|week (US3 scenario 1–2; research.md R5). */
+export async function getProgress(
+  student: Student,
+  view: ProgressView,
+  now = new Date(),
+): Promise<ProgressResponse> {
+  const today = todayIn(student.timezone, now)
+  const [goal, days, courses] = await Promise.all([
+    goalOf(student.id),
+    dailyActivity(student.id, student.timezone),
+    coursesWithForecast(student, today),
+  ])
+  const facts = weekFacts(days, today)
+  const { dates, previous } = periodsOf(view, today)
+  const from = dates[0]
+  const to = dates[dates.length - 1]
+  const byDate = new Map(days.map((d) => [d.date, d]))
+  const inPeriod = days.filter((d) => d.date >= from && d.date <= to)
+  const completionsIn = (a: string, b: string) =>
+    days.filter((d) => d.date >= a && d.date <= b).reduce((sum, d) => sum + d.completions, 0)
+
+  return {
+    today,
+    streak: facts.streak,
+    goal: { days: goal, activeThisWeek: facts.weekActiveDays },
+    period: { from, to },
+    studied: {
+      seconds: inPeriod.reduce((sum, d) => sum + d.seconds, 0),
+      activeDays: inPeriod.filter(isActiveDay).length,
+    },
+    lessonsDone: {
+      count: completionsIn(from, to),
+      previous: completionsIn(previous.from, previous.to),
+    },
+    days: dates.map((date) => {
+      const day = byDate.get(date)
+      const seconds = day?.seconds ?? 0
+      return { date, seconds, completions: day?.completions ?? 0, level: heatLevel(seconds) }
+    }),
+    courses,
+  }
+}
+
+/**
+ * Where to pick up (Today's Continue card; research.md R13): the active course with the latest
+ * activity (a completion or a focus session), else the first assigned, and its first open lesson that
+ * isn't done. Null when there is none.
+ */
+async function continueCard(student: Student, now: Date): Promise<ProgressSummary['continue']> {
+  const courses = await prisma.$queryRaw<{ course_id: string }[]>`
+    select ca.course_id
+    from course_assignments ca
+    join courses c on c.id = ca.course_id and c.status = 'active' and c.deleted_at is null
+    left join lateral (
+      select max(t) as last from (
+        select lp.completed_at as t from lesson_progress lp join lessons l on l.id = lp.lesson_id
+        where l.course_id = c.id and lp.student_id = ca.student_id
+        union all
+        select ss.started_at from study_sessions ss join lessons l on l.id = ss.lesson_id
+        where l.course_id = c.id and ss.student_id = ca.student_id
+      ) t
+    ) activity on true
+    where ca.student_id = ${student.id}::uuid and ca.status = 'active'
+    order by activity.last desc nulls last, ca.created_at, c.title`
+  for (const { course_id } of courses) {
+    const view = await getStudentCourse(student, course_id, now)
+    const lesson = view.groups.flatMap((g) => g.lessons).find((l) => l.state === 'open' && !l.done)
+    if (lesson) {
+      return {
+        courseId: view.course.id,
+        courseTitle: view.course.title,
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        number: lesson.number,
+        done: view.course.progress.done,
+        total: view.course.progress.total,
+      }
+    }
+  }
+  return null
+}
+
+/** GET /api/progress/summary: streak, this week's active days and Continue (Today). */
+export async function getSummary(student: Student, now = new Date()): Promise<ProgressSummary> {
+  const today = todayIn(student.timezone, now)
+  const [goal, days, next] = await Promise.all([
+    goalOf(student.id),
+    dailyActivity(student.id, student.timezone),
+    continueCard(student, now),
+  ])
+  const facts = weekFacts(days, today)
+  return {
+    streak: facts.streak,
+    week: { activeDays: facts.weekActiveDays, goal },
+    continue: next,
+  }
 }

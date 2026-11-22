@@ -12,13 +12,13 @@ import { cn } from '@/lib/utils'
 import { studentCoursesQuery } from '../queries'
 import type { StudentCourseCard } from '../types'
 import { COURSE_COLOR_CLASSES, CourseIcon } from './course-icon'
-import { useCalendarDate } from './use-calendar-date'
+import { useCalendarDate } from '@/components/shared/use-calendar-date'
 
 // Student Courses tab (screen 05-Courses, partial per contracts/ui-routes.md): chips Active · n and
 // Archived · n (only when there are any), and one card per assigned course. Active cards show the
 // student's course deadline and a red overdue count (spec 003 US3 scenario 5), and from spec 004 the
-// progress bar, "{percent}%" and "{done} of {total}" (FR-005). The weekly study card comes with 004
-// US3; Completed and Mine with the personal-courses feature.
+// progress bar, "{percent}%" and "{done} of {total}" (FR-005). The page puts 004's "Studied this
+// week" card above it; Completed and Mine come with the personal-courses feature.
 
 export function StudentCourseList() {
   const t = useTranslations('studentCourses')

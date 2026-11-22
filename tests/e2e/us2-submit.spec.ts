@@ -127,7 +127,7 @@ test('scenarios 2–4: submit, the Admin reviews live, Needs redo, resubmit; pro
   const { courseId, lessonId } = await verbsCourse(student)
   const zin = await signedInPage(browser, testInfo, admin)
   await zin.goto('/a/students')
-  const card = zin.getByRole('link', { name: 'May' })
+  const card = zin.getByRole('article', { name: 'May' })
   await expect(card).toBeVisible()
   await expect(card.getByText(/to review/)).toHaveCount(0)
 
@@ -142,7 +142,7 @@ test('scenarios 2–4: submit, the Admin reviews live, Needs redo, resubmit; pro
   expect(await percentOf(courseId)).toBe(0)
 
   // Scenario 3: comment + Needs redo → the student's open lesson shows it within 5 s.
-  await card.click()
+  await card.getByRole('link', { name: 'May' }).click()
   await expect(zin.getByRole('heading', { name: 'To review · 1' })).toBeVisible()
   await zin.getByRole('link', { name: /Verbs/ }).first().click()
   await expect(zin.getByText('食べて、飲んで、寝ます。')).toBeVisible()

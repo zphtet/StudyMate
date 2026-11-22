@@ -1,9 +1,18 @@
 import 'server-only'
+import { countOverdue } from '@/features/assignments/student-repo'
 import { flatten, groupCourse } from '@/features/courses/order'
 import type { CourseColor } from '@/features/courses/schemas'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
-import { countNotes, getReviewComments, submissionSelect, toSubmissionView } from './repo'
+import { todayIn } from '@/lib/time'
+import {
+  countNotes,
+  dailyActivityForStudents,
+  getReviewComments,
+  submissionSelect,
+  toSubmissionView,
+  weekFacts,
+} from './repo'
 import type {
   AdminLessonReview,
   AdminStudentCard,
@@ -90,8 +99,14 @@ async function submissionsToReview(adminId: string, studentIds: string[]) {
     order by s.submitted_at, s.id`
 }
 
-/** GET /api/admin/students/progress: one card per actively linked student, by name. */
-export async function getStudentCards(admin: Admin): Promise<{ students: AdminStudentCard[] }> {
+/**
+ * GET /api/admin/students/progress: one card per actively linked student, by name, from a fixed
+ * number of queries for all students (research.md R2, R12). Weeks are each student's local Mon–Sun.
+ */
+export async function getStudentCards(
+  admin: Admin,
+  now = new Date(),
+): Promise<{ students: AdminStudentCard[] }> {
   const links = await prisma.studentLink.findMany({
     where: { adminId: admin.id, status: 'active' },
     select: { student: { select: { id: true, displayName: true, timezone: true } } },
@@ -99,17 +114,26 @@ export async function getStudentCards(admin: Admin): Promise<{ students: AdminSt
   })
   const students = links.map((l) => l.student)
   const ids = students.map((s) => s.id)
-  const [progress, toReview] = await Promise.all([
+  const [progress, toReview, activity, overdue] = await Promise.all([
     progressOfStudents(admin.id, ids),
     submissionsToReview(admin.id, ids),
+    dailyActivityForStudents(ids),
+    countOverdue(ids, now),
   ])
   const waiting = (studentId: string) => toReview.filter((r) => r.student_id === studentId).length
   return {
-    students: students.map((s) => ({
-      ...s,
-      toReview: waiting(s.id),
-      courses: progress.get(s.id) ?? [],
-    })),
+    students: students.map((s) => {
+      const week = weekFacts(activity.get(s.id) ?? [], todayIn(s.timezone, now))
+      return {
+        ...s,
+        overdueCount: overdue.get(s.id) ?? 0,
+        toReview: waiting(s.id),
+        streak: week.streak,
+        weekSeconds: week.weekSeconds,
+        weekLessonsDone: week.weekLessonsDone,
+        courses: progress.get(s.id) ?? [],
+      }
+    }),
   }
 }
 

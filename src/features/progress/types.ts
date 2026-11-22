@@ -71,11 +71,56 @@ export type LessonWork = {
 
 export type StudentRef = { id: string; displayName: string; timezone: string }
 
-/** GET /api/admin/students/progress. US3 adds the streak, week and overdue tiles. */
+/** GET /api/admin/students/progress: one card per linked student (weeks are their local Mon–Sun). */
 export type AdminStudentCard = StudentRef & {
+  /** 003's rules (countOverdue). */
+  overdueCount: number
   /** Submissions waiting for this Admin's review. */
   toReview: number
+  streak: Streak
+  weekSeconds: number
+  weekLessonsDone: number
   courses: CourseProgress[]
+}
+
+/** One local day of a period. */
+export type ProgressDay = {
+  date: string
+  seconds: number
+  completions: number
+  level: 0 | 1 | 2 | 3 | 4
+}
+
+/** GET /api/progress?view=month|week (contracts/route-handlers.md › Student). */
+export type ProgressResponse = {
+  today: string
+  streak: Streak
+  goal: { days: number; activeThisWeek: number }
+  /** The local month or week. */
+  period: { from: string; to: string }
+  studied: { seconds: number; activeDays: number }
+  /** Completions in the period and in the one before (previous month or week). */
+  lessonsDone: { count: number; previous: number }
+  days: ProgressDay[]
+  courses: (CourseProgress & { dueAt: string | null; forecast: Forecast })[]
+}
+
+export type ProgressView = 'month' | 'week'
+
+/** GET /api/progress/summary: the Today cards. */
+export type ProgressSummary = {
+  streak: Streak
+  /** Active days this local week (Mon–Sun) and the weekly goal (FR-008). */
+  week: { activeDays: number; goal: number }
+  continue: {
+    courseId: string
+    courseTitle: string
+    lessonId: string
+    lessonTitle: string
+    number: number
+    done: number
+    total: number
+  } | null
 }
 
 /** GET /api/admin/students/[studentId]. `submission` is null for none or a Draft. */

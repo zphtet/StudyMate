@@ -17,6 +17,7 @@ type Me = {
   timezone: string
   locale: string
   colorMode: string
+  weeklyGoalDays: number
 }
 
 export async function getMe(me: Me): Promise<MeResponse> {
@@ -57,6 +58,7 @@ export async function getMe(me: Me): Promise<MeResponse> {
     timezone: me.timezone,
     locale: hasLocale(me.locale) ? me.locale : 'en',
     colorMode: me.colorMode === 'light' || me.colorMode === 'dark' ? me.colorMode : 'system',
+    weeklyGoalDays: me.weeklyGoalDays,
     link:
       link && (link.status === 'pending' || link.status === 'active')
         ? {

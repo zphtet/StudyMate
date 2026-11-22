@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 import { getStudentCourse, listStudentCourses } from '@/features/courses/student-repo'
 import { prisma } from '@/lib/prisma'
-import { getToday } from './student-repo'
+import { countOverdue, getToday } from './student-repo'
 
 vi.setConfig({ testTimeout: 30_000 })
 
@@ -246,5 +246,17 @@ describe('course progress (spec 004 additions)', () => {
   test('the course screen has percent, done and total', async () => {
     const view = await getStudentCourse(may, course.grammar, now)
     expect(view.course.progress).toEqual({ percent: 13, done: 1, total: 8 })
+  })
+})
+
+describe('countOverdue (spec 004 Admin card)', () => {
+  test('matches the sum of the per-course overdue counts, for several students at once', async () => {
+    const counts = await countOverdue([may.id, thant.id, randomUUID()], now)
+    for (const student of [may, thant]) {
+      const { active } = await listStudentCourses(student.id, now)
+      const sum = active.reduce((total, c) => total + c.overdueCount, 0)
+      expect(counts.get(student.id) ?? 0).toBe(sum)
+    }
+    expect(counts.get(may.id)).toBeGreaterThan(0)
   })
 })

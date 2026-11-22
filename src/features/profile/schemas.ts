@@ -21,6 +21,9 @@ export const colorModes = ['light', 'dark', 'system'] as const
 export type ColorMode = (typeof colorModes)[number]
 export const colorModeSchema = z.object({ colorMode: z.enum(colorModes) })
 
+/** Spec 004 FR-008; data-model.md Profile.weekly_goal_days (database CHECK 1..7). */
+export const weeklyGoalSchema = z.object({ days: z.number().int().min(1).max(7) })
+
 export const deleteAccountSchema = z.object({
   confirm: z.literal('DELETE', { error: 'confirm_mismatch' }),
 })

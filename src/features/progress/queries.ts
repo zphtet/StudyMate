@@ -6,6 +6,9 @@ import type {
   AdminStudentDetail,
   CommentView,
   LessonWork,
+  ProgressResponse,
+  ProgressSummary,
+  ProgressView,
 } from './types'
 
 // TanStack Query keys for the 004 Route Handlers (contracts/route-handlers.md). Invalidation after
@@ -25,7 +28,7 @@ export const focusKeys = {
 
 export const progressKeys = {
   all: ['progress'] as const,
-  view: (view: 'month' | 'week') => ['progress', view] as const,
+  view: (view: ProgressView) => ['progress', view] as const,
   summary: ['progress', 'summary'] as const,
 }
 
@@ -67,3 +70,14 @@ export const adminLessonReviewQuery = (studentId: string, lessonId: string) =>
     queryKey: adminProgressKeys.lesson(studentId, lessonId),
     queryFn: () => api<AdminLessonReview>(`/api/admin/students/${studentId}/lessons/${lessonId}`),
   })
+
+export const progressQuery = (view: ProgressView) =>
+  queryOptions({
+    queryKey: progressKeys.view(view),
+    queryFn: () => api<ProgressResponse>(`/api/progress?view=${view}`),
+  })
+
+export const summaryQuery = queryOptions({
+  queryKey: progressKeys.summary,
+  queryFn: () => api<ProgressSummary>('/api/progress/summary'),
+})

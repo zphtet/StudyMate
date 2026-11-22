@@ -106,7 +106,7 @@ No new npm packages are needed (R16).
 - **Week** (current local week) shows `WeekBars` in place of the calendar: 7 bars of minutes per day, with today emphasised.
   - The same component is the "Studied this week" card on the Courses tab (`05-Courses.png`), so it goes in `src/components/shared/week-bars.tsx`.
   - The Courses page gets the card from `progress/queries.ts` (`progressQuery('week')`), so a page composes both features.
-- **Shades**: 5 levels from `heatLevel(seconds)`: 0; 1 s–14 min; 15–29; 30–59; 60+ min. The colours are tokens `--heat-1..4`, mixed from `--primary` with `color-mix(in oklch, …)` like 003's `--avail-*`, so all 10 themes get them. They are covered by the contrast test. Each day cell's text gives the minutes ("5 Nov, 45 min") for screen readers.
+- **Shades**: 5 levels from `heatLevel(seconds)`: 0; 1 s–14 min; 15–29; 30–59; 60+ min. The colours are tokens `--heat-1..4`, mixed from `--primary` and `--card` like 003's `--avail-*`, so all 10 themes get them. They use `color-mix(in srgb, …)` (18 %, 35 %, 60 %, then `--primary`), which the contrast test can compute: day numbers are `--foreground` on levels 1–3 and `--primary-foreground` on 4, at 4.5:1 or more in light and dark. Each day cell's name ends with the minutes (", 45 min studied") for screen readers.
 - Only the current month and week are shown. The screenshot has no arrows to move between them, and the spec doesn't ask for it.
 - **Rationale**: One endpoint and one query key serve the Progress screen and the Courses card.
 - **Alternatives**: a separate endpoint for each card. Rejected: it adds requests for data that is computed the same way.

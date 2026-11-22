@@ -9,7 +9,7 @@ import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
 import { studentLessonQuery } from '../queries'
 import type { LockInfo, Resource, StudentLesson } from '../types'
-import { useCalendarDate } from './use-calendar-date'
+import { useCalendarDate } from '@/components/shared/use-calendar-date'
 
 // Student lesson screen (screen 10-Lesson, partial per contracts/ui-routes.md; US4 scenario 3):
 // "{course} · Lesson n of m", title, minutes, the shared Markdown body, attachments and the

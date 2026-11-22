@@ -65,11 +65,43 @@ const pairs: [string, string][] = [
   ['course-slate', 'course-slate-soft'],
 ]
 
+/** Spec 004 heat shades: `color-mix(in srgb, var(--a) N%, var(--b))` (or `var(--a)`) from :root. */
+function heatTokens(t: Record<string, string>) {
+  const root = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')))
+  const hex = (channels: number[]) =>
+    `#${channels.map((c) => Math.round(c).toString(16).padStart(2, '0')).join('')}`
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const heat: Record<string, string> = {}
+  for (const [, name, a, percent, b] of root.matchAll(
+    /--(heat-\d):\s*color-mix\(in srgb, var\(--([\w-]+)\) (\d+)%, var\(--([\w-]+)\)\)/g,
+  )) {
+    const p = Number(percent) / 100
+    const [x, y] = [rgb(t[a]), rgb(t[b])]
+    heat[name] = hex(x.map((c, i) => c * p + y[i] * (1 - p)))
+  }
+  for (const [, name, a] of root.matchAll(/--(heat-\d):\s*var\(--([\w-]+)\);/g)) heat[name] = t[a]
+  return heat
+}
+
+const heatPairs: [string, string][] = [
+  ['foreground', 'heat-1'],
+  ['foreground', 'heat-2'],
+  ['foreground', 'heat-3'],
+  ['primary-foreground', 'heat-4'],
+]
+
 describe.each([
   ['light', ':root'],
   ['dark', '.dark'],
 ])('indigo theme, %s', (_, selector) => {
   const t = tokens(selector)
+
+  test.each(heatPairs)('%s on %s (Progress calendar day) ≥ 4.5:1', (fg, bg) => {
+    const heat = heatTokens(t)
+    expect(heat[bg], `--${bg} missing`).toBeDefined()
+    expect(contrast(t[fg], heat[bg])).toBeGreaterThanOrEqual(4.5)
+  })
+
   test.each(pairs)('%s on %s ≥ 4.5:1', (fg, bg) => {
     expect(t[fg], `--${fg} missing`).toBeDefined()
     expect(t[bg], `--${bg} missing`).toBeDefined()

@@ -8,6 +8,8 @@ export type MeResponse = {
   locale: 'en' | 'my' | 'ja'
   /** spec 007 FR-001 (mode pulled into 001): light / dark / system */
   colorMode: 'light' | 'dark' | 'system'
+  /** Spec 004 FR-008: study days a week the student aims for (1–7). */
+  weeklyGoalDays: number
   link: null | {
     id: string
     status: 'pending' | 'active'

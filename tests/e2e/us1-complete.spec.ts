@@ -11,6 +11,8 @@ let admin: TestUser
 let student: TestUser
 
 test.beforeEach(async ({ page }) => {
+  // Each test moves through several screens (and a second browser) against the hosted dev database.
+  test.slow()
   admin = await createConfirmedUser({ role: 'admin', displayName: 'Zin' })
   student = await createConfirmedUser({
     role: 'student',

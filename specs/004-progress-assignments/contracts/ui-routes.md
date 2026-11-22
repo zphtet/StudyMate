@@ -85,10 +85,10 @@ Intentional difference from `10-Lesson.png`: the assignment card reads "Draft sa
 
 - Empty state (no assigned courses): 002's "Your admin hasn't assigned a course yet."
 
-**Today** (above 003's Overdue and Due today)
+**Today** (streak and goal cards above 003's Overdue and Due today; Continue below them, as in `04-Today.png`)
 - Two cards side by side:
   - flame icon, "{n} days", "Study streak";
-  - 7 dots (filled = active day Mon–Sun), "{n} of {goal}", "Study days this week".
+  - one pill per goal day, filled for each active day this week (as in `04-Today.png`), "{n} of {goal}", "Study days this week".
 - **Continue** card: "{course short} · Lesson {n}", "{course} · {done} of {total} done", a progress bar, and a round play button (`aria-label` "Continue {lesson}") linking to the lesson. Hidden when `continue` is null.
 
 **Courses**
@@ -110,7 +110,7 @@ Intentional difference from `10-Lesson.png`: the assignment card reads "Draft sa
   - a "{n} to review" chip in the primary tone, which links to `/a/students/[id]`.
 - **Tiles**: three tiles, "{n} · Day streak", "{h} h {m} m · This week" and "{n} · Lessons done", the last two in the student's own local week.
 - **Course rows**: one per active course, with title, bar and "{percent}%".
-- **Link**: the whole card links to `/a/students/[id]` (one link; its accessible name is the student's name).
+- **Link**: the student's name is the card's one link, stretched over the whole card, so the card is one tap target and the link's name matches its visible text.
 - **Live updates**: through Realtime (research R10).
 - **Empty state**: 001's.
 

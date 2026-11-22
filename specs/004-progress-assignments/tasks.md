@@ -301,15 +301,15 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T051 [P] [US3] Write unit tests in src/features/progress/streak.test.ts (research.md R4):
+- [X] T051 [P] [US3] Write unit tests in src/features/progress/streak.test.ts (research.md R4):
   - `isActiveDay` at 599 s vs 600 s, and with 1 completion;
   - `currentStreak` with today active, with today not yet active (yesterday's run counts), and broken two days ago → 0;
   - `bestStreak`;
   - `weekActiveDays` Mon–Sun beyond the goal;
   - date sequences for Asia/Tokyo, Asia/Yangon, America/New_York including the November daylight-saving week.
-- [ ] T052 [P] [US3] Write unit tests in src/features/progress/forecast.test.ts for the six outcomes and rounding in research.md R6: `empty`, `finished`, `no_pace`, `no_deadline`, `on_track` on the due date itself, `behind` by one day; and `ceil` for a fractional pace.
-- [ ] T053 [P] [US3] Write unit tests in src/features/progress/heat.test.ts: level boundaries 0, 1 s, 14:59, 15:00, 29:59, 30:00, 59:59, 60:00.
-- [ ] T054 [P] [US3] Add tests against the dev database to src/features/progress/repo.test.ts (data-model.md StudySession.started_at, StudySession.ended_at, StudySession.planned_minutes, LessonProgress.completed_at, LessonProgress.minutes_spent):
+- [X] T052 [P] [US3] Write unit tests in src/features/progress/forecast.test.ts for the six outcomes and rounding in research.md R6: `empty`, `finished`, `no_pace`, `no_deadline`, `on_track` on the due date itself, `behind` by one day; and `ceil` for a fractional pace.
+- [X] T053 [P] [US3] Write unit tests in src/features/progress/heat.test.ts: level boundaries 0, 1 s, 14:59, 15:00, 29:59, 30:00, 59:59, 60:00.
+- [X] T054 [P] [US3] Add tests against the dev database to src/features/progress/repo.test.ts (data-model.md StudySession.started_at, StudySession.ended_at, StudySession.planned_minutes, LessonProgress.completed_at, LessonProgress.minutes_spent):
   - `dailyActivity`: a completion at 23:30 and one at 00:30 Tokyo time give two dates; a New York day across the daylight-saving change groups correctly;
   - a session counts on its local start date;
   - an open session past its plan counts `planned_minutes`;
@@ -317,7 +317,7 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
   - the admin version returns all students in one query.
 
   Add to src/features/assignments/student-repo.test.ts: `countOverdue(studentIds, now)` matches the per-course `overdueCount` sums from 003.
-- [ ] T055 [P] [US3] Write Playwright tests in tests/e2e/us3-progress.spec.ts (390×844 and 1280×800, axe; history seeded with `markDone` and `seedSession`):
+- [X] T055 [P] [US3] Write Playwright tests in tests/e2e/us3-progress.spec.ts (390×844 and 1280×800, axe; history seeded with `markDone` and `seedSession`):
   - scenario 1: the Month view's cards, heat calendar (accessible names "…, 45 min studied") and goal label;
   - Week toggle in the URL;
   - scenario 2: the forecast text for a course with a deadline (On track) and one behind;
@@ -329,32 +329,32 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ### Implementation for User Story 3
 
-- [ ] T056 [P] [US3] Implement src/features/progress/streak.ts (research.md R4). T051 passes.
-- [ ] T057 [P] [US3] Implement src/features/progress/forecast.ts (research.md R6), using the student's course deadline (`course_assignments.due_at`), not `courses.target_date`. T052 passes.
-- [ ] T058 [P] [US3] Implement src/features/progress/heat.ts. T053 passes.
-- [ ] T059 [US3] Repo in src/features/progress/repo.ts:
+- [X] T056 [P] [US3] Implement src/features/progress/streak.ts (research.md R4). T051 passes.
+- [X] T057 [P] [US3] Implement src/features/progress/forecast.ts (research.md R6), using the student's course deadline (`course_assignments.due_at`), not `courses.target_date`. T052 passes.
+- [X] T058 [P] [US3] Implement src/features/progress/heat.ts. T053 passes.
+- [X] T059 [US3] Repo in src/features/progress/repo.ts:
   - `dailyActivity(studentId, timeZone, from, to)`: one `$queryRaw` that unions counted session seconds (capped formula, data-model.md › Derived values) and completions with `minutes_spent`, grouped by `(ts at time zone $tz)::date`;
   - `dailyActivityForStudents(studentIds, from, to)`, which joins `profiles.timezone`;
   - `getProgress(student, view)` and `getSummary(student)`, including `continue` (research.md R13).
 
   Add `countOverdue(studentIds, now)` to src/features/assignments/student-repo.ts. Extend `getStudentCards` in src/features/progress/admin-repo.ts with streak, `weekSeconds`, `weekLessonsDone` and `overdueCount`, without N+1. T054 passes.
-- [ ] T060 [US3] Route Handlers GET src/app/api/progress/route.ts (`view` parsed with Zod, defaults to `month`) and GET src/app/api/progress/summary/route.ts, both `requireRole('student')`. Extend the admin cards route output. Add `progressQuery(view)` and `summaryQuery()` to queries.ts.
-- [ ] T061 [US3] Weekly goal:
+- [X] T060 [US3] Route Handlers GET src/app/api/progress/route.ts (`view` parsed with Zod, defaults to `month`) and GET src/app/api/progress/summary/route.ts, both `requireRole('student')`. Extend the admin cards route output. Add `progressQuery(view)` and `summaryQuery()` to queries.ts.
+- [X] T061 [US3] Weekly goal:
   - `setWeeklyGoal` action and schema in src/features/profile/actions.ts and src/features/profile/schemas.ts (`requireRole('student')`);
   - `WeeklyGoalSheet` in src/features/profile/components/weekly-goal-sheet.tsx;
   - the "Weekly goal · {n} days" row on the Me screen (src/features/profile/components/me-view.tsx);
   - `weeklyGoalDays` added to the `me` payload in src/features/profile/repo.ts.
-- [ ] T062 [P] [US3] Add `WeekBars` in src/components/shared/week-bars.tsx with a component test week-bars.test.tsx: 7 bars relative to the week's maximum, today bold, empty days as a 4 px stub, accessible text per day. Add the `--heat-1..4` tokens to src/app/globals.css (`color-mix` from `--primary`, as `--avail-*`) and extend the existing token contrast test.
-- [ ] T063 [US3] Add the heat cells to src/components/shared/calendar-month.tsx: use the existing badge slot if it can fill the cell, otherwise add a `renderDay` slot. Extend its test; keep the Plan month (003) unchanged.
-- [ ] T064 [US3] Progress screen: src/app/s/(tabs)/progress/page.tsx replaces `TabPlaceholder`, prefetches `progressQuery`, and renders `ProgressView`. Components in src/features/progress/components/: `progress-view.tsx` (`Segmented` Week/Month in the URL), `stat-cards.tsx`, `heat-calendar.tsx`, `forecast-list.tsx` (texts and tones per contracts/ui-routes.md › Progress).
-- [ ] T065 [US3] Today and Courses cards:
+- [X] T062 [P] [US3] Add `WeekBars` in src/components/shared/week-bars.tsx with a component test week-bars.test.tsx: 7 bars relative to the week's maximum, today bold, empty days as a 4 px stub, accessible text per day. Add the `--heat-1..4` tokens to src/app/globals.css (`color-mix` from `--primary`, as `--avail-*`) and extend the existing token contrast test.
+- [X] T063 [US3] Add the heat cells to src/components/shared/calendar-month.tsx: use the existing badge slot if it can fill the cell, otherwise add a `renderDay` slot. Extend its test; keep the Plan month (003) unchanged.
+- [X] T064 [US3] Progress screen: src/app/s/(tabs)/progress/page.tsx replaces `TabPlaceholder`, prefetches `progressQuery`, and renders `ProgressView`. Components in src/features/progress/components/: `progress-view.tsx` (`Segmented` Week/Month in the URL), `stat-cards.tsx`, `heat-calendar.tsx`, `forecast-list.tsx` (texts and tones per contracts/ui-routes.md › Progress).
+- [X] T065 [US3] Today and Courses cards:
   - `streak-card.tsx`, `week-goal-card.tsx` (7 dots) and `continue-card.tsx` added to src/app/s/(tabs)/today/page.tsx above 003's sections, from `summaryQuery`;
   - `studied-week-card.tsx` (`WeekBars` + "{n} lessons done") added to src/app/s/(tabs)/courses/page.tsx from `progressQuery('week')`.
 
   Remove the stale "come later" comments in today-view.tsx and student-course-list.tsx.
-- [ ] T066 [US3] Admin card tiles in student-progress-card.tsx: streak, "This week", "Lessons done", and the "{n} overdue" danger chip. Also subscribe to `lesson_progress` on `/a/students`.
-- [ ] T067 [US3] Add the `progress` strings (cards, legend, forecast texts, month and week comparisons), `todayProgress` (streak, goal, Continue), `weeklyGoal`, and the `adminStudents` tile strings to src/i18n/messages/en.json, my.json and ja.json. Duration and date formats come from next-intl, per locale.
-- [ ] T068 [US3] Run T051–T055 until they pass.
+- [X] T066 [US3] Admin card tiles in student-progress-card.tsx: streak, "This week", "Lessons done", and the "{n} overdue" danger chip. Also subscribe to `lesson_progress` on `/a/students`.
+- [X] T067 [US3] Add the `progress` strings (cards, legend, forecast texts, month and week comparisons), `todayProgress` (streak, goal, Continue), `weeklyGoal`, and the `adminStudents` tile strings to src/i18n/messages/en.json, my.json and ja.json. Duration and date formats come from next-intl, per locale.
+- [X] T068 [US3] Run T051–T055 until they pass.
 
 **Checkpoint**: US1–US3 all work on their own. This is the feature's MVP.
 

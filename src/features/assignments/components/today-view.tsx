@@ -4,7 +4,7 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { House } from 'lucide-react'
 import { useNow, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { TodayLabel } from '@/components/shared/today-label'
@@ -17,7 +17,8 @@ import { DueChip } from './due-chip'
 
 // Student Today (screen 04-Today, partial per contracts/ui-routes.md): date line, greeting, then
 // "Overdue · N" (oldest first) and "Due today" (earliest first), 5 rows each, then "Show all (N)".
-// The bell (006), shift banner (005), streak, weekly goal and Continue cards (004) come later.
+// Spec 004's streak and goal cards go in `top` and Continue in `bottom`; the bell (006) and the shift
+// banner (005) come later.
 
 const PAGE = 5
 
@@ -29,7 +30,17 @@ function useDayPeriod() {
   return hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
 }
 
-export function TodayView({ name }: { name: string }) {
+export function TodayView({
+  name,
+  top,
+  bottom,
+}: {
+  name: string
+  /** Above the sections (spec 004 streak and goal cards). */
+  top?: ReactNode
+  /** Below them (spec 004 Continue). */
+  bottom?: ReactNode
+}) {
   const t = useTranslations('today')
   const f = useInstantFormat()
   const period = useDayPeriod()
@@ -41,6 +52,7 @@ export function TodayView({ name }: { name: string }) {
         eyebrow={t.rich('dateLine', { date: () => <TodayLabel />, city: cityOf(f.viewerZone) })}
         title={t('greeting', { period, name })}
       />
+      {top}
       {data.overdue.length === 0 && data.dueToday.length === 0 ? (
         <EmptyState icon={House} title={t('empty')}>
           {t('emptyBody')}
@@ -59,6 +71,7 @@ export function TodayView({ name }: { name: string }) {
           )}
         </>
       )}
+      {bottom}
     </div>
   )
 }

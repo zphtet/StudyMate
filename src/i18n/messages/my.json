@@ -12,7 +12,11 @@
     "password": "စကားဝှက်",
     "signOut": "ထွက်ရန်",
     "student": "ကျောင်းသား",
-    "admin": "အက်ဒမင်"
+    "admin": "အက်ဒမင်",
+    "duration": {
+      "minutes": "{minutes} မိနစ်",
+      "hours": "{hours} နာရီ {minutes} မိနစ်"
+    }
   },
   "nav": {
     "main": "ပင်မ",
@@ -137,7 +141,8 @@
     "appearance": "အသွင်အပြင်",
     "appearanceValue": "Indigo · Inter · {mode, select, light {အလင်း} dark {အမှောင်} other {အလိုအလျောက်}}",
     "account": "အကောင့်နှင့် စကားဝှက်",
-    "export": "ကျွန်ုပ်၏ ဒေတာ ထုတ်ယူရန်"
+    "export": "ကျွန်ုပ်၏ ဒေတာ ထုတ်ယူရန်",
+    "study": "လေ့လာမှု"
   },
   "errors": {
     "invalid_input": "အမှတ်အသားပြထားသော အကွက်များကို စစ်ပါ။",
@@ -669,7 +674,11 @@
     "needsRedo": "ပြန်လုပ်ရန်",
     "reviewed": "စစ်ဆေးပြီး",
     "showMore": "ပိုပြရန်",
-    "showLess": "လျှော့ပြရန်"
+    "showLess": "လျှော့ပြရန်",
+    "overdue": "ရက်လွန် {count} ခု",
+    "tileStreak": "ဆက်တိုက် လေ့လာသည့်ရက်",
+    "tileWeek": "ဤအပတ်",
+    "tileLessons": "ပြီးဆုံးသော သင်ခန်းစာ"
   },
   "submission": {
     "answer": "သင့်အဖြေ",
@@ -710,5 +719,57 @@
     "emptyStudentNoAdmin": "မေးခွန်းမေးပါ သို့မဟုတ် မှတ်စု ချန်ထားပါ။",
     "emptyAdmin": "မှတ်စု မရှိသေးပါ။ {student} ထံ ရေးပါ။",
     "you": "သင်"
+  },
+  "progress": {
+    "title": "တိုးတက်မှု",
+    "view": "ကာလ",
+    "week": "အပတ်",
+    "month": "လ",
+    "streak": "ဆက်တိုက် လေ့လာသည့်ရက်",
+    "best": "အများဆုံး- {count}",
+    "studied": "လေ့လာချိန်",
+    "studyDays": "လေ့လာသည့်ရက် {count} ရက်",
+    "lessonsDone": "ပြီးဆုံးသော သင်ခန်းစာ",
+    "monthMore": "{month} ထက် +{count}",
+    "monthLess": "{month} ထက် −{count}",
+    "monthSame": "{month} နှင့် အတူတူ",
+    "weekMore": "ပြီးခဲ့သည့်အပတ်ထက် +{count}",
+    "weekLess": "ပြီးခဲ့သည့်အပတ်ထက် −{count}",
+    "weekSame": "ပြီးခဲ့သည့်အပတ်နှင့် အတူတူ",
+    "weeklyGoal": "အပတ်စဉ် ပန်းတိုင်- {goal} ရက်အနက် {count} ရက်",
+    "legend": "တစ်ရက်ချင်း လေ့လာချိန်",
+    "less": "နည်း",
+    "more": "များ",
+    "dayStudied": "{duration} လေ့လာခဲ့သည်",
+    "dayNone": "မလေ့လာရ",
+    "weekBars": "နေ့အလိုက် လေ့လာချိန်",
+    "forecastTitle": "သင်တန်းများ · ပြီးဆုံးမည့် ခန့်မှန်းချက်",
+    "forecast": {
+      "on_track": "အချိန်မီ · ~{finish} တွင် ပြီးမည်၊ နောက်ဆုံးရက် {due}",
+      "behind": "နောက်ကျနေ · ဤနှုန်းဖြင့် ~{finish}၊ နောက်ဆုံးရက် {due}",
+      "no_deadline": "နောက်ဆုံးရက် မရှိ · သင်ခန်းစာ ~{count} ခု ကျန်",
+      "no_pace": "ပြီးခဲ့သည့် ၂ ပတ်အတွင်း မလေ့လာရ · သင်ခန်းစာ {count} ခု ကျန်",
+      "finished": "ပြီးဆုံးပြီ",
+      "empty": "သင်ခန်းစာ မရှိသေးပါ"
+    },
+    "percent": "{percent}%",
+    "studiedWeek": "ဤအပတ် လေ့လာချိန်",
+    "weekLessons": "သင်ခန်းစာ {count} ခု ပြီး"
+  },
+  "todayProgress": {
+    "streakDays": "{count} ရက်",
+    "streak": "ဆက်တိုက် လေ့လာမှု",
+    "goal": "{goal} ရက်အနက် {count}",
+    "goalLabel": "ဤအပတ် လေ့လာသည့်ရက်",
+    "continue": "ဆက်လေ့လာရန်",
+    "continueLesson": "သင်ခန်းစာ {number} · {lesson}",
+    "continueCourse": "{course} · {total} ခုအနက် {done} ခု ပြီး",
+    "continueAction": "{lesson} ကို ဆက်လေ့လာရန်"
+  },
+  "weeklyGoal": {
+    "row": "အပတ်စဉ် ပန်းတိုင်",
+    "days": "{count} ရက်",
+    "title": "အပတ်စဉ် ပန်းတိုင်",
+    "description": "တစ်ပတ်တွင် လေ့လာလိုသည့် ရက်အရေအတွက်"
   }
 }

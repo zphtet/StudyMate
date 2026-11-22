@@ -6,8 +6,9 @@ import { addCalendarDays, datesOfMonth, mondayOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
 // A month of calendar dates, weeks starting Monday (spec 003 Plan month; 004 and 005 reuse it).
-// Each day is a button with a badge slot. One day is in the tab order; the arrow keys move by day
-// and by week inside the month, Home / End to the start and end of the week.
+// Each day is a button with a badge slot and an optional style per day (004's heat shades). One day
+// is in the tab order; the arrow keys move by day and by week inside the month, Home / End to the
+// start and end of the week.
 
 const KEY_STEP: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }
 
@@ -15,6 +16,7 @@ export function CalendarMonth({
   month,
   today,
   badge,
+  dayClassName,
   onSelectDay,
 }: {
   /** YYYY-MM */
@@ -23,7 +25,10 @@ export function CalendarMonth({
   today: string
   /** Content under the day number (visible or screen-reader text). */
   badge?: (date: string) => ReactNode
-  onSelectDay: (date: string) => void
+  /** Extra classes for a day's cell, applied last (spec 004 Progress heat shades). */
+  dayClassName?: (date: string) => string | undefined
+  /** Without it the days can still be read and moved through, but do nothing when chosen. */
+  onSelectDay?: (date: string) => void
 }) {
   const format = useFormatter()
   const dates = datesOfMonth(month)
@@ -87,12 +92,13 @@ export function CalendarMonth({
                     data-date={date}
                     tabIndex={date === active ? 0 : -1}
                     aria-current={date === today ? 'date' : undefined}
-                    onClick={() => onSelectDay(date)}
+                    onClick={() => onSelectDay?.(date)}
                     onFocus={() => setFocused(date)}
                     onKeyDown={(event) => onKeyDown(event, date)}
                     className={cn(
                       'flex min-h-14 w-full flex-col items-center justify-start gap-1 rounded-xl py-1.5 outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50',
                       date === today && 'bg-accent font-semibold text-primary',
+                      dayClassName?.(date),
                     )}
                   >
                     <span className="text-sm tabular-nums">

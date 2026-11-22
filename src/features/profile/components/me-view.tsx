@@ -10,9 +10,10 @@ import { signOut } from '@/features/auth/actions'
 import { unwrap } from '@/lib/result'
 import { meQuery } from '../queries'
 import { EditProfileSheet } from './edit-profile-sheet'
+import { WeeklyGoalSheet } from './weekly-goal-sheet'
 
-// Me (screen 11-Profile). Study rows (shifts, goal, quiet hours, reminders) arrive with 005–006;
-// colour themes, fonts and text size with 007.
+// Me (screen 11-Profile). Students set their weekly goal here (spec 004 FR-008). The other study rows
+// (shifts, quiet hours, reminders) arrive with 005–006; colour themes, fonts and text size with 007.
 export function MeView() {
   const t = useTranslations()
   const { data: me } = useSuspenseQuery(meQuery)
@@ -41,6 +42,14 @@ export function MeView() {
         </div>
         <EditProfileSheet me={me} />
       </section>
+
+      {me.role === 'student' && (
+        <SettingsSection title={t('me.study')}>
+          <SettingsGroup>
+            <WeeklyGoalSheet days={me.weeklyGoalDays} />
+          </SettingsGroup>
+        </SettingsSection>
+      )}
 
       <SettingsSection title={t('me.language')}>
         <LanguageButtons label={t('me.language')} />

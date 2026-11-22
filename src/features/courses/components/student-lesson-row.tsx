@@ -9,7 +9,7 @@ import { DueChip } from '@/features/assignments/components/due-chip'
 import { calendarDaysBetween, utcToZoned } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { StudentLessonRow as Row } from '../types'
-import { useCalendarDate } from './use-calendar-date'
+import { useCalendarDate } from '@/components/shared/use-calendar-date'
 
 // One lesson on the student course screen (screen 09-Course, partial): number circle, title, minutes
 // and a detail line, plus a chip. Spec 003 (contracts/ui-routes.md › Course screen) adds the deadline

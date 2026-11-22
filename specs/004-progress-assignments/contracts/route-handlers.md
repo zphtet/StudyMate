@@ -79,7 +79,7 @@ Guard: `requireRole('student')`. Feeds the Today cards.
 ```ts
 {
   streak: Streak
-  week: { activeDays: number; goal: number; days: boolean[] }   // Mon..Sun active flags, for the 5 dots
+  week: { activeDays: number; goal: number }   // one pill per goal day, filled per active day (04-Today)
   continue: { courseId: string; courseTitle: string; lessonId: string; lessonTitle: string;
               number: number; done: number; total: number } | null
 }

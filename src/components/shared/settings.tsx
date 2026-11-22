@@ -21,12 +21,15 @@ export function SettingsGroup({ children }: { children: ReactNode }) {
 
 export function SettingsRow({
   href,
+  onClick,
   download,
   icon,
   label,
   value,
 }: {
-  href: string
+  /** A link row, or with `onClick` a button row (e.g. one that opens a sheet). */
+  href?: string
+  onClick?: () => void
   download?: boolean
   icon?: ReactNode
   label: string
@@ -41,6 +44,13 @@ export function SettingsRow({
     </>
   )
   const className = 'flex min-h-15 items-center gap-3 px-4 py-3 hover:bg-muted/50'
+  if (!href) {
+    return (
+      <button type="button" onClick={onClick} className={`${className} w-full text-left`}>
+        {content}
+      </button>
+    )
+  }
   // Downloads must be a plain link so the browser saves the file.
   return download ? (
     <a href={href} download className={className}>

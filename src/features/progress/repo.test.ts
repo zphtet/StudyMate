@@ -13,6 +13,8 @@ import { ActionFailure } from '@/lib/action'
 import { prisma } from '@/lib/prisma'
 import {
   completeLesson,
+  dailyActivity,
+  dailyActivityForStudents,
   getLessonWork,
   getNotes,
   postNote,
@@ -29,7 +31,10 @@ const run = Date.now()
 const admin = { id: randomUUID(), displayName: 'Zin' }
 const aung = { id: randomUUID() }
 const may = { id: randomUUID(), timezone: 'Asia/Tokyo' }
-const users = [admin.id, aung.id, may.id]
+// US3: their own history, so May's sessions from other tests don't mix in.
+const aya = { id: randomUUID(), timezone: 'Asia/Tokyo' }
+const ken = { id: randomUUID(), timezone: 'America/New_York' }
+const users = [admin.id, aung.id, may.id, aya.id, ken.id]
 
 async function makeUser(id: string, role: string, name: string) {
   const meta = JSON.stringify({ role, display_name: name })
@@ -43,6 +48,9 @@ beforeAll(async () => {
   await makeUser(aung.id, 'admin', 'Aung')
   await makeUser(may.id, 'student', 'May')
   await prisma.profile.update({ where: { id: may.id }, data: { locale: 'ja' } })
+  await makeUser(aya.id, 'student', 'Aya')
+  await makeUser(ken.id, 'student', 'Ken')
+  await prisma.profile.update({ where: { id: ken.id }, data: { timezone: ken.timezone } })
   await prisma.studentLink.createMany({
     data: [
       { studentId: may.id, adminId: admin.id, status: 'active' },
@@ -54,6 +62,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.$executeRaw`delete from public.audit_log where actor_id = any(${users}::uuid[])`
   await prisma.$executeRaw`delete from public.lesson_progress where student_id = any(${users}::uuid[])`
+  await prisma.$executeRaw`delete from public.study_sessions where student_id = any(${users}::uuid[])`
   await prisma.$executeRaw`delete from public.course_assignments where student_id = any(${users}::uuid[])`
   await prisma.$executeRaw`delete from auth.users where id = any(${users}::uuid[])`
   await prisma.$disconnect()
@@ -608,5 +617,76 @@ describe('getLessonWork (US2)', () => {
       ['Well done.', 'Zin', false],
     ])
     expect(work.notesCount).toBe(1)
+  })
+})
+
+// ── US3: daily activity (research.md R2; data-model.md StudySession.started_at,
+// StudySession.ended_at, StudySession.planned_minutes, LessonProgress.completed_at,
+// LessonProgress.minutes_spent) ───────────────────────────────────────────────────────────────
+
+/** A done row for a lesson of a fresh course, completed at `at` with a credit of `minutes`. */
+async function completion(studentId: string, at: string, minutes: number) {
+  const { lessonIds } = await makeCourse()
+  await prisma.lessonProgress.create({
+    data: {
+      studentId,
+      lessonId: lessonIds[0],
+      status: 'done',
+      completedAt: new Date(at),
+      completedBy: studentId,
+      minutesSpent: minutes,
+    },
+  })
+}
+
+async function session(studentId: string, start: string, minutes: number, planned = 25) {
+  const startedAt = new Date(start)
+  await prisma.studySession.create({
+    data: {
+      studentId,
+      startedAt,
+      endedAt: minutes === 0 ? null : new Date(startedAt.getTime() + minutes * 60_000),
+      plannedMinutes: planned,
+    },
+  })
+}
+
+describe('dailyActivity', () => {
+  test('groups by the student’s local date; credits land on the completion date', async () => {
+    await completion(aya.id, '2026-10-10T14:30:00Z', 12) // 23:30 Tokyo, 10 Oct
+    await completion(aya.id, '2026-10-10T15:30:00Z', 0) // 00:30 Tokyo, 11 Oct
+    // 23:55–00:15 Tokyo: counts on the start date, 20 min.
+    await session(aya.id, '2026-10-10T14:55:00Z', 20)
+    const days = await dailyActivity(aya.id, aya.timezone, { from: '2026-10-01', to: '2026-10-31' })
+    expect(days).toEqual([
+      { date: '2026-10-10', seconds: 12 * 60 + 20 * 60, completions: 1 },
+      { date: '2026-10-11', seconds: 0, completions: 1 },
+    ])
+  })
+
+  test('an open session past its plan counts the planned minutes', async () => {
+    await session(aya.id, '2026-10-20T01:00:00Z', 0, 15)
+    const days = await dailyActivity(aya.id, aya.timezone, { from: '2026-10-20', to: '2026-10-20' })
+    expect(days).toEqual([{ date: '2026-10-20', seconds: 15 * 60, completions: 0 }])
+  })
+
+  test('New York across the daylight-saving change (1 Nov 2026)', async () => {
+    await session(ken.id, '2026-11-01T04:30:00Z', 15) // 00:30 EDT, 1 Nov
+    await session(ken.id, '2026-11-02T04:30:00Z', 15) // 23:30 EST, 1 Nov
+    await session(ken.id, '2026-11-02T05:30:00Z', 15) // 00:30 EST, 2 Nov
+    const days = await dailyActivity(ken.id, ken.timezone, { from: '2026-10-31', to: '2026-11-02' })
+    expect(days).toEqual([
+      { date: '2026-11-01', seconds: 30 * 60, completions: 0 },
+      { date: '2026-11-02', seconds: 15 * 60, completions: 0 },
+    ])
+  })
+
+  test('the Admin version reads every student, each in their own zone, in one query', async () => {
+    const queries = vi.spyOn(prisma, '$queryRaw')
+    const byStudent = await dailyActivityForStudents([aya.id, ken.id])
+    expect(queries).toHaveBeenCalledTimes(1)
+    queries.mockRestore()
+    expect(byStudent.get(aya.id)).toEqual(await dailyActivity(aya.id, aya.timezone))
+    expect(byStudent.get(ken.id)).toEqual(await dailyActivity(ken.id, ken.timezone))
   })
 })

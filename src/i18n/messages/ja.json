@@ -12,7 +12,11 @@
     "password": "パスワード",
     "signOut": "ログアウト",
     "student": "学生",
-    "admin": "管理者"
+    "admin": "管理者",
+    "duration": {
+      "minutes": "{minutes}分",
+      "hours": "{hours}時間{minutes}分"
+    }
   },
   "nav": {
     "main": "メイン",
@@ -137,7 +141,8 @@
     "appearance": "外観",
     "appearanceValue": "インディゴ · Inter · {mode, select, light {ライト} dark {ダーク} other {自動}}",
     "account": "アカウントとパスワード",
-    "export": "データをエクスポート"
+    "export": "データをエクスポート",
+    "study": "学習"
   },
   "errors": {
     "invalid_input": "入力内容を確認してください。",
@@ -669,7 +674,11 @@
     "needsRedo": "やり直し",
     "reviewed": "確認済みにする",
     "showMore": "もっと見る",
-    "showLess": "閉じる"
+    "showLess": "閉じる",
+    "overdue": "期限切れ {count} 件",
+    "tileStreak": "連続学習日数",
+    "tileWeek": "今週",
+    "tileLessons": "完了したレッスン"
   },
   "submission": {
     "answer": "あなたの回答",
@@ -710,5 +719,57 @@
     "emptyStudentNoAdmin": "質問やメモを残せます。",
     "emptyAdmin": "まだノートはありません。{student} さんに書いてみましょう。",
     "you": "あなた"
+  },
+  "progress": {
+    "title": "進捗",
+    "view": "期間",
+    "week": "週",
+    "month": "月",
+    "streak": "連続学習日数",
+    "best": "最高: {count}",
+    "studied": "学習時間",
+    "studyDays": "学習日 {count} 日",
+    "lessonsDone": "完了したレッスン",
+    "monthMore": "{month}より +{count}",
+    "monthLess": "{month}より −{count}",
+    "monthSame": "{month}と同じ",
+    "weekMore": "先週より +{count}",
+    "weekLess": "先週より −{count}",
+    "weekSame": "先週と同じ",
+    "weeklyGoal": "週の目標: {goal}日中{count}日",
+    "legend": "1日の学習時間",
+    "less": "少",
+    "more": "多",
+    "dayStudied": "{duration}学習",
+    "dayNone": "学習なし",
+    "weekBars": "曜日ごとの学習時間",
+    "forecastTitle": "コース · 修了予測",
+    "forecast": {
+      "on_track": "順調 · ~{finish}に修了予定、期限 {due}",
+      "behind": "遅れ気味 · このペースだと~{finish}、期限 {due}",
+      "no_deadline": "期限なし · 残り約{count}レッスン",
+      "no_pace": "直近2週間の学習なし · 残り{count}レッスン",
+      "finished": "修了",
+      "empty": "まだレッスンがありません"
+    },
+    "percent": "{percent}%",
+    "studiedWeek": "今週の学習時間",
+    "weekLessons": "{count}レッスン完了"
+  },
+  "todayProgress": {
+    "streakDays": "{count}日",
+    "streak": "連続学習",
+    "goal": "{goal}日中{count}日",
+    "goalLabel": "今週の学習日",
+    "continue": "続きから",
+    "continueLesson": "レッスン {number} · {lesson}",
+    "continueCourse": "{course} · {total}中{done}完了",
+    "continueAction": "{lesson}を続ける"
+  },
+  "weeklyGoal": {
+    "row": "週の目標",
+    "days": "{count}日",
+    "title": "週の目標",
+    "description": "1週間に学習したい日数"
   }
 }

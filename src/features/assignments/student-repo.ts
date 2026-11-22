@@ -110,3 +110,27 @@ export async function getToday(student: Student, now = new Date()): Promise<Toda
     dueToday: items.filter((i) => i.due.status === 'due_soon').sort(byDue),
   }
 }
+
+/**
+ * Overdue lessons per student for the Admin's Students cards (spec 004 US3 scenario 3): the same
+ * rule as the per-course `overdueCount` on the student's Courses cards (counting lessons that
+ * aren't done, effective deadline passed, FR-004/FR-006), for many students in one query. Callers
+ * MUST have checked the students are theirs (requireRole('admin') + active links).
+ */
+export async function countOverdue(studentIds: string[], now = new Date()) {
+  if (studentIds.length === 0) return new Map<string, number>()
+  const rows = await prisma.$queryRaw<{ student_id: string; overdue: number }[]>`
+    select ca.student_id, count(*)::int as overdue
+    from course_assignments ca
+    join courses c on c.id = ca.course_id and c.status = 'active' and c.deleted_at is null
+    join lessons l on l.course_id = c.id and l.status = 'published' and l.deleted_at is null
+    left join lesson_deadlines ld on ld.lesson_id = l.id and ld.student_id = ca.student_id
+    where ca.student_id = any(${studentIds}::uuid[]) and ca.status = 'active'
+      and coalesce(ld.due_at, ca.due_at) < ${now}
+      and not exists (
+        select 1 from lesson_progress lp
+        where lp.student_id = ca.student_id and lp.lesson_id = l.id and lp.status = 'done'
+      )
+    group by ca.student_id`
+  return new Map(rows.map((r) => [r.student_id, r.overdue]))
+}
