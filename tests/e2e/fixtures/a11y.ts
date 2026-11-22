@@ -7,6 +7,15 @@ import { expect, type Page } from '@playwright/test'
  * from our renderer and is covered by the Markdown tests.)
  */
 export async function expectNoSeriousA11yViolations(page: Page) {
+  // A sheet or menu still fading in reads as low contrast; let finite animations end first.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  )
   const { violations } = await new AxeBuilder({ page })
     .exclude('iframe[src^="https://www.youtube-nocookie.com/"]')
     .analyze()

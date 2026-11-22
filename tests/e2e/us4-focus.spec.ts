@@ -56,15 +56,16 @@ async function expectDayStudied(page: Page, at: Date, minutes: number) {
 test('scenario 1: a running timer counts down, stops itself at 0 and adds 15 min', async ({
   page,
 }) => {
-  const startedAt = new Date(Date.now() - 14 * MINUTE - 50_000)
+  // 30 s left: enough for sign-in and the page to load on a busy run.
+  const startedAt = new Date(Date.now() - 14 * MINUTE - 30_000)
   await seedSession(student.id, lessonIds[0], { startedAt, plannedMinutes: 15 })
 
   await page.goto(`/s/lessons/${lessonIds[0]}`)
-  const stop = bottomBar(page).getByRole('button', { name: /^0:[01]\d · Stop$/ })
+  const stop = bottomBar(page).getByRole('button', { name: /^0:[0-3]\d · Stop$/ })
   await expect(stop).toBeVisible()
   await expectNoSeriousA11yViolations(page)
 
-  await expect(page.getByText('Focus done · 15 min added')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('Focus done · 15 min added')).toBeVisible({ timeout: 45_000 })
   await expect(bottomBar(page).getByRole('button', { name: 'Focus 15' })).toBeVisible()
   const [row] = await sql<{ ended_at: Date | null }>(
     `select ended_at from study_sessions where student_id = $1`,
