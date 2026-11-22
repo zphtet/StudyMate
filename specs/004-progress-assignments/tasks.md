@@ -35,8 +35,8 @@ description: "Tasks for 004 Completion, Assignments and Progress"
 
 **Purpose**: generated UI primitive and a database precondition. The branch `004-progress-assignments` already exists.
 
-- [ ] T001 Generate the shadcn Tabs primitive into src/components/ui/tabs.tsx with `pnpm dlx shadcn@latest add tabs` (research.md R16). Check that package.json has no new dependency (`radix-ui` 1.8 is already installed) and don't edit the generated file.
-- [ ] T002 Check the dev database precondition for the migration: `select count(*) from study_sessions` on `DIRECT_URL` must be 0 (data-model.md › Migration, StudySession.planned_minutes; quickstart.md §2). If it isn't 0, stop and report.
+- [X] T001 Generate the shadcn Tabs primitive into src/components/ui/tabs.tsx with the project's own CLI, `pnpm shadcn add tabs` (research.md R16). Check that package.json has no new dependency (`radix-ui` 1.8 is already installed) and don't edit the generated file.
+- [X] T002 Check the dev database precondition for the migration: `select count(*) from study_sessions` on `DIRECT_URL` must be 0 (data-model.md › Migration, StudySession.planned_minutes; quickstart.md §2). If it isn't 0, stop and report. (2026-11-22: 0 rows.)
 
 ---
 
