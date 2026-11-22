@@ -218,17 +218,17 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T032 [P] [US2] Write unit tests in src/features/progress/submission-status.test.ts covering every row and every disallowed move of the transition table in research.md R7 / data-model.md › Submission (data-model.md Submission.status): `canStudentEdit`, `studentNext('save' | 'submit')`, `adminCanReview(from, to)`.
-- [ ] T033 [P] [US2] Add tests against the dev database to src/features/progress/repo.test.ts (data-model.md Submission.body_md, Submission.attachments, Submission.status, Submission.submitted_at, Submission.reviewed_at, Comment.target_type, Comment.target_id):
+- [X] T032 [P] [US2] Write unit tests in src/features/progress/submission-status.test.ts covering every row and every disallowed move of the transition table in research.md R7 / data-model.md › Submission (data-model.md Submission.status): `canStudentEdit`, `studentNext('save' | 'submit')`, `adminCanReview(from, to)`.
+- [X] T033 [P] [US2] Add tests against the dev database to src/features/progress/repo.test.ts (data-model.md Submission.body_md, Submission.attachments, Submission.status, Submission.submitted_at, Submission.reviewed_at, Comment.target_type, Comment.target_id):
   - `saveDraft` creates a `draft`, then updates it keeping the status (also in `needs_redo`); it refuses in `submitted`/`reviewed` with `submission_locked` and a path outside `<student>/<lesson>/`;
   - `submitAssignment` sets `submitted_at` and clears `reviewed_at`; an empty body and no images give `submission_empty`;
   - `reviewSubmission` sets `reviewed_at`, inserts the optional comment with target `submission`, and leaves `lesson_progress` unchanged before and after;
   - notices: one `submitted` row per actively linked Admin, replaced and unread again on resubmit; one `reviewed` row for the student, in the student's locale (data-model.md › Notifications recorded by 004);
   - `postNote` by the student and by the Admin; `getNotes` oldest first, capped at 200;
   - `getLessonWork` now returns the submission, review comments and `notesCount`.
-- [ ] T034 [P] [US2] Add a case to src/features/courses/purge.test.ts: purging a lesson also deletes `comments` that target it (`lesson`) and its submissions (`submission`) (research.md R8; data-model.md Comment.target_id).
-- [ ] T035 [P] [US2] Write a unit test in src/lib/realtime.test.ts (mocked browser client): `useRealtimeInvalidate` subscribes to `postgres_changes` with the given table and filter, invalidates every given key on an event, and removes the channel on unmount.
-- [ ] T036 [P] [US2] Write Playwright tests in tests/e2e/us2-submit.spec.ts (390×844 and 1280×800, axe):
+- [X] T034 [P] [US2] Add a case to src/features/courses/purge.test.ts: purging a lesson also deletes `comments` that target it (`lesson`) and its submissions (`submission`) (research.md R8; data-model.md Comment.target_id).
+- [X] T035 [P] [US2] Write a unit test in src/lib/realtime.test.tsx (`.tsx` for the provider wrapper; mocked browser client): `useRealtimeInvalidate` subscribes to `postgres_changes` with the given table and filter, invalidates every given key on an event, and removes the channel on unmount.
+- [X] T036 [P] [US2] Write Playwright tests in tests/e2e/us2-submit.spec.ts (390×844 and 1280×800, axe):
   - scenario 1: type, wait for "Draft saved", reload and the text is kept; add 2 images from tests/e2e/fixtures/files/ (one larger than 2 MB before resizing) and check each stored object is ≤ 2 MB with `sql` on `storage.objects`;
   - scenario 2: two browser contexts; the Admin's `/a/students` is already open; the student submits → "1 to review" appears within 5 s with no reload; the editor becomes read-only;
   - scenario 3: the Admin comments + Needs redo → the student's open lesson shows the banner and comment within 5 s;
@@ -238,35 +238,35 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ### Implementation for User Story 2
 
-- [ ] T037 [US2] Shared moves, no behaviour change, one commit (plan.md › Structure Decision):
+- [X] T037 [US2] Shared moves, no behaviour change, one commit (plan.md › Structure Decision):
   - `MdTextarea` from src/features/courses/components/md-textarea.tsx to src/components/shared/md-textarea.tsx (update lesson-editor.tsx and the mock path in lesson-editor.test.tsx);
   - `fitWithin`, `resizeImage` (now exported) and `MAX_IMAGE_EDGE` from src/features/courses/upload.ts to src/lib/image.ts;
   - `MAX_CONTENT_BYTES` and `utf8Bytes` from src/features/courses/schemas.ts to src/lib/content.ts; update src/features/progress/schemas.ts;
   - `textsFor` from src/features/assignments/notices.ts to src/server/notifications/texts.ts as `textsFor(recipient)`.
 
   All existing tests pass unchanged.
-- [ ] T038 [P] [US2] Implement src/features/progress/submission-status.ts (research.md R7; data-model.md Submission.status). T032 passes.
-- [ ] T039 [P] [US2] Notice texts in src/features/progress/notices.ts: `submittedNotice(admin, student, lesson)` and `reviewedNotice(student, lesson, status)`, using `textsFor(recipient)` and the `notices` namespace, with sourceId = submission id and the keys and urls in data-model.md › Notifications recorded by 004.
-- [ ] T040 [US2] Repo in src/features/progress/repo.ts: `saveDraft`, `submitAssignment` (with the notices), `reviewSubmission` (one transaction: status, `reviewed_at`, optional comment, notice), `postNote` and `getNotes`. Extend `getLessonWork` with `submission`, `reviewComments` and `notesCount`; attachment `url` = `/api/submissions/<id>/files/<basename>`. Field rules: data-model.md Submission.student_id, Submission.lesson_id (one row per pair; the lesson has a prompt), Submission.body_md, Submission.status, Submission.submitted_at, Submission.reviewed_at, Submission.attachments, Comment.author_id, Comment.student_id, Comment.target_type, Comment.target_id (`lesson` for Notes, `submission` for review comments), Comment.body, Comment.created_at (threads oldest first). T033 passes.
-- [ ] T041 [US2] Extend src/features/progress/admin-repo.ts:
+- [X] T038 [P] [US2] Implement src/features/progress/submission-status.ts (research.md R7; data-model.md Submission.status). T032 passes.
+- [X] T039 [P] [US2] Notice texts in src/features/progress/notices.ts: `submittedNotice(admin, student, lesson)` and `reviewedNotice(student, lesson, status)`, using `textsFor(recipient)` and the `notices` namespace, with sourceId = submission id and the keys and urls in data-model.md › Notifications recorded by 004.
+- [X] T040 [US2] Repo in src/features/progress/repo.ts: `saveDraft`, `submitAssignment` (with the notices), `reviewSubmission` (one transaction: status, `reviewed_at`, optional comment, notice), `postNote` and `getNotes`. Extend `getLessonWork` with `submission`, `reviewComments` and `notesCount`; attachment `url` = `/api/submissions/<id>/files/<basename>`. Field rules: data-model.md Submission.student_id, Submission.lesson_id (one row per pair; the lesson has a prompt), Submission.body_md, Submission.status, Submission.submitted_at, Submission.reviewed_at, Submission.attachments, Comment.author_id, Comment.student_id, Comment.target_type, Comment.target_id (`lesson` for Notes, `submission` for review comments), Comment.body, Comment.created_at (threads oldest first). T033 passes.
+- [X] T041 [US2] Extend src/features/progress/admin-repo.ts:
   - `toReview` count on cards;
   - detail `toReview` list (oldest first) and per-lesson submission chips (a Draft shows as null);
   - `getAdminLesson` with the non-Draft submission and review comments.
 
   Contracts: route-handlers.md › Admin.
-- [ ] T042 [US2] Delete comments in src/features/courses/purge.ts for each purged lesson and its submissions, matching on data-model.md Comment.target_type and Comment.target_id (no foreign key), in the same transaction as the lesson delete. T034 passes.
-- [ ] T043 [US2] Add the Server Actions `saveDraft`, `submitAssignment`, `reviewSubmission` and `postNote` to src/features/progress/actions.ts (contracts/server-actions.md › Submissions, Notes). Guards first: student lesson guards, `requireSubmissionReviewer`, or `requireAdminLessonTarget`. Student actions never accept another `studentId`.
-- [ ] T044 [US2] Route Handlers:
+- [X] T042 [US2] Delete comments in src/features/courses/purge.ts for each purged lesson and its submissions, matching on data-model.md Comment.target_type and Comment.target_id (no foreign key), in the same transaction as the lesson delete. T034 passes.
+- [X] T043 [US2] Add the Server Actions `saveDraft`, `submitAssignment`, `reviewSubmission` and `postNote` to src/features/progress/actions.ts (contracts/server-actions.md › Submissions, Notes). Guards first: student lesson guards, `requireSubmissionReviewer`, or `requireAdminLessonTarget`. Student actions never accept another `studentId`.
+- [X] T044 [US2] Route Handlers:
   - GET src/app/api/lessons/[lessonId]/notes/route.ts (student or admin guard per contracts/route-handlers.md);
   - GET src/app/api/submissions/[submissionId]/files/[name]/route.ts (owner or `requireSubmissionReviewer`; basename must match an attachment; 302 to a 1-hour signed URL made with `createServerClient()`, as src/app/api/lesson-files/[resourceId]/[name]/route.ts does).
 
   Add `notesQuery` to queries.ts.
-- [ ] T045 [P] [US2] Implement `useRealtimeInvalidate({ table, filter?, queryKeys })` in src/lib/realtime.ts with the browser client from src/lib/supabase/client.ts (research.md R10). T035 passes.
-- [ ] T046 [P] [US2] Image upload in src/features/progress/upload.ts:
+- [X] T045 [P] [US2] Implement `useRealtimeInvalidate({ table, filter?, queryKeys })` in src/lib/realtime.ts with the browser client from src/lib/supabase/client.ts (research.md R10). T035 passes.
+- [X] T046 [P] [US2] Image upload in src/features/progress/upload.ts:
   - `uploadSubmissionImage(studentId, lessonId, file)` resizes with src/lib/image.ts, refuses results over 2 MB (`file_too_large`), and uploads to `submissions/<studentId>/<lessonId>/<uuid>.<ext>` (data-model.md Submission.attachments);
   - `removeSubmissionImage(path)`;
   - map an offline failure to `offline`.
-- [ ] T047 [US2] Student components in src/features/progress/components/:
+- [X] T047 [US2] Student components in src/features/progress/components/:
   - `assignment-editor.tsx`: `MdTextarea` loaded on demand; local text state; autosave 1.5 s after the last keystroke and on `visibilitychange`; "Saving…" / "Draft saved · {time}"; Submit; the Needs redo banner;
   - `image-strip.tsx`: up to 5 images, "Add photo", remove buttons with `aria-label`;
   - `submission-view.tsx`: read-only Markdown and images;
@@ -274,15 +274,15 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
   - `note-composer.tsx`: counter after 1800 characters.
 
   Put them into the Assignment and Notes tabs of `lesson-work-tabs.tsx`. Add the assignment card on the Lesson tab (contracts/ui-routes.md › Lesson). Subscribe with `useRealtimeInvalidate` to `submissions` and `comments` filtered by `student_id=eq.<me>` (research.md R10).
-- [ ] T048 [US2] Admin components:
+- [X] T048 [US2] Admin components:
   - `lesson-review.tsx` Assignment tab: collapsed prompt, `SubmissionView`, submitted time via `TimeBoth` in the student's zone, review comments, comment box, Needs redo and Reviewed buttons with optimistic status;
   - Notes tab with `CommentList` and `NoteComposer`;
   - `student-detail.tsx` "To review · n" list and submission chips (`StatusChip` tones);
   - `student-progress-card.tsx` "{n} to review" chip.
 
   Realtime subscriptions on `/a/students` and the review screen per research.md R10.
-- [ ] T049 [US2] Add the `submission` and `notes` strings, the `notices.submitted*` and `notices.reviewed*` / `notices.needsRedo*` texts, `errors.submission_locked`, `submission_empty`, `submission_not_found`, `invalid_transition`, `too_many_images`, and `validation.commentRequired`, `commentTooLong` to src/i18n/messages/en.json, my.json and ja.json.
-- [ ] T050 [US2] Run T032–T036 until they pass, plus 002's lesson-editor tests after the move.
+- [X] T049 [US2] Add the `submission` and `notes` strings, the `notices.submitted*` and `notices.reviewed*` / `notices.needsRedo*` texts, `errors.submission_locked`, `submission_empty`, `submission_not_found`, `invalid_transition`, `too_many_images`, and `validation.commentRequired`, `commentTooLong` to src/i18n/messages/en.json, my.json and ja.json.
+- [X] T050 [US2] Run T032–T036 until they pass, plus 002's lesson-editor tests after the move.
 
 **Checkpoint**: US1 and US2 both work on their own.
 

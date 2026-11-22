@@ -13,7 +13,8 @@ import { useCalendarDate } from './use-calendar-date'
 
 // Student lesson screen (screen 10-Lesson, partial per contracts/ui-routes.md; US4 scenario 3):
 // "{course} · Lesson n of m", title, minutes, the shared Markdown body, attachments and the
-// assignment prompt. Spec 004 wraps the body in its tabs (`wrapBody`, from LessonWorkScreen).
+// assignment prompt. Spec 004 wraps the body in its tabs (`wrapBody`, from LessonWorkScreen) and shows
+// the assignment on its own tab instead (`showAssignment`).
 
 function BackLink({ href, label }: { href: string; label: string }) {
   return (
@@ -30,10 +31,13 @@ function BackLink({ href, label }: { href: string; label: string }) {
 export function StudentLessonView({
   lessonId,
   wrapBody = (body) => body,
+  showAssignment = true,
 }: {
   lessonId: string
   /** Puts the lesson body inside another layout (spec 004 tabs). */
   wrapBody?: (body: ReactNode, lesson: StudentLesson) => ReactNode
+  /** The assignment prompt under the content; spec 004 has an Assignment tab instead. */
+  showAssignment?: boolean
 }) {
   const t = useTranslations('lessonView')
   const { data: lesson } = useSuspenseQuery(studentLessonQuery(lessonId))
@@ -58,12 +62,18 @@ export function StudentLessonView({
         </p>
       </header>
 
-      {wrapBody(<LessonBody lesson={lesson} />, lesson)}
+      {wrapBody(<LessonBody lesson={lesson} showAssignment={showAssignment} />, lesson)}
     </div>
   )
 }
 
-function LessonBody({ lesson }: { lesson: StudentLesson }) {
+function LessonBody({
+  lesson,
+  showAssignment,
+}: {
+  lesson: StudentLesson
+  showAssignment: boolean
+}) {
   const t = useTranslations('lessonView')
   return (
     <div className="flex flex-col gap-6">
@@ -73,7 +83,7 @@ function LessonBody({ lesson }: { lesson: StudentLesson }) {
 
       {lesson.attachments.length > 0 && <Attachments attachments={lesson.attachments} />}
 
-      {lesson.assignmentPrompt && (
+      {showAssignment && lesson.assignmentPrompt && (
         <section
           aria-labelledby="assignment-heading"
           className="flex gap-4 rounded-3xl border bg-card p-5"

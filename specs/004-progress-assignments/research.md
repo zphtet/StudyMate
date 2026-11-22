@@ -192,7 +192,10 @@ No new npm packages are needed (R16).
 
 - **Decision**:
   - The migration adds `submissions`, `comments` and `lesson_progress` to the `supabase_realtime` publication. Realtime applies each subscriber's SELECT policies, so an Admin only gets their linked students' non-Draft submissions (`subs_admin_read`).
-  - A hook, `useRealtimeInvalidate({ table, filter?, queryKeys })` in `src/lib/realtime.ts` (named in tech spec §7), subscribes with the browser client and invalidates the given TanStack Query keys on any change. It unsubscribes on unmount.
+  - A hook, `useRealtimeInvalidate({ table, filter?, queryKeys, when? })` in `src/lib/realtime.ts` (named in tech spec §7), subscribes with the browser client and invalidates the given TanStack Query keys on a change. It unsubscribes on unmount.
+    - It calls `supabase.realtime.setAuth()` before subscribing (found during US2). A channel that joins before the session is read stays anonymous, and RLS then hides every change.
+    - Events within 150 ms are grouped across all subscriptions, so one write (a review updates the submission and adds a comment) refetches each key once.
+    - `when` skips events that can't change the screen: the student's own saves and submits, other lessons, and redo edits on the Admin side. Each refetch of the lesson work costs a round of queries.
 
   | Screen | Subscribes to | Invalidates |
   | --- | --- | --- |
@@ -200,7 +203,7 @@ No new npm packages are needed (R16).
   | `/a/students/[studentId]/lessons/[lessonId]` | `submissions` + `comments` with `student_id=eq.<id>` | that lesson's admin key |
   | `/s/lessons/[lessonId]` | `submissions` + `comments` with `student_id=eq.<me>` | `['lesson',id,'work']`, `['lesson',id,'notes']` |
 
-  - The student's own autosaves also trigger events on their channel. The refetch only replaces status and comments, never the editor's local text (R7).
+  - The student's own autosaves also send events on their channel. `when` ignores them, and a refetch never replaces the editor's local text (R7).
 - SC-002 (an Admin with the Students screen open sees a new submission within 5 seconds) is met by Realtime plus one refetch. The Playwright test checks it with a 5 s timeout and no reload.
 - **Rationale**: The constitution names Realtime for this, and supabase-js is allowed for Realtime. Invalidating instead of patching the cache keeps one code path for reads.
 - **Alternatives**:

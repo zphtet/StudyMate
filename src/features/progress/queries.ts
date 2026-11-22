@@ -1,6 +1,12 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AdminLessonReview, AdminStudentCard, AdminStudentDetail, LessonWork } from './types'
+import type {
+  AdminLessonReview,
+  AdminStudentCard,
+  AdminStudentDetail,
+  CommentView,
+  LessonWork,
+} from './types'
 
 // TanStack Query keys for the 004 Route Handlers (contracts/route-handlers.md). Invalidation after
 // writes and Realtime events follows contracts/server-actions.md › Query invalidation; the stories add
@@ -35,6 +41,14 @@ export const lessonWorkQuery = (lessonId: string) =>
   queryOptions({
     queryKey: lessonWorkKeys.work(lessonId),
     queryFn: () => api<LessonWork>(`/api/lessons/${lessonId}/work`),
+  })
+
+/** One Notes thread; `studentId` is the thread owner (a student passes their own id). */
+export const notesQuery = (lessonId: string, studentId: string) =>
+  queryOptions({
+    queryKey: lessonWorkKeys.notes(lessonId, studentId),
+    queryFn: () =>
+      api<{ comments: CommentView[] }>(`/api/lessons/${lessonId}/notes?studentId=${studentId}`),
   })
 
 export const studentCardsQuery = queryOptions({

@@ -3,6 +3,7 @@ import { flatten, groupCourse } from '@/features/courses/order'
 import type { CourseColor } from '@/features/courses/schemas'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
+import { countNotes, getReviewComments, submissionSelect, toSubmissionView } from './repo'
 import type {
   AdminLessonReview,
   AdminStudentCard,
@@ -60,6 +61,35 @@ async function progressOfStudents(adminId: string, studentIds: string[]) {
   return byStudent
 }
 
+/**
+ * Submitted answers waiting for this Admin, oldest first: on Published, non-deleted lessons of their
+ * own courses that the student is still actively assigned, so each one opens on the review screen
+ * (requireAdminLessonTarget). One query for any number of students.
+ */
+async function submissionsToReview(adminId: string, studentIds: string[]) {
+  if (studentIds.length === 0) return []
+  return prisma.$queryRaw<
+    {
+      submission_id: string
+      student_id: string
+      lesson_id: string
+      lesson_title: string
+      course_title: string
+      submitted_at: Date
+    }[]
+  >`select s.id as submission_id, s.student_id, s.lesson_id, l.title as lesson_title,
+           c.title as course_title, s.submitted_at
+    from submissions s
+    join lessons l on l.id = s.lesson_id
+    join courses c on c.id = l.course_id
+    join course_assignments ca
+      on ca.course_id = c.id and ca.student_id = s.student_id and ca.status = 'active'
+    where s.student_id = any(${studentIds}::uuid[]) and s.status = 'submitted'
+      and c.owner_id = ${adminId}::uuid and c.deleted_at is null
+      and l.status = 'published' and l.deleted_at is null
+    order by s.submitted_at, s.id`
+}
+
 /** GET /api/admin/students/progress: one card per actively linked student, by name. */
 export async function getStudentCards(admin: Admin): Promise<{ students: AdminStudentCard[] }> {
   const links = await prisma.studentLink.findMany({
@@ -68,12 +98,18 @@ export async function getStudentCards(admin: Admin): Promise<{ students: AdminSt
     orderBy: { student: { displayName: 'asc' } },
   })
   const students = links.map((l) => l.student)
-  const progress = await progressOfStudents(
-    admin.id,
-    students.map((s) => s.id),
-  )
+  const ids = students.map((s) => s.id)
+  const [progress, toReview] = await Promise.all([
+    progressOfStudents(admin.id, ids),
+    submissionsToReview(admin.id, ids),
+  ])
+  const waiting = (studentId: string) => toReview.filter((r) => r.student_id === studentId).length
   return {
-    students: students.map((s) => ({ ...s, courses: progress.get(s.id) ?? [] })),
+    students: students.map((s) => ({
+      ...s,
+      toReview: waiting(s.id),
+      courses: progress.get(s.id) ?? [],
+    })),
   }
 }
 
@@ -90,7 +126,7 @@ export async function getStudentDetail(
   admin: Admin,
   studentId: string,
 ): Promise<AdminStudentDetail> {
-  const [student, courses, progress] = await Promise.all([
+  const [student, courses, progress, toReview] = await Promise.all([
     prisma.profile.findUniqueOrThrow({
       where: { id: studentId },
       select: { id: true, displayName: true, timezone: true },
@@ -109,16 +145,28 @@ export async function getStudentDetail(
             sectionId: true,
             position: true,
             progress: { where: { studentId, status: 'done' }, select: { lessonId: true } },
+            // The Admin never sees a Draft (spec Role access).
+            submissions: {
+              where: { studentId, status: { not: 'draft' } },
+              select: { status: true },
+            },
           },
         },
       },
     }),
     progressOfStudents(admin.id, [studentId]),
+    submissionsToReview(admin.id, [studentId]),
   ])
   const progressOf = new Map((progress.get(studentId) ?? []).map((p) => [p.courseId, p]))
   return {
     student,
-    toReview: [],
+    toReview: toReview.map((r) => ({
+      submissionId: r.submission_id,
+      lessonId: r.lesson_id,
+      lessonTitle: r.lesson_title,
+      courseTitle: r.course_title,
+      submittedAt: r.submitted_at.toISOString(),
+    })),
     courses: courses.flatMap((course) => {
       const summary = progressOf.get(course.id)
       if (!summary) return []
@@ -131,7 +179,7 @@ export async function getStudentDetail(
             number: i + 1,
             title: l.title,
             done: l.progress.length > 0,
-            submission: null,
+            submission: l.submissions[0]?.status ?? null,
           })),
         },
       ]
@@ -145,7 +193,7 @@ export async function getAdminLesson(
   studentId: string,
   lessonId: string,
 ): Promise<AdminLessonReview> {
-  const [student, lesson] = await Promise.all([
+  const [student, lesson, reviewComments, notesCount] = await Promise.all([
     prisma.profile.findUniqueOrThrow({
       where: { id: studentId },
       select: { id: true, displayName: true, timezone: true },
@@ -177,10 +225,15 @@ export async function getAdminLesson(
             completer: { select: { displayName: true } },
           },
         },
+        // The Admin never sees a Draft (spec Role access): it shows as "not submitted yet".
+        submissions: { where: { studentId, status: { not: 'draft' } }, select: submissionSelect },
       },
     }),
+    getReviewComments(admin, studentId, lessonId),
+    countNotes(studentId, lessonId),
   ])
   if (!lesson) throw new NotFound('lesson_not_found')
+  const submission = lesson.submissions[0]
   const ordered = flatten(groupCourse(lesson.course.sections, lesson.course.lessons))
   const progress = lesson.progress[0]
   const done = progress?.status === 'done'
@@ -202,8 +255,18 @@ export async function getAdminLesson(
       completedAt: done ? (progress.completedAt?.toISOString() ?? null) : null,
       completedByName: done ? (progress.completer?.displayName ?? null) : null,
     },
-    submission: null,
-    reviewComments: [],
-    notesCount: 0,
+    submission: submission ? reviewView(submission) : null,
+    // Review comments only exist on a sent answer; a Draft shows none.
+    reviewComments: submission ? reviewComments : [],
+    notesCount,
   }
+}
+
+/** A non-Draft submission as the Admin sees it; submitted_at is set on every submit. */
+function reviewView(
+  row: Parameters<typeof toSubmissionView>[0],
+): NonNullable<AdminLessonReview['submission']> {
+  const view = toSubmissionView(row)
+  if (view.status === 'draft' || !view.submittedAt) throw new NotFound('submission_not_found')
+  return { ...view, status: view.status, submittedAt: view.submittedAt }
 }

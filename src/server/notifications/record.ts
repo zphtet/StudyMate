@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Prisma } from '@/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 
 // Notices recorded by the app (spec 003 FR-012, research.md R8). 006 delivers new rows by push and
@@ -17,9 +18,13 @@ export type NoticeInput = {
   url: string | null
 }
 
-export async function recordNotice({ userId, sourceId, occurrenceKey, ...text }: NoticeInput) {
+/** `db` is a transaction client when the notice must be written with the change it is about. */
+export async function recordNotice(
+  { userId, sourceId, occurrenceKey, ...text }: NoticeInput,
+  db: Prisma.TransactionClient = prisma,
+) {
   const sentAt = new Date()
-  await prisma.notification.upsert({
+  await db.notification.upsert({
     where: {
       sourceType_sourceId_userId_occurrenceKey: {
         sourceType: 'system',

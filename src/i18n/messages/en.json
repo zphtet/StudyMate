@@ -182,7 +182,12 @@
     "upload_failed": "The file couldn't be uploaded. Try again.",
     "course_not_active": "Only Active courses can be assigned or given deadlines.",
     "assignment_not_found": "This course is no longer assigned to that student.",
-    "submission_required": "Submit your assignment to complete this lesson."
+    "submission_required": "Submit your assignment to complete this lesson.",
+    "submission_locked": "This answer has been sent, so it can't be changed now.",
+    "submission_empty": "Write something or add a photo before you submit.",
+    "submission_not_found": "This submission isn't available.",
+    "invalid_transition": "That status change isn't allowed.",
+    "too_many_images": "You can add up to 5 photos."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -204,7 +209,9 @@
     "urlInvalid": "Enter a link starting with https://",
     "resourceNameRequired": "Enter a name",
     "sectionTitleRequired": "Enter a section name",
-    "content_too_long": "Longer than 200 KB: shorten it to save"
+    "content_too_long": "Longer than 200 KB: shorten it to save",
+    "commentRequired": "Write a comment",
+    "commentTooLong": "Use 2000 characters or fewer"
   },
   "students": {
     "title": "Students",
@@ -540,7 +547,13 @@
     "assignedBodyDue": "{admin} assigned it to you. Finish by {due}.",
     "deadlineTitle": "{item} is now due {due}",
     "deadlineRemovedTitle": "{item} no longer has a deadline",
-    "deadlineBody": "Changed by {admin}."
+    "deadlineBody": "Changed by {admin}.",
+    "submittedTitle": "{student} submitted {lesson}",
+    "submittedBody": "{course} · open it to review.",
+    "reviewedTitle": "{lesson}: reviewed",
+    "reviewedBody": "{admin} reviewed your assignment.",
+    "needsRedoTitle": "{lesson}: needs redo",
+    "needsRedoBody": "{admin} asked you to redo your assignment."
   },
   "reminders": {
     "default": {
@@ -611,7 +624,9 @@
   "lessonWork": {
     "tabs": {
       "lesson": "Lesson",
-      "assignment": "Assignment"
+      "assignment": "Assignment",
+      "notes": "Notes",
+      "notesCount": "Notes · {count}"
     },
     "actions": "Lesson actions",
     "markComplete": "Mark complete",
@@ -619,7 +634,15 @@
     "markedDoneBy": "Marked done by {name}",
     "undo": "Undo",
     "nextLesson": "Next lesson",
-    "submitToComplete": "Submit your assignment to complete this lesson."
+    "submitToComplete": "Submit your assignment to complete this lesson.",
+    "assignmentCard": "Assignment: {prompt}",
+    "card": {
+      "notStarted": "Not started",
+      "draftSaved": "Draft saved · {time}",
+      "submitted": "Submitted · {date}",
+      "needsRedo": "Needs redo",
+      "reviewed": "Reviewed"
+    }
   },
   "adminStudents": {
     "back": "Back to students",
@@ -635,6 +658,57 @@
     "actions": "Lesson actions",
     "markDone": "Mark done",
     "reopen": "Reopen",
-    "doneBy": "Done · {date} by {name}"
+    "doneBy": "Done · {date} by {name}",
+    "toReview": "To review · {count}",
+    "toReviewChip": "{count} to review",
+    "submittedRelative": "{course} · submitted {time}",
+    "submittedAt": "Submitted {date}",
+    "commentLabel": "Comment for {name}",
+    "commentPlaceholder": "Add a comment (optional)",
+    "review": "Review",
+    "needsRedo": "Needs redo",
+    "reviewed": "Reviewed",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  },
+  "submission": {
+    "answer": "Your answer",
+    "placeholder": "Write your answer here…",
+    "toolbar": "Formatting",
+    "bold": "Bold",
+    "italic": "Italic",
+    "list": "List",
+    "saving": "Saving…",
+    "saved": "Draft saved · {time}",
+    "notSaved": "Not saved yet",
+    "tooLong": "Longer than 200 KB: shorten it to save",
+    "submit": "Submit",
+    "photos": "Photos",
+    "addPhoto": "Add photo",
+    "photoCount": "{count} of {max} photos",
+    "removePhoto": "Remove {name}",
+    "openPhoto": "Open {name}",
+    "uploading": "Uploading…",
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "reviewed": "Reviewed",
+      "needs_redo": "Needs redo"
+    },
+    "submittedAt": "Submitted {date}",
+    "redo": "{admin} asked for a redo.",
+    "redoNoName": "Your admin asked for a redo.",
+    "feedback": "Feedback"
+  },
+  "notes": {
+    "thread": "Notes",
+    "label": "Write a note",
+    "placeholder": "Write a note…",
+    "send": "Send",
+    "counter": "{count} / {max}",
+    "emptyStudent": "Ask a question or leave a note for {admin}.",
+    "emptyStudentNoAdmin": "Ask a question or leave a note.",
+    "emptyAdmin": "No notes yet. Write to {student}.",
+    "you": "You"
   }
 }

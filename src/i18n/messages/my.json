@@ -182,7 +182,12 @@
     "upload_failed": "ဖိုင်ကို တင်၍မရပါ။ ထပ်ကြိုးစားပါ။",
     "course_not_active": "အသုံးပြုနေသော သင်ခန်းစာအစုံများကိုသာ ပေးအပ်နိုင်ပြီး နောက်ဆုံးရက် သတ်မှတ်နိုင်သည်။",
     "assignment_not_found": "ဤသင်ခန်းစာအစုံကို ထိုကျောင်းသားထံ ပေးအပ်ထားခြင်း မရှိတော့ပါ။",
-    "submission_required": "ဤသင်ခန်းစာ ပြီးဆုံးရန် လေ့ကျင့်ခန်းကို တင်သွင်းပါ။"
+    "submission_required": "ဤသင်ခန်းစာ ပြီးဆုံးရန် လေ့ကျင့်ခန်းကို တင်သွင်းပါ။",
+    "submission_locked": "ဤအဖြေကို တင်သွင်းပြီးဖြစ်၍ ယခု ပြင်၍မရပါ။",
+    "submission_empty": "မတင်သွင်းမီ တစ်ခုခု ရေးပါ သို့မဟုတ် ဓာတ်ပုံ ထည့်ပါ။",
+    "submission_not_found": "ဤတင်သွင်းချက်ကို မကြည့်နိုင်ပါ။",
+    "invalid_transition": "ဤအခြေအနေသို့ ပြောင်း၍မရပါ။",
+    "too_many_images": "ဓာတ်ပုံ ၅ ပုံအထိသာ ထည့်နိုင်သည်။"
   },
   "validation": {
     "nameRequired": "သင့်အမည် ထည့်ပါ",
@@ -204,7 +209,9 @@
     "urlInvalid": "https:// ဖြင့်စသော လင့်ခ်ကို ထည့်ပါ",
     "resourceNameRequired": "အမည် ထည့်ပါ",
     "sectionTitleRequired": "အပိုင်းအမည် ထည့်ပါ",
-    "content_too_long": "200 KB ထက် ရှည်နေသည်- သိမ်းရန် တိုအောင်လုပ်ပါ"
+    "content_too_long": "200 KB ထက် ရှည်နေသည်- သိမ်းရန် တိုအောင်လုပ်ပါ",
+    "commentRequired": "မှတ်ချက် ရေးပါ",
+    "commentTooLong": "စာလုံး ၂၀၀၀ သို့မဟုတ် ထို့ထက်နည်းအောင် ရေးပါ"
   },
   "students": {
     "title": "ကျောင်းသားများ",
@@ -540,7 +547,13 @@
     "assignedBodyDue": "{admin} က သင့်ထံ ပေးအပ်ထားသည်။ {due} နောက်ဆုံးထား ပြီးရန်။",
     "deadlineTitle": "{item} ၏ နောက်ဆုံးရက်မှာ ယခု {due} ဖြစ်သည်",
     "deadlineRemovedTitle": "{item} တွင် နောက်ဆုံးရက် မရှိတော့ပါ",
-    "deadlineBody": "{admin} က ပြောင်းလဲထားသည်။"
+    "deadlineBody": "{admin} က ပြောင်းလဲထားသည်။",
+    "submittedTitle": "{student} က {lesson} ကို တင်သွင်းခဲ့သည်",
+    "submittedBody": "{course} · စစ်ဆေးရန် ဖွင့်ပါ။",
+    "reviewedTitle": "{lesson}- စစ်ဆေးပြီး",
+    "reviewedBody": "{admin} က သင့်လေ့ကျင့်ခန်းကို စစ်ဆေးပြီးပါပြီ။",
+    "needsRedoTitle": "{lesson}- ပြန်လုပ်ရန်",
+    "needsRedoBody": "{admin} က သင့်လေ့ကျင့်ခန်းကို ပြန်လုပ်ရန် တောင်းဆိုထားသည်။"
   },
   "reminders": {
     "default": {
@@ -611,7 +624,9 @@
   "lessonWork": {
     "tabs": {
       "lesson": "သင်ခန်းစာ",
-      "assignment": "လေ့ကျင့်ခန်း"
+      "assignment": "လေ့ကျင့်ခန်း",
+      "notes": "မှတ်စုများ",
+      "notesCount": "မှတ်စုများ · {count}"
     },
     "actions": "သင်ခန်းစာ လုပ်ဆောင်ချက်များ",
     "markComplete": "ပြီးဆုံးကြောင်း မှတ်ရန်",
@@ -619,7 +634,15 @@
     "markedDoneBy": "{name} က ပြီးဆုံးကြောင်း မှတ်ထားသည်",
     "undo": "ပြန်ဖျက်ရန်",
     "nextLesson": "နောက်သင်ခန်းစာ",
-    "submitToComplete": "ဤသင်ခန်းစာ ပြီးဆုံးရန် လေ့ကျင့်ခန်းကို တင်သွင်းပါ။"
+    "submitToComplete": "ဤသင်ခန်းစာ ပြီးဆုံးရန် လေ့ကျင့်ခန်းကို တင်သွင်းပါ။",
+    "assignmentCard": "လေ့ကျင့်ခန်း- {prompt}",
+    "card": {
+      "notStarted": "မစရသေးပါ",
+      "draftSaved": "မူကြမ်း သိမ်းပြီး · {time}",
+      "submitted": "တင်သွင်းပြီး · {date}",
+      "needsRedo": "ပြန်လုပ်ရန်",
+      "reviewed": "စစ်ဆေးပြီး"
+    }
   },
   "adminStudents": {
     "back": "ကျောင်းသားများသို့ ပြန်သွားရန်",
@@ -635,6 +658,57 @@
     "actions": "သင်ခန်းစာ လုပ်ဆောင်ချက်များ",
     "markDone": "ပြီးဆုံးကြောင်း မှတ်ရန်",
     "reopen": "ပြန်ဖွင့်ရန်",
-    "doneBy": "ပြီးပြီ · {date} · {name}"
+    "doneBy": "ပြီးပြီ · {date} · {name}",
+    "toReview": "စစ်ဆေးရန် · {count}",
+    "toReviewChip": "စစ်ဆေးရန် {count} ခု",
+    "submittedRelative": "{course} · {time} တင်သွင်းခဲ့သည်",
+    "submittedAt": "{date} တွင် တင်သွင်းခဲ့သည်",
+    "commentLabel": "{name} အတွက် မှတ်ချက်",
+    "commentPlaceholder": "မှတ်ချက် ထည့်ပါ (မထည့်လည်းရ)",
+    "review": "စစ်ဆေးခြင်း",
+    "needsRedo": "ပြန်လုပ်ရန်",
+    "reviewed": "စစ်ဆေးပြီး",
+    "showMore": "ပိုပြရန်",
+    "showLess": "လျှော့ပြရန်"
+  },
+  "submission": {
+    "answer": "သင့်အဖြေ",
+    "placeholder": "သင့်အဖြေကို ဤနေရာတွင် ရေးပါ…",
+    "toolbar": "ပုံစံချခြင်း",
+    "bold": "စာလုံးထူ",
+    "italic": "စာလုံးစောင်း",
+    "list": "စာရင်း",
+    "saving": "သိမ်းနေသည်…",
+    "saved": "မူကြမ်း သိမ်းပြီး · {time}",
+    "notSaved": "မသိမ်းရသေးပါ",
+    "tooLong": "200 KB ထက် ရှည်နေသည်- သိမ်းရန် တိုအောင်လုပ်ပါ",
+    "submit": "တင်သွင်းရန်",
+    "photos": "ဓာတ်ပုံများ",
+    "addPhoto": "ဓာတ်ပုံ ထည့်ရန်",
+    "photoCount": "ဓာတ်ပုံ {max} ပုံအနက် {count} ပုံ",
+    "removePhoto": "{name} ကို ဖယ်ရှားရန်",
+    "openPhoto": "{name} ကို ဖွင့်ရန်",
+    "uploading": "တင်နေသည်…",
+    "status": {
+      "draft": "မူကြမ်း",
+      "submitted": "တင်သွင်းပြီး",
+      "reviewed": "စစ်ဆေးပြီး",
+      "needs_redo": "ပြန်လုပ်ရန်"
+    },
+    "submittedAt": "{date} တွင် တင်သွင်းခဲ့သည်",
+    "redo": "{admin} က ပြန်လုပ်ရန် တောင်းဆိုထားသည်။",
+    "redoNoName": "သင့်အက်ဒမင်က ပြန်လုပ်ရန် တောင်းဆိုထားသည်။",
+    "feedback": "အကြံပြုချက်"
+  },
+  "notes": {
+    "thread": "မှတ်စုများ",
+    "label": "မှတ်စု ရေးရန်",
+    "placeholder": "မှတ်စု ရေးပါ…",
+    "send": "ပို့ရန်",
+    "counter": "{count} / {max}",
+    "emptyStudent": "{admin} ထံ မေးခွန်းမေးပါ သို့မဟုတ် မှတ်စု ချန်ထားပါ။",
+    "emptyStudentNoAdmin": "မေးခွန်းမေးပါ သို့မဟုတ် မှတ်စု ချန်ထားပါ။",
+    "emptyAdmin": "မှတ်စု မရှိသေးပါ။ {student} ထံ ရေးပါ။",
+    "you": "သင်"
   }
 }

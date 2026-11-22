@@ -182,7 +182,12 @@
     "upload_failed": "ファイルをアップロードできませんでした。もう一度お試しください。",
     "course_not_active": "割り当てや期限の設定ができるのは公開中のコースだけです。",
     "assignment_not_found": "このコースはその生徒に割り当てられていません。",
-    "submission_required": "このレッスンを完了にするには、課題を提出してください。"
+    "submission_required": "このレッスンを完了にするには、課題を提出してください。",
+    "submission_locked": "この回答は提出済みのため、今は変更できません。",
+    "submission_empty": "提出する前に、文章を書くか写真を追加してください。",
+    "submission_not_found": "この提出物は表示できません。",
+    "invalid_transition": "このステータスには変更できません。",
+    "too_many_images": "写真は5枚まで追加できます。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -204,7 +209,9 @@
     "urlInvalid": "https:// で始まるリンクを入力してください",
     "resourceNameRequired": "名前を入力してください",
     "sectionTitleRequired": "セクション名を入力してください",
-    "content_too_long": "200KBを超えています。保存するには短くしてください"
+    "content_too_long": "200KBを超えています。保存するには短くしてください",
+    "commentRequired": "コメントを入力してください",
+    "commentTooLong": "2000文字以内で入力してください"
   },
   "students": {
     "title": "学生",
@@ -540,7 +547,13 @@
     "assignedBodyDue": "{admin} さんがあなたに割り当てました。{due} までに修了してください。",
     "deadlineTitle": "{item} の期限が {due} になりました",
     "deadlineRemovedTitle": "{item} の期限がなくなりました",
-    "deadlineBody": "{admin} さんが変更しました。"
+    "deadlineBody": "{admin} さんが変更しました。",
+    "submittedTitle": "{student} さんが {lesson} を提出しました",
+    "submittedBody": "{course} · 開いて確認してください。",
+    "reviewedTitle": "{lesson}: 確認済み",
+    "reviewedBody": "{admin} さんが課題を確認しました。",
+    "needsRedoTitle": "{lesson}: やり直し",
+    "needsRedoBody": "{admin} さんが課題のやり直しを依頼しました。"
   },
   "reminders": {
     "default": {
@@ -611,7 +624,9 @@
   "lessonWork": {
     "tabs": {
       "lesson": "レッスン",
-      "assignment": "課題"
+      "assignment": "課題",
+      "notes": "ノート",
+      "notesCount": "ノート · {count}"
     },
     "actions": "レッスンの操作",
     "markComplete": "完了にする",
@@ -619,7 +634,15 @@
     "markedDoneBy": "{name}さんが完了にしました",
     "undo": "元に戻す",
     "nextLesson": "次のレッスン",
-    "submitToComplete": "このレッスンを完了にするには、課題を提出してください。"
+    "submitToComplete": "このレッスンを完了にするには、課題を提出してください。",
+    "assignmentCard": "課題: {prompt}",
+    "card": {
+      "notStarted": "未着手",
+      "draftSaved": "下書き保存済み · {time}",
+      "submitted": "提出済み · {date}",
+      "needsRedo": "やり直し",
+      "reviewed": "確認済み"
+    }
   },
   "adminStudents": {
     "back": "学生一覧に戻る",
@@ -635,6 +658,57 @@
     "actions": "レッスンの操作",
     "markDone": "完了にする",
     "reopen": "未完了に戻す",
-    "doneBy": "完了 · {date} · {name}"
+    "doneBy": "完了 · {date} · {name}",
+    "toReview": "確認待ち · {count}",
+    "toReviewChip": "確認待ち {count} 件",
+    "submittedRelative": "{course} · {time}に提出",
+    "submittedAt": "{date} に提出",
+    "commentLabel": "{name} さんへのコメント",
+    "commentPlaceholder": "コメントを追加(任意)",
+    "review": "確認",
+    "needsRedo": "やり直し",
+    "reviewed": "確認済みにする",
+    "showMore": "もっと見る",
+    "showLess": "閉じる"
+  },
+  "submission": {
+    "answer": "あなたの回答",
+    "placeholder": "ここに回答を書いてください…",
+    "toolbar": "書式",
+    "bold": "太字",
+    "italic": "斜体",
+    "list": "箇条書き",
+    "saving": "保存中…",
+    "saved": "下書き保存済み · {time}",
+    "notSaved": "まだ保存されていません",
+    "tooLong": "200KBを超えています。保存するには短くしてください",
+    "submit": "提出する",
+    "photos": "写真",
+    "addPhoto": "写真を追加",
+    "photoCount": "写真 {count} / {max} 枚",
+    "removePhoto": "{name} を削除",
+    "openPhoto": "{name} を開く",
+    "uploading": "アップロード中…",
+    "status": {
+      "draft": "下書き",
+      "submitted": "提出済み",
+      "reviewed": "確認済み",
+      "needs_redo": "やり直し"
+    },
+    "submittedAt": "{date} に提出",
+    "redo": "{admin} さんがやり直しを依頼しました。",
+    "redoNoName": "管理者がやり直しを依頼しました。",
+    "feedback": "フィードバック"
+  },
+  "notes": {
+    "thread": "ノート",
+    "label": "ノートを書く",
+    "placeholder": "ノートを書く…",
+    "send": "送信",
+    "counter": "{count} / {max}",
+    "emptyStudent": "{admin} さんに質問やメモを送れます。",
+    "emptyStudentNoAdmin": "質問やメモを残せます。",
+    "emptyAdmin": "まだノートはありません。{student} さんに書いてみましょう。",
+    "you": "あなた"
   }
 }

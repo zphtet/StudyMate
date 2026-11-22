@@ -8,8 +8,9 @@ import type { PurgeResult } from './types'
 // Daily purge (spec 002 FR-006, research.md R8), run by GET /api/cron/purge. Finds courses and
 // lessons deleted more than 30 days ago, removes their files first (lesson files and the attachments
 // of submissions on them), then hard-deletes the rows; FK cascades take sections, lessons,
-// resources, progress, submissions and deadlines with them. If removing files fails, nothing is
-// deleted and the next run retries, so the job is idempotent.
+// resources, progress, submissions and deadlines with them. Comments point at a lesson or submission
+// without a foreign key (spec 004 research.md R8), so they are deleted in the same transaction. If
+// removing files fails, nothing is deleted and the next run retries, so the job is idempotent.
 
 const LESSON_FILES = 'lesson-files'
 const SUBMISSIONS = 'submissions'
@@ -38,10 +39,13 @@ export async function purgeExpired(
   const lessonIds = lessons.map((l) => l.id)
   if (courseIds.length === 0 && lessonIds.length === 0) return { courses: 0, lessons: 0, files: 0 }
 
-  const submissions = await prisma.submission.findMany({
-    where: { OR: [{ lesson: { courseId: { in: courseIds } } }, { lessonId: { in: lessonIds } }] },
-    select: { attachments: true },
-  })
+  const [submissions, courseLessons] = await Promise.all([
+    prisma.submission.findMany({
+      where: { OR: [{ lesson: { courseId: { in: courseIds } } }, { lessonId: { in: lessonIds } }] },
+      select: { id: true, attachments: true },
+    }),
+    prisma.lesson.findMany({ where: { courseId: { in: courseIds } }, select: { id: true } }),
+  ])
   const submissionFiles = submissions.flatMap((s) =>
     attachmentsSchema.parse(s.attachments).map((a) => a.path),
   )
@@ -56,7 +60,18 @@ export async function purgeExpired(
   if (lessonFiles.length > 0) await removeStorageObjects(LESSON_FILES, lessonFiles)
   if (submissionFiles.length > 0) await removeStorageObjects(SUBMISSIONS, submissionFiles)
 
+  // data-model.md Comment.target_type / Comment.target_id: Notes on a lesson, review comments on a
+  // submission.
+  const purgedLessonIds = [...lessonIds, ...courseLessons.map((l) => l.id)]
   await prisma.$transaction([
+    prisma.comment.deleteMany({
+      where: {
+        OR: [
+          { targetType: 'lesson', targetId: { in: purgedLessonIds } },
+          { targetType: 'submission', targetId: { in: submissions.map((s) => s.id) } },
+        ],
+      },
+    }),
     prisma.lesson.deleteMany({ where: { id: { in: lessonIds } } }),
     prisma.course.deleteMany({ where: { id: { in: courseIds } } }),
   ])

@@ -46,10 +46,14 @@ export type SubmissionView = {
   attachments: AttachmentView[]
   submittedAt: string | null
   reviewedAt: string | null
+  /** Last save ("Draft saved · 21:04"). */
+  updatedAt: string
 }
 
 /** GET /api/lessons/[lessonId]/work. `completedByName` only when someone else marked it done. */
 export type LessonWork = {
+  /** The student's own id: the owner of the Notes thread and of the photo folder. */
+  studentId: string
   progress: {
     done: boolean
     completedAt: string | null
@@ -60,13 +64,19 @@ export type LessonWork = {
   submission: SubmissionView | null
   reviewComments: CommentView[]
   notesCount: number
+  /** The actively linked Admin, named in "{admin} asked for a redo" and the Notes empty state. */
+  adminName: string | null
   nextLessonId: string | null
 }
 
 export type StudentRef = { id: string; displayName: string; timezone: string }
 
-/** GET /api/admin/students/progress. US2 adds `toReview`; US3 the streak, week and overdue tiles. */
-export type AdminStudentCard = StudentRef & { courses: CourseProgress[] }
+/** GET /api/admin/students/progress. US3 adds the streak, week and overdue tiles. */
+export type AdminStudentCard = StudentRef & {
+  /** Submissions waiting for this Admin's review. */
+  toReview: number
+  courses: CourseProgress[]
+}
 
 /** GET /api/admin/students/[studentId]. `submission` is null for none or a Draft. */
 export type AdminStudentDetail = {
@@ -105,7 +115,8 @@ export type AdminLessonReview = {
   /** Mark done and Reopen only when true. */
   courseActive: boolean
   progress: { done: boolean; completedAt: string | null; completedByName: string | null }
-  submission: (SubmissionView & { status: Exclude<SubmissionStatus, 'draft'> }) | null
+  submission:
+    (SubmissionView & { status: Exclude<SubmissionStatus, 'draft'>; submittedAt: string }) | null
   reviewComments: CommentView[]
   notesCount: number
 }

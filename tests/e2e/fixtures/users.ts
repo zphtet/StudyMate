@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { expect, type Page } from '@playwright/test'
+import { expect, type Browser, type Page, type TestInfo } from '@playwright/test'
 import { supabaseAdmin } from './supabase-admin'
 
 // Fixture users (spec 001 research R5). Every address carries the run prefix so global teardown can
@@ -57,4 +57,19 @@ export async function signIn(page: Page, user: TestUser) {
     })
     .click()
   await expect(page).toHaveURL(user.role === 'admin' ? /\/a\// : /\/(s\/|join)/)
+}
+
+/** A second signed-in browser with the test's own viewport, e.g. the Admin beside the student. */
+export async function signedInPage(browser: Browser, testInfo: TestInfo, user: TestUser) {
+  const { viewport, isMobile, hasTouch, deviceScaleFactor, baseURL } = testInfo.project.use
+  const context = await browser.newContext({
+    viewport,
+    isMobile,
+    hasTouch,
+    deviceScaleFactor,
+    baseURL,
+  })
+  const page = await context.newPage()
+  await signIn(page, user)
+  return page
 }

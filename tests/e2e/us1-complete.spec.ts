@@ -1,15 +1,8 @@
-import {
-  expect,
-  test,
-  type Browser,
-  type Locator,
-  type Page,
-  type TestInfo,
-} from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { expectNoSeriousA11yViolations } from './fixtures/a11y'
 import { assignCourse, linkStudent, seedCourse } from './fixtures/courses'
 import { sql } from './fixtures/db'
-import { createConfirmedUser, signIn, type TestUser } from './fixtures/users'
+import { createConfirmedUser, signedInPage, signIn, type TestUser } from './fixtures/users'
 
 // Spec 004 User Story 1 – Mark a lesson complete (screen 10-Lesson, 05-Courses, 09-Course partial;
 // contracts/ui-routes.md). Linking (001) and assignments (003) are seeded directly.
@@ -47,21 +40,6 @@ async function grammarCourse() {
   })
   await assignCourse(course.courseId, student.id, admin.id)
   return course
-}
-
-/** A second signed-in browser at the same viewport, for the Admin. */
-async function adminPage(browser: Browser, testInfo: TestInfo) {
-  const { viewport, isMobile, hasTouch, deviceScaleFactor, baseURL } = testInfo.project.use
-  const context = await browser.newContext({
-    viewport,
-    isMobile,
-    hasTouch,
-    deviceScaleFactor,
-    baseURL,
-  })
-  const page = await context.newPage()
-  await signIn(page, admin)
-  return page
 }
 
 const bottomBar = (page: Page) => page.getByRole('region', { name: 'Lesson actions' })
@@ -176,7 +154,7 @@ test('scenario 4: the Admin marks a lesson done and reopens it; both are audited
   browser,
 }, testInfo) => {
   const { lessonIds } = await grammarCourse()
-  const zin = await adminPage(browser, testInfo)
+  const zin = await signedInPage(browser, testInfo, admin)
 
   await zin.goto('/a/students')
   await zin.getByRole('link', { name: /May/ }).click()

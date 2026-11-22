@@ -29,22 +29,26 @@ type CourseProgress = { courseId: string; title: string; accent: string; percent
 Guard: `requireRole('student')`, `requireLessonReader(lessonId)`, then `placeStudentLesson` (404 `lesson_not_found`, 403 `lesson_locked`, as 002's lesson endpoint).
 ```ts
 {
+  studentId: string                // the caller: owner of the Notes thread and the photo folder
   progress: { done: boolean; completedAt: string | null; completedByName: string | null; minutes: number } // minutes = credit + sessions
   submission: { id: string; status: SubmissionStatus; bodyMd: string; attachments: Attachment[];
-                submittedAt: string | null; reviewedAt: string | null } | null
+                submittedAt: string | null; reviewedAt: string | null; updatedAt: string } | null
   reviewComments: Comment[]        // on this submission, oldest first
   notesCount: number
+  adminName: string | null         // the actively linked Admin ("Zin asked for a redo", Notes empty state)
   nextLessonId: string | null      // next visible lesson in course order
 }
 ```
-`completedByName` is set only when someone other than the student marked it ("Marked done by Zin").
+- `completedByName` is set only when someone other than the student marked it ("Marked done by Zin").
+- `updatedAt` is the last save ("Draft saved · 21:04"). `studentId`, `adminName` and `updatedAt` were added during US2 so the screen needs no second request.
+- All reads run in one round of queries: Realtime refetches this after every review (research R10).
 
 ### GET `/api/lessons/[lessonId]/notes?studentId=<id>`
 Guards:
 - **Student**: `requireLessonReader(lessonId)`. `studentId` must be absent or equal to `me.id`.
 - **Admin**: `requireAdminLessonTarget(lessonId, studentId)`.
 
-Returns `{ comments: Comment[] }`: the Notes thread, oldest first, at most 200. Threads are short; older comments beyond 200 aren't returned.
+Returns `{ comments: Comment[] }`: the Notes thread, oldest first, at most 200. Threads are short; older comments beyond 200 aren't returned. The client always sends `studentId` (a student sends their own id), so both roles share one query key.
 
 ### GET `/api/focus`
 Guard: `requireRole('student')`.

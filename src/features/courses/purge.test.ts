@@ -131,6 +131,55 @@ describe('purgeExpired', () => {
     expect(storage.removed).toEqual([])
   })
 
+  test('also deletes the Notes and review comments of purged lessons (spec 004 research.md R8)', async () => {
+    const liveCourse = await course(null)
+    const expiredLesson = await lesson(liveCourse, ago(31), 0)
+    const liveLesson = await lesson(liveCourse, null, 1)
+    const expiredCourse = await course(ago(31))
+    const expiredCourseLesson = await lesson(expiredCourse, null)
+    await submissionWithFile(expiredLesson)
+    await submissionWithFile(liveLesson)
+    const submissionIds = Object.fromEntries(
+      (
+        await prisma.submission.findMany({
+          where: { lessonId: { in: [expiredLesson, liveLesson] } },
+          select: { id: true, lessonId: true },
+        })
+      ).map((s) => [s.lessonId, s.id]),
+    )
+    // data-model.md Comment.target_type / Comment.target_id: no foreign key, so no cascade.
+    const comment = (targetType: 'lesson' | 'submission', targetId: string) => ({
+      authorId: student,
+      studentId: student,
+      targetType,
+      targetId,
+      body: `${targetType} ${targetId}`,
+    })
+    await prisma.comment.createMany({
+      data: [
+        comment('lesson', expiredLesson),
+        comment('submission', submissionIds[expiredLesson]),
+        comment('lesson', expiredCourseLesson),
+        comment('lesson', liveLesson),
+        comment('submission', submissionIds[liveLesson]),
+      ],
+    })
+
+    await purgeExpired(now, { ownerIds: [admin] })
+
+    const left = await prisma.comment.findMany({
+      where: { studentId: student },
+      select: { targetType: true, targetId: true },
+    })
+    expect(left).toEqual(
+      expect.arrayContaining([
+        { targetType: 'lesson', targetId: liveLesson },
+        { targetType: 'submission', targetId: submissionIds[liveLesson] },
+      ]),
+    )
+    expect(left).toHaveLength(2)
+  })
+
   test('keeps the rows when removing files fails, so the next run retries', async () => {
     const expired = await course(ago(40))
     storage.failRemove = true

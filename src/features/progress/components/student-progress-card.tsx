@@ -7,17 +7,28 @@ import Link from 'next/link'
 import { EmptyState } from '@/components/shared/empty-state'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { ProgressBar } from '@/components/shared/progress-bar'
+import { StatusChip } from '@/components/shared/status-chip'
 import { COURSE_COLOR_CLASSES } from '@/features/courses/components/course-icon'
-import { studentCardsQuery } from '../queries'
+import { useRealtimeInvalidate } from '@/lib/realtime'
+import { adminProgressKeys, studentCardsQuery } from '../queries'
 import type { AdminStudentCard, CourseProgress } from '../types'
 
 // Admin Students tab cards (screen 16-AdminStudents, partial per contracts/ui-routes.md): one card per
-// linked student with per-course progress bars. US2 adds "to review"; US3 the streak, week and
-// overdue tiles. The whole card is one link to the student's screen.
+// linked student with per-course progress bars and "{n} to review". US3 adds the streak, week and
+// overdue tiles. The whole card is one link to the student's screen. New submissions and completions
+// arrive live (research.md R10; SC-002): RLS limits the events to linked students' visible rows.
 
 export function StudentCardList() {
   const t = useTranslations('students')
   const { data } = useSuspenseQuery(studentCardsQuery)
+  const queryKeys = [adminProgressKeys.cards]
+  // Only a submit adds to "to review"; the Admin's own reviews refetch through their mutation.
+  useRealtimeInvalidate({
+    table: 'submissions',
+    queryKeys,
+    when: (row) => row.status === 'submitted',
+  })
+  useRealtimeInvalidate({ table: 'lesson_progress', queryKeys })
   if (data.students.length === 0) {
     return (
       <EmptyState icon={UsersRound} title={t('emptyTitle')}>
@@ -37,6 +48,7 @@ export function StudentCardList() {
 }
 
 function StudentProgressCard({ student }: { student: AdminStudentCard }) {
+  const t = useTranslations('adminStudents')
   return (
     <Link
       href={`/a/students/${student.id}`}
@@ -45,7 +57,10 @@ function StudentProgressCard({ student }: { student: AdminStudentCard }) {
     >
       <div className="flex items-center gap-3">
         <InitialAvatar name={student.displayName} seed={student.id} className="size-12" />
-        <h2 className="min-w-0 truncate text-lg font-semibold">{student.displayName}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{student.displayName}</h2>
+        {student.toReview > 0 && (
+          <StatusChip tone="accent">{t('toReviewChip', { count: student.toReview })}</StatusChip>
+        )}
       </div>
       {student.courses.length > 0 && (
         <ul className="flex flex-col gap-2">

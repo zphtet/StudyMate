@@ -128,14 +128,16 @@ New validation keys: `validation.commentRequired`, `validation.commentTooLong`.
 | --- | --- | --- |
 | `completeLesson`, `undoCompletion` | `['lesson',id,'work']` progress | `['today']`, `['progress']` (prefix), `['courses','student']` (prefix) |
 | `setLessonDone` | admin lesson key | `['admin','students']` (prefix) |
-| `saveDraft` | none (the editor holds the text) | `['lesson',id,'work']` (status line only) |
-| `submitAssignment` | `['lesson',id,'work']` status → `submitted` | same |
+| `saveDraft` | none (the editor holds the text) | none: the result updates `['lesson',id,'work']` (card status and time) |
+| `submitAssignment` | none: a spinner, then the result sets `['lesson',id,'work']` to `submitted` | `['lesson',id,'work']` |
 | `reviewSubmission` | admin lesson key status | `['admin','students']` (prefix) |
 | `postNote` | appends to the thread | `['lesson',id,'notes',studentId]`, the work or admin lesson key (count) |
 | `startFocus`, `stopFocus` | `['focus']` | `['progress']` (prefix), `['lesson',id,'work']` |
 | `setWeeklyGoal` | `['me']` | `['progress']` (prefix) |
 
 Realtime (research R10) invalidates the same keys when the other side writes.
+
+`submitAssignment` is not optimistic: switching to the read-only view before the server answers would unmount the editor, and a refused submit (`submission_empty`, `submission_locked`) would then lose unsaved text.
 
 ## Notes
 - No action accepts `completedBy`, `authorId`, `status` for students, `startedAt`, `endedAt` or `reviewedAt` from the client; the server derives them.
