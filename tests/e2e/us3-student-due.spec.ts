@@ -241,11 +241,12 @@ test('scenario 5: Courses cards show "due {date} · N overdue" or "no deadline"'
   await signIn(page, may)
   await page.goto('/s/courses')
   const grammarCard = page.getByRole('link', { name: /JLPT N4 Grammar/ })
+  // Spec 004 US1: active cards count done of total ("12 of 20 · due 31 Dec" on screen 05-Courses).
   await expect(grammarCard).toContainText(
-    `2 lessons · due ${fmt(due, TOKYO, { day: 'numeric', month: 'short' })} · 1 overdue`,
+    `0 of 2 · due ${fmt(due, TOKYO, { day: 'numeric', month: 'short' })} · 1 overdue`,
   )
   await expect(page.getByRole('link', { name: /Listening Practice/ })).toContainText(
-    '1 lesson · no deadline',
+    '0 of 1 · no deadline',
   )
   await expect(page.getByRole('link', { name: /Listening Practice/ })).not.toContainText('overdue')
   await expectNoSeriousA11yViolations(page)

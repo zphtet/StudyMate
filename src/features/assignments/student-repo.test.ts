@@ -232,3 +232,19 @@ describe('getStudentCourse (spec 003 additions)', () => {
     expect(byId.get(L.archived)).toMatchObject({ done: true, due: null })
   })
 })
+
+// Spec 004 US1 (T024): progress from the course_progress view (FR-005). Grammar has 8 Published,
+// non-deleted lessons (Draft and deleted ones don't count); May has done 1, Thant none.
+describe('course progress (spec 004 additions)', () => {
+  test('each active card has the student’s percent and done count', async () => {
+    const mine = await listStudentCourses(may.id, now)
+    expect(mine.active[0]).toMatchObject({ id: course.grammar, percent: 13, doneCount: 1 })
+    const theirs = await listStudentCourses(thant.id, now)
+    expect(theirs.active[0]).toMatchObject({ id: course.grammar, percent: 0, doneCount: 0 })
+  })
+
+  test('the course screen has percent, done and total', async () => {
+    const view = await getStudentCourse(may, course.grammar, now)
+    expect(view.course.progress).toEqual({ percent: 13, done: 1, total: 8 })
+  })
+})

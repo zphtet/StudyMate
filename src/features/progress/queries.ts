@@ -1,3 +1,7 @@
+import { queryOptions } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import type { AdminLessonReview, AdminStudentCard, AdminStudentDetail, LessonWork } from './types'
+
 // TanStack Query keys for the 004 Route Handlers (contracts/route-handlers.md). Invalidation after
 // writes and Realtime events follows contracts/server-actions.md › Query invalidation; the stories add
 // their `queryOptions` next to these keys.
@@ -26,3 +30,26 @@ export const adminProgressKeys = {
   lesson: (studentId: string, lessonId: string) =>
     ['admin', 'students', studentId, 'lessons', lessonId] as const,
 }
+
+export const lessonWorkQuery = (lessonId: string) =>
+  queryOptions({
+    queryKey: lessonWorkKeys.work(lessonId),
+    queryFn: () => api<LessonWork>(`/api/lessons/${lessonId}/work`),
+  })
+
+export const studentCardsQuery = queryOptions({
+  queryKey: adminProgressKeys.cards,
+  queryFn: () => api<{ students: AdminStudentCard[] }>('/api/admin/students/progress'),
+})
+
+export const adminStudentQuery = (studentId: string) =>
+  queryOptions({
+    queryKey: adminProgressKeys.student(studentId),
+    queryFn: () => api<AdminStudentDetail>(`/api/admin/students/${studentId}`),
+  })
+
+export const adminLessonReviewQuery = (studentId: string, lessonId: string) =>
+  queryOptions({
+    queryKey: adminProgressKeys.lesson(studentId, lessonId),
+    queryFn: () => api<AdminLessonReview>(`/api/admin/students/${studentId}/lessons/${lessonId}`),
+  })

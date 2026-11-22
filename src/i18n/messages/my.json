@@ -181,7 +181,8 @@
     "file_type_not_allowed": "ပုံ၊ PDF သို့မဟုတ် အသံဖိုင်ကို သုံးပါ။",
     "upload_failed": "ဖိုင်ကို တင်၍မရပါ။ ထပ်ကြိုးစားပါ။",
     "course_not_active": "အသုံးပြုနေသော သင်ခန်းစာအစုံများကိုသာ ပေးအပ်နိုင်ပြီး နောက်ဆုံးရက် သတ်မှတ်နိုင်သည်။",
-    "assignment_not_found": "ဤသင်ခန်းစာအစုံကို ထိုကျောင်းသားထံ ပေးအပ်ထားခြင်း မရှိတော့ပါ။"
+    "assignment_not_found": "ဤသင်ခန်းစာအစုံကို ထိုကျောင်းသားထံ ပေးအပ်ထားခြင်း မရှိတော့ပါ။",
+    "submission_required": "ဤသင်ခန်းစာ ပြီးဆုံးရန် လေ့ကျင့်ခန်းကို တင်သွင်းပါ။"
   },
   "validation": {
     "nameRequired": "သင့်အမည် ထည့်ပါ",
@@ -445,7 +446,11 @@
     "overdueCount": "ရက်လွန် {count} ခု",
     "wasDue": "{date} က နောက်ဆုံးရက် ဖြစ်ခဲ့သည်",
     "tonight": "ယနေ့ည {time}",
-    "todayAt": "ယနေ့ {time}"
+    "todayAt": "ယနေ့ {time}",
+    "percent": "{percent}%",
+    "doneOf": "{total} ခုအနက် {done}",
+    "lessonsDoneOf": "သင်ခန်းစာ {total} ခုအနက် {done} ခု ပြီးပြီ",
+    "progress": "တိုးတက်မှု"
   },
   "lessonView": {
     "back": "သင်တန်းသို့ ပြန်သွားရန်",
@@ -602,5 +607,34 @@
     "part": "{kind} {from}–{to}",
     "now": "ယခု {time}",
     "legend": "သင်္ကေတများ"
+  },
+  "lessonWork": {
+    "tabs": {
+      "lesson": "သင်ခန်းစာ",
+      "assignment": "လေ့ကျင့်ခန်း"
+    },
+    "actions": "သင်ခန်းစာ လုပ်ဆောင်ချက်များ",
+    "markComplete": "ပြီးဆုံးကြောင်း မှတ်ရန်",
+    "done": "ပြီးပြီ",
+    "markedDoneBy": "{name} က ပြီးဆုံးကြောင်း မှတ်ထားသည်",
+    "undo": "ပြန်ဖျက်ရန်",
+    "nextLesson": "နောက်သင်ခန်းစာ",
+    "submitToComplete": "ဤသင်ခန်းစာ ပြီးဆုံးရန် လေ့ကျင့်ခန်းကို တင်သွင်းပါ။"
+  },
+  "adminStudents": {
+    "back": "ကျောင်းသားများသို့ ပြန်သွားရန်",
+    "backToStudent": "{name} ထံ ပြန်သွားရန်",
+    "cityTime": "{city} အချိန်",
+    "noCourses": "ပေးအပ်ထားသော သင်ခန်းစာအစုံ မရှိသေးပါ။",
+    "percent": "{percent}%",
+    "done": "ပြီးပြီ",
+    "lessonPosition": "{student} · {course} · သင်ခန်းစာ {total} ခုအနက် {number}",
+    "assignment": "လေ့ကျင့်ခန်း",
+    "noSubmission": "{name} မတင်သွင်းရသေးပါ။",
+    "noAssignment": "ဤသင်ခန်းစာတွင် လေ့ကျင့်ခန်း မရှိပါ။",
+    "actions": "သင်ခန်းစာ လုပ်ဆောင်ချက်များ",
+    "markDone": "ပြီးဆုံးကြောင်း မှတ်ရန်",
+    "reopen": "ပြန်ဖွင့်ရန်",
+    "doneBy": "ပြီးပြီ · {date} · {name}"
   }
 }

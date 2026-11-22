@@ -1,19 +1,21 @@
-import { Bell, UsersRound } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { PageSkeleton } from '@/components/layout/page-skeleton'
-import { EmptyState } from '@/components/shared/empty-state'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { TodayLabel } from '@/components/shared/today-label'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InviteCard } from '@/features/invites/components/invite-card'
+import { StudentCardList } from '@/features/progress/components/student-progress-card'
+import { WithStudentCards } from '@/features/progress/components/with-admin-progress'
 import { getMe } from '@/features/profile/repo'
 import { requirePageUser } from '@/server/auth/page-guard'
 
-// Screen 16-AdminStudents (001 scope). Join requests and student cards arrive with User Story 2.
+// Screen 16-AdminStudents: the invite card (001) and one progress card per linked student (spec 004).
+// Join requests arrive with 001 User Story 2.
 export default async function AdminStudentsPage() {
   const [t, tc, nav] = await Promise.all([
     getTranslations('students'),
@@ -51,9 +53,9 @@ export default async function AdminStudentsPage() {
         <Suspense fallback={<PageSkeleton header={false} />}>
           <Invite />
         </Suspense>
-        <EmptyState icon={UsersRound} title={t('emptyTitle')}>
-          {t('emptyBody')}
-        </EmptyState>
+        <WithStudentCards>
+          <StudentCardList />
+        </WithStudentCards>
       </div>
     </>
   )

@@ -29,6 +29,23 @@ const readableCourse = (studentId: string) => ({
 
 const visibleLesson = { status: 'published' as const, deletedAt: null }
 
+/**
+ * Spec 004 FR-005: completed published lessons ÷ published lessons, from the course_progress view
+ * (one query for the student's courses). A course with no published lessons has percent null ("—").
+ */
+async function progressByCourse(studentId: string, courseId?: string) {
+  const rows = await prisma.$queryRaw<
+    { course_id: string; total: number; done: number; percent: number | null }[]
+  >`select course_id, published_lessons::int as total, done_lessons::int as done, percent::int as percent
+    from course_progress
+    where student_id = ${studentId}::uuid and (${courseId ?? null}::uuid is null or course_id = ${courseId ?? null}::uuid)`
+  const byCourse = new Map(rows.map((r) => [r.course_id, r]))
+  return (id: string) => {
+    const row = byCourse.get(id)
+    return { percent: row?.percent ?? null, done: row?.done ?? 0, total: row?.total ?? 0 }
+  }
+}
+
 /** Today in the student's zone; an unknown zone falls back to UTC. */
 function today(timezone: string, now: Date) {
   try {
@@ -92,7 +109,10 @@ function studentView(course: Structure, student: Student, now: Date) {
 }
 
 export async function listStudentCourses(studentId: string, now = new Date()) {
-  const facts = await loadDeadlineFacts(studentId)
+  const [facts, progressOf] = await Promise.all([
+    loadDeadlineFacts(studentId),
+    progressByCourse(studentId),
+  ])
   const courses = await prisma.course.findMany({
     where: readableCourse(studentId),
     orderBy: [{ targetDate: { sort: 'asc', nulls: 'last' } }, { title: 'asc' }],
@@ -131,6 +151,8 @@ export async function listStudentCourses(studentId: string, now = new Date()) {
       const due = facts.dueOf({ id: l.id, courseId: c.id })
       return l.progress.length === 0 && due !== null && due < now
     }).length,
+    percent: progressOf(c.id).percent,
+    doneCount: progressOf(c.id).done,
   })
   return {
     active: courses.filter((c) => c.status === 'active').map(card),
@@ -143,7 +165,7 @@ export async function getStudentCourse(
   courseId: string,
   now = new Date(),
 ): Promise<StudentCourse> {
-  const [course, facts] = await Promise.all([
+  const [course, facts, progressOf] = await Promise.all([
     prisma.course.findFirst({
       where: { id: courseId, ...readableCourse(student.id) },
       select: {
@@ -159,6 +181,7 @@ export async function getStudentCourse(
       },
     }),
     loadDeadlineFacts(student.id, courseId),
+    progressByCourse(student.id, courseId),
   ])
   if (!course) throw new NotFound('course_not_found')
 
@@ -175,6 +198,7 @@ export async function getStudentCourse(
       status: course.status === 'archived' ? 'archived' : 'active',
       admin: { displayName: course.owner.displayName },
       dueAt: facts.courseDue.get(course.id)?.toISOString() ?? null,
+      progress: progressOf(course.id),
     },
     lessonCount: ordered.length,
     groups: groups.map((g) => ({
@@ -207,7 +231,8 @@ export async function getStudentCourse(
 /**
  * Where a lesson sits for this student ("Lesson n of m"), or why it can't be opened: 404
  * `lesson_not_found` when the student can't see it, 403 `lesson_locked` with the reason when it is
- * locked (research.md R1).
+ * locked (research.md R1). Spec 004 also reads the course status (only Active courses change) and the
+ * next lesson in course order ("Next lesson" after completing).
  */
 export async function placeStudentLesson(student: Student, lessonId: string, now = new Date()) {
   const lesson = await prisma.lesson.findFirst({
@@ -231,8 +256,10 @@ export async function placeStudentLesson(student: Student, lessonId: string, now
   }
   return {
     course: { id: course.id, title: course.title },
+    courseStatus: course.status,
     number: index + 1,
     total: ordered.length,
+    nextLessonId: ordered[index + 1]?.id ?? null,
   }
 }
 

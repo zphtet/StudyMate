@@ -6,17 +6,19 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 import { EmptyState } from '@/components/shared/empty-state'
+import { ProgressBar } from '@/components/shared/progress-bar'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { cn } from '@/lib/utils'
 import { studentCoursesQuery } from '../queries'
 import type { StudentCourseCard } from '../types'
-import { CourseIcon } from './course-icon'
+import { COURSE_COLOR_CLASSES, CourseIcon } from './course-icon'
 import { useCalendarDate } from './use-calendar-date'
 
 // Student Courses tab (screen 05-Courses, partial per contracts/ui-routes.md): chips Active · n and
 // Archived · n (only when there are any), and one card per assigned course. Active cards show the
-// student's course deadline and a red overdue count (spec 003 US3 scenario 5). The weekly study card,
-// progress bars, Completed and Mine come with 004 and the personal-courses feature.
+// student's course deadline and a red overdue count (spec 003 US3 scenario 5), and from spec 004 the
+// progress bar, "{percent}%" and "{done} of {total}" (FR-005). The weekly study card comes with 004
+// US3; Completed and Mine with the personal-courses feature.
 
 export function StudentCourseList() {
   const t = useTranslations('studentCourses')
@@ -77,9 +79,26 @@ function CourseLink({ course, archived }: { course: StudentCourseCard; archived:
     >
       <CourseIcon icon={course.icon} color={course.color} />
       <div className="min-w-0 flex-1">
-        <h2 className="text-lg leading-snug font-semibold">{course.title}</h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-lg leading-snug font-semibold">{course.title}</h2>
+          {!archived && (
+            <span className="shrink-0 font-semibold tabular-nums">
+              {course.percent === null ? '—' : t('percent', { percent: course.percent })}
+            </span>
+          )}
+        </div>
+        {!archived && (
+          <ProgressBar
+            percent={course.percent}
+            label={course.title}
+            fillClassName={COURSE_COLOR_CLASSES[course.color].solid}
+            className="my-2"
+          />
+        )}
         <p className="text-muted-foreground">
-          {t('lessonCount', { count: course.lessonCount })}
+          {archived
+            ? t('lessonCount', { count: course.lessonCount })
+            : t('doneOf', { done: course.doneCount, total: course.lessonCount })}
           {archived
             ? course.targetDate && ` · ${t('finishBy', { date: calendarDate(course.targetDate) })}`
             : ' · '}

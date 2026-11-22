@@ -181,7 +181,8 @@
     "file_type_not_allowed": "画像、PDF、音声ファイルを使ってください。",
     "upload_failed": "ファイルをアップロードできませんでした。もう一度お試しください。",
     "course_not_active": "割り当てや期限の設定ができるのは公開中のコースだけです。",
-    "assignment_not_found": "このコースはその生徒に割り当てられていません。"
+    "assignment_not_found": "このコースはその生徒に割り当てられていません。",
+    "submission_required": "このレッスンを完了にするには、課題を提出してください。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -445,7 +446,11 @@
     "overdueCount": "期限切れ {count} 件",
     "wasDue": "期限は {date}",
     "tonight": "今夜 {time}",
-    "todayAt": "今日 {time}"
+    "todayAt": "今日 {time}",
+    "percent": "{percent}%",
+    "doneOf": "{total}中{done}",
+    "lessonsDoneOf": "{total}レッスン中{done}レッスン完了",
+    "progress": "進み具合"
   },
   "lessonView": {
     "back": "コースに戻る",
@@ -602,5 +607,34 @@
     "part": "{kind} {from}–{to}",
     "now": "現在 {time}",
     "legend": "凡例"
+  },
+  "lessonWork": {
+    "tabs": {
+      "lesson": "レッスン",
+      "assignment": "課題"
+    },
+    "actions": "レッスンの操作",
+    "markComplete": "完了にする",
+    "done": "完了",
+    "markedDoneBy": "{name}さんが完了にしました",
+    "undo": "元に戻す",
+    "nextLesson": "次のレッスン",
+    "submitToComplete": "このレッスンを完了にするには、課題を提出してください。"
+  },
+  "adminStudents": {
+    "back": "学生一覧に戻る",
+    "backToStudent": "{name}さんに戻る",
+    "cityTime": "{city}の時間",
+    "noCourses": "まだコースが割り当てられていません。",
+    "percent": "{percent}%",
+    "done": "完了",
+    "lessonPosition": "{student}さん · {course} · レッスン {number} / {total}",
+    "assignment": "課題",
+    "noSubmission": "{name}さんはまだ提出していません。",
+    "noAssignment": "このレッスンには課題がありません。",
+    "actions": "レッスンの操作",
+    "markDone": "完了にする",
+    "reopen": "未完了に戻す",
+    "doneBy": "完了 · {date} · {name}"
   }
 }

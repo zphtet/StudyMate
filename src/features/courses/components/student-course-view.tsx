@@ -6,15 +6,17 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useId } from 'react'
 import { EmptyState } from '@/components/shared/empty-state'
+import { ProgressBar } from '@/components/shared/progress-bar'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { studentCourseQuery } from '../queries'
 import type { StudentCourse } from '../types'
+import { COURSE_COLOR_CLASSES } from './course-icon'
 import { StudentLessonRow } from './student-lesson-row'
 
 // Student course screen (screen 09-Course, partial per contracts/ui-routes.md and FR-010): title,
 // "Assigned by … · finish by {the student's course deadline}" (spec 003 US3 scenario 4), the Archived
-// banner, then sections with lessons in course order and their deadline chips (003). The progress
-// card comes with 004.
+// banner, the progress card (spec 004 FR-005), then sections with lessons in course order and their
+// deadline chips (003).
 
 export function StudentCourseView({ courseId }: { courseId: string }) {
   const t = useTranslations('studentCourses')
@@ -42,6 +44,8 @@ export function StudentCourseView({ courseId }: { courseId: string }) {
         </div>
       </header>
 
+      {!archived && <ProgressCard course={course} />}
+
       {archived && (
         <div className="flex items-center gap-3 rounded-2xl bg-muted p-4 text-muted-foreground">
           <Archive className="size-5 shrink-0" aria-hidden />
@@ -55,6 +59,29 @@ export function StudentCourseView({ courseId }: { courseId: string }) {
         data.groups.map((group) => <LessonGroup key={group.section?.id ?? 'none'} group={group} />)
       )}
     </div>
+  )
+}
+
+function ProgressCard({ course }: { course: StudentCourse['course'] }) {
+  const t = useTranslations('studentCourses')
+  const { percent, done, total } = course.progress
+  return (
+    <section
+      aria-label={t('progress')}
+      className="flex flex-col gap-3 rounded-3xl border bg-card p-5"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-muted-foreground">{t('lessonsDoneOf', { done, total })}</p>
+        <p className="text-2xl font-bold tabular-nums">
+          {percent === null ? '—' : t('percent', { percent })}
+        </p>
+      </div>
+      <ProgressBar
+        percent={percent}
+        label={course.title}
+        fillClassName={COURSE_COLOR_CLASSES[course.color].solid}
+      />
+    </section>
   )
 }
 

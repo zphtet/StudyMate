@@ -1,0 +1,101 @@
+'use client'
+
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { BookOpen, Check, ChevronLeft } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import Link from 'next/link'
+import { EmptyState } from '@/components/shared/empty-state'
+import { ProgressBar } from '@/components/shared/progress-bar'
+import { COURSE_COLOR_CLASSES } from '@/features/courses/components/course-icon'
+import { cityOf } from '@/lib/time'
+import { cn } from '@/lib/utils'
+import { adminStudentQuery } from '../queries'
+import type { AdminStudentDetail } from '../types'
+
+// The Admin's view of one student (contracts/ui-routes.md › Student; no screenshot, 002's course
+// screen layout): each assigned course with its progress and lessons, linking to the review screen.
+// US2 adds "To review" and the submission chips.
+
+export function StudentDetail({ studentId }: { studentId: string }) {
+  const t = useTranslations('adminStudents')
+  const { data } = useSuspenseQuery(adminStudentQuery(studentId))
+  const { student } = data
+
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-4 pt-5">
+        <Link
+          href="/a/students"
+          aria-label={t('back')}
+          className="-ml-2 flex size-11 items-center justify-center rounded-full hover:bg-muted"
+        >
+          <ChevronLeft className="size-6" aria-hidden />
+        </Link>
+        <div>
+          <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight">
+            {student.displayName}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {t('cityTime', { city: cityOf(student.timezone) })}
+          </p>
+        </div>
+      </header>
+
+      {data.courses.length === 0 ? (
+        <EmptyState icon={BookOpen}>{t('noCourses')}</EmptyState>
+      ) : (
+        data.courses.map((course) => (
+          <CourseSection key={course.courseId} studentId={student.id} course={course} />
+        ))
+      )}
+    </div>
+  )
+}
+
+function CourseSection({
+  studentId,
+  course,
+}: {
+  studentId: string
+  course: AdminStudentDetail['courses'][number]
+}) {
+  const t = useTranslations('adminStudents')
+  const headingId = `course-${course.courseId}`
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={headingId} className="text-lg font-semibold">
+          {course.title}
+        </h2>
+        <span className="font-semibold tabular-nums">
+          {course.percent === null ? '—' : t('percent', { percent: course.percent })}
+        </span>
+      </div>
+      <ProgressBar
+        percent={course.percent}
+        label={course.title}
+        fillClassName={COURSE_COLOR_CLASSES[course.color].solid}
+      />
+      <ul className="overflow-hidden rounded-3xl border bg-card">
+        {course.lessons.map((lesson) => (
+          <li key={lesson.id} className="border-b last:border-b-0">
+            <Link
+              href={`/a/students/${studentId}/lessons/${lesson.id}`}
+              className="flex min-h-14 items-center gap-3 px-4 py-3 outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+            >
+              <span
+                className={cn(
+                  'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
+                  lesson.done ? 'bg-success-soft text-success' : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {lesson.done ? <Check className="size-4" aria-label={t('done')} /> : lesson.number}
+              </span>
+              <span className="min-w-0 flex-1 truncate font-medium">{lesson.title}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

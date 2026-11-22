@@ -181,7 +181,8 @@
     "file_type_not_allowed": "Use an image, PDF or audio file.",
     "upload_failed": "The file couldn't be uploaded. Try again.",
     "course_not_active": "Only Active courses can be assigned or given deadlines.",
-    "assignment_not_found": "This course is no longer assigned to that student."
+    "assignment_not_found": "This course is no longer assigned to that student.",
+    "submission_required": "Submit your assignment to complete this lesson."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -445,7 +446,11 @@
     "overdueCount": "{count} overdue",
     "wasDue": "was due {date}",
     "tonight": "{time} tonight",
-    "todayAt": "{time} today"
+    "todayAt": "{time} today",
+    "percent": "{percent}%",
+    "doneOf": "{done} of {total}",
+    "lessonsDoneOf": "{done} of {total} lessons",
+    "progress": "Progress"
   },
   "lessonView": {
     "back": "Back to course",
@@ -602,5 +607,34 @@
     "part": "{kind} {from}–{to}",
     "now": "now {time}",
     "legend": "Key"
+  },
+  "lessonWork": {
+    "tabs": {
+      "lesson": "Lesson",
+      "assignment": "Assignment"
+    },
+    "actions": "Lesson actions",
+    "markComplete": "Mark complete",
+    "done": "Done",
+    "markedDoneBy": "Marked done by {name}",
+    "undo": "Undo",
+    "nextLesson": "Next lesson",
+    "submitToComplete": "Submit your assignment to complete this lesson."
+  },
+  "adminStudents": {
+    "back": "Back to students",
+    "backToStudent": "Back to {name}",
+    "cityTime": "{city} time",
+    "noCourses": "No courses assigned yet.",
+    "percent": "{percent}%",
+    "done": "Done",
+    "lessonPosition": "{student} · {course} · Lesson {number} of {total}",
+    "assignment": "Assignment",
+    "noSubmission": "{name} hasn't submitted yet.",
+    "noAssignment": "This lesson has no assignment.",
+    "actions": "Lesson actions",
+    "markDone": "Mark done",
+    "reopen": "Reopen",
+    "doneBy": "Done · {date} by {name}"
   }
 }

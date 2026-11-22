@@ -16,6 +16,8 @@ export type SeedLesson = {
   contentMd?: string
   estMinutes?: number
   assignmentPrompt?: string
+  /** Spec 004: "submit before complete" */
+  requireSubmission?: boolean
   deleted?: boolean
 }
 
@@ -79,8 +81,8 @@ export async function seedCourse({
     positions.set(key, position + 1)
     await sql(
       `insert into lessons (id, course_id, section_id, title, status, unlock_rule, content_md, est_minutes,
-                            assignment_prompt, position, deleted_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, case when $11 then now() end)`,
+                            assignment_prompt, require_submission, position, deleted_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, case when $12 then now() end)`,
       [
         id,
         courseId,
@@ -91,6 +93,7 @@ export async function seedCourse({
         lesson.contentMd ?? `## ${lesson.title}`,
         lesson.estMinutes ?? 15,
         lesson.assignmentPrompt ?? null,
+        lesson.requireSubmission ?? false,
         position,
         lesson.deleted ?? false,
       ],

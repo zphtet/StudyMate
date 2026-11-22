@@ -122,6 +122,9 @@ export type StudentCourseCard = {
   dueAt: string | null
   /** Spec 003: counting lessons past their effective deadline and not done (0 when Archived). */
   overdueCount: number
+  /** Spec 004 FR-005 (course_progress): null = no published lessons ("—"). */
+  percent: number | null
+  doneCount: number
 }
 export type StudentCourseList = { active: StudentCourseCard[]; archived: StudentCourseCard[] }
 
@@ -154,6 +157,8 @@ export type StudentCourse = {
     admin: { displayName: string }
     /** Spec 003: the student's own course deadline ("finish by"); null when none or Archived. */
     dueAt: string | null
+    /** Spec 004 FR-005 (course_progress): `percent` null = no published lessons ("—"). */
+    progress: { percent: number | null; done: number; total: number }
   }
   lessonCount: number
   groups: { section: { id: string; title: string } | null; lessons: StudentLessonRow[] }[]

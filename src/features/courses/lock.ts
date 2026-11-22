@@ -10,6 +10,8 @@ import type { LockInfo } from './types'
 //   first visible lesson is open. A locked lesson can't be done, so a locked chain stays locked.
 // - on_date: open from 00:00 on that date in the student's zone (YYYY-MM-DD strings compare).
 // - Archived courses: everything the student can still see is open.
+// - A done lesson is always open (spec 004 research R1): undo doesn't cascade, so a lesson completed
+//   after an earlier one stays readable when that earlier one is undone.
 
 export type LockLesson = {
   id: string
@@ -42,7 +44,7 @@ export function computeLocks({
 
   visible.forEach((lesson, index) => {
     const rule = lesson.unlockRule
-    if (archived || rule.type === 'none') {
+    if (archived || rule.type === 'none' || done.has(lesson.id)) {
       locks.set(lesson.id, OPEN)
     } else if (rule.type === 'on_date') {
       locks.set(

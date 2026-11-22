@@ -4,15 +4,16 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { ChevronLeft, Clock, ClipboardList, ExternalLink, FileText, Lock } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
 import { studentLessonQuery } from '../queries'
-import type { LockInfo, Resource } from '../types'
+import type { LockInfo, Resource, StudentLesson } from '../types'
 import { useCalendarDate } from './use-calendar-date'
 
 // Student lesson screen (screen 10-Lesson, partial per contracts/ui-routes.md; US4 scenario 3):
 // "{course} · Lesson n of m", title, minutes, the shared Markdown body, attachments and the
-// assignment prompt (read only; writing and submitting come with 004).
+// assignment prompt. Spec 004 wraps the body in its tabs (`wrapBody`, from LessonWorkScreen).
 
 function BackLink({ href, label }: { href: string; label: string }) {
   return (
@@ -26,7 +27,14 @@ function BackLink({ href, label }: { href: string; label: string }) {
   )
 }
 
-export function StudentLessonView({ lessonId }: { lessonId: string }) {
+export function StudentLessonView({
+  lessonId,
+  wrapBody = (body) => body,
+}: {
+  lessonId: string
+  /** Puts the lesson body inside another layout (spec 004 tabs). */
+  wrapBody?: (body: ReactNode, lesson: StudentLesson) => ReactNode
+}) {
   const t = useTranslations('lessonView')
   const { data: lesson } = useSuspenseQuery(studentLessonQuery(lessonId))
 
@@ -50,6 +58,15 @@ export function StudentLessonView({ lessonId }: { lessonId: string }) {
         </p>
       </header>
 
+      {wrapBody(<LessonBody lesson={lesson} />, lesson)}
+    </div>
+  )
+}
+
+function LessonBody({ lesson }: { lesson: StudentLesson }) {
+  const t = useTranslations('lessonView')
+  return (
+    <div className="flex flex-col gap-6">
       <article>
         <Markdown source={lesson.contentMd} />
       </article>

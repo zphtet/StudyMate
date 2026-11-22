@@ -100,4 +100,32 @@ describe('computeLocks', () => {
     const locks = computeLocks({ ...base, lessons, archived: true })
     expect([...locks.values()].every((l) => l.state === 'open')).toBe(true)
   })
+
+  // Spec 004 research R1 (spec Edge Cases): undo doesn't cascade, so a lesson the student already
+  // completed stays open even when an earlier lesson is no longer done.
+  test('a done lesson is open even when the previous lesson is not done', () => {
+    const lessons = [lesson('a'), lesson('b'), lesson('c'), lesson('d')]
+    const locks = computeLocks({ ...base, lessons, done: new Set(['b', 'c']) })
+    expect(locks.get('b')).toEqual({ state: 'open', lock: null })
+    // c is done, and its previous lesson (b) is done too.
+    expect(locks.get('c')).toEqual({ state: 'open', lock: null })
+    // d follows a done lesson, so it opens as before.
+    expect(locks.get('d')).toEqual({ state: 'open', lock: null })
+  })
+
+  test('a done lesson with a future on_date is open', () => {
+    const locks = computeLocks({
+      ...base,
+      lessons: [lesson('a', { type: 'on_date', date: '2026-12-01' })],
+      done: new Set(['a']),
+    })
+    expect(locks.get('a')).toEqual({ state: 'open', lock: null })
+  })
+
+  test('a lesson that is not done after a not-done lesson stays locked', () => {
+    const lessons = [lesson('a'), lesson('b'), lesson('c')]
+    const locks = computeLocks({ ...base, lessons, done: new Set(['c']) })
+    expect(locks.get('b')?.state).toBe('locked')
+    expect(locks.get('c')?.state).toBe('open')
+  })
 })

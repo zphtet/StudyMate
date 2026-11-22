@@ -128,16 +128,16 @@ Undo returns it. On a "submit before complete" lesson the Assignment tab opens w
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T015 [P] [US1] Write unit tests in src/features/progress/completion.test.ts for `completionBlock()` (research.md R1):
+- [X] T015 [P] [US1] Write unit tests in src/features/progress/completion.test.ts for `completionBlock()` (research.md R1):
   - locked → `lesson_locked`; course not Active → `course_not_active`;
   - `require_submission` with no submission or a Draft → `submission_required`;
   - with `submitted`, `reviewed` or `needs_redo` → allowed (data-model.md Submission.status);
   - the Admin path ignores `require_submission`.
-- [ ] T016 [P] [US1] Add lock cases to src/features/courses/lock.test.ts (research.md R1):
+- [X] T016 [P] [US1] Add lock cases to src/features/courses/lock.test.ts (research.md R1):
   - with in-order unlocking, lesson 6 done and lesson 5 not done → lesson 6 is open, and lesson 7 is open because its previous visible lesson (6) is done;
   - a not-done lesson after a not-done lesson stays locked;
   - the existing cases are unchanged.
-- [ ] T017 [P] [US1] Write tests against the dev database in src/features/progress/repo.test.ts (create the file with the node environment, 60 s timeout and the user and link setup and cleanup of src/features/assignments/repo.test.ts):
+- [X] T017 [P] [US1] Write tests against the dev database in src/features/progress/repo.test.ts (create the file with the node environment, 60 s timeout and the user and link setup and cleanup of src/features/assignments/repo.test.ts):
   - complete sets `done`, `completed_at`, `completed_by` = student (data-model.md LessonProgress.status, LessonProgress.completed_at, LessonProgress.completed_by);
   - `minutes_spent` = `est_minutes` when the student has no session for the lesson, 0 when they have one (data-model.md LessonProgress.minutes_spent);
   - completing twice keeps the first `completed_at`;
@@ -145,7 +145,7 @@ Undo returns it. On a "submit before complete" lesson the Assignment tab opens w
   - the Admin's done or reopen writes `completed_by` = admin plus one `audit_log` row (`lesson.complete` / `lesson.reopen`, target `{ studentId, lessonId }`), all in one transaction;
   - `course_progress.percent` reflects completion;
   - `getLessonWork` returns `completedByName` only when the completer isn't the student, and `nextLessonId` in course order.
-- [ ] T018 [P] [US1] Write Playwright tests in tests/e2e/us1-complete.spec.ts (390×844 and 1280×800, axe):
+- [X] T018 [P] [US1] Write Playwright tests in tests/e2e/us1-complete.spec.ts (390×844 and 1280×800, axe):
   - scenario 1: mark complete → the bar changes before the response; lesson 2 opens; the Courses card shows % and "1 of N"; the course screen card shows the same;
   - scenario 2: on the `require_submission` lesson → the Assignment tab is selected with the banner and nothing is completed;
   - scenario 3: undo → % goes back;
@@ -155,22 +155,22 @@ Undo returns it. On a "submit before complete" lesson the Assignment tab opens w
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Add the "done lesson is always open" rule to `computeLocks()` in src/features/courses/lock.ts, before the `after_previous` check, and update the header comment (research.md R1; spec Edge Cases). T016 passes.
-- [ ] T020 [P] [US1] Implement `completionBlock()` in src/features/progress/completion.ts as a pure function of `{ role, locked, courseActive, requireSubmission, submissionStatus }` (research.md R1). T015 passes.
-- [ ] T021 [US1] Implement the completion repo in src/features/progress/repo.ts:
+- [X] T019 [US1] Add the "done lesson is always open" rule to `computeLocks()` in src/features/courses/lock.ts, before the `after_previous` check, and update the header comment (research.md R1; spec Edge Cases). T016 passes.
+- [X] T020 [P] [US1] Implement `completionBlock()` in src/features/progress/completion.ts as a pure function of `{ role, locked, courseActive, requireSubmission, submissionStatus }` (research.md R1). T015 passes.
+- [X] T021 [US1] Implement the completion repo in src/features/progress/repo.ts:
   - `completeLesson(student, lessonId)` and `undoCompletion(student, lessonId)`;
   - `setLessonDone(admin, studentId, lessonId, done)`, in a `prisma.$transaction` with the `audit_log` insert;
   - `getLessonWork(student, lessonId)` (progress part: `completedByName`, `minutes` = credit + counted session seconds / 60, `nextLessonId` via 002's order helpers; `submission: null`, `reviewComments: []`, `notesCount: 0` until US2).
 
   Follow the lifecycles in data-model.md › Lesson progress (data-model.md LessonProgress.student_id, LessonProgress.lesson_id, LessonProgress.updated_at (set on every write), LessonProgress.status, LessonProgress.completed_at, LessonProgress.completed_by, LessonProgress.minutes_spent). T017 passes.
-- [ ] T022 [US1] Add the Server Actions `completeLesson`, `undoCompletion` and `setLessonDone` in src/features/progress/actions.ts (contracts/server-actions.md › Completion). Each starts with its guard: `requireRole('student')` + `requireLessonReader` + 002's `placeStudentLesson`, or `requireAdminLessonTarget`. Then check `completionBlock()`, then the repo. Use `action()` and `fail(code)`.
-- [ ] T023 [US1] Add Route Handler GET src/app/api/lessons/[lessonId]/work/route.ts (`handle()`, guards as in contracts/route-handlers.md, 404 `lesson_not_found` / 403 `lesson_locked`). Add `lessonWorkQuery(id)` to src/features/progress/queries.ts.
-- [ ] T024 [US1] Course progress for students in src/features/courses/student-repo.ts:
+- [X] T022 [US1] Add the Server Actions `completeLesson`, `undoCompletion` and `setLessonDone` in src/features/progress/actions.ts (contracts/server-actions.md › Completion). Each starts with its guard: `requireRole('student')` + `requireLessonReader` + 002's `placeStudentLesson`, or `requireAdminLessonTarget`. Then check `completionBlock()`, then the repo. Use `action()` and `fail(code)`.
+- [X] T023 [US1] Add Route Handler GET src/app/api/lessons/[lessonId]/work/route.ts (`handle()`, guards as in contracts/route-handlers.md, 404 `lesson_not_found` / 403 `lesson_locked`). Add `lessonWorkQuery(id)` to src/features/progress/queries.ts.
+- [X] T024 [US1] Course progress for students in src/features/courses/student-repo.ts:
   - `percent` and `doneCount` on active cards from `course_progress`, in one `$queryRaw` for all of the student's courses;
   - `course.progress` on the course screen.
 
   Update the types in src/features/courses/types.ts and add assertions to src/features/assignments/student-repo.test.ts, which already covers these endpoints. Contracts: route-handlers.md › Changed endpoints.
-- [ ] T025 [US1] Admin reads in src/features/progress/admin-repo.ts:
+- [X] T025 [US1] Admin reads in src/features/progress/admin-repo.ts:
   - `getStudentCards(admin)`: id, name, time zone, `courses: CourseProgress[]`, from one link query plus one `course_progress` query;
   - `getStudentDetail(admin, studentId)`: courses with Published lessons in order, `done`, `submission: null` and `toReview: []` until US2;
   - `getAdminLesson(admin, studentId, lessonId)`: lesson, `courseActive`, progress; `submission: null` until US2.
@@ -181,26 +181,26 @@ Undo returns it. On a "submit before complete" lesson the Assignment tab opens w
   - GET src/app/api/admin/students/[studentId]/lessons/[lessonId]/route.ts (`requireAdminLessonTarget`).
 
   Add their `queryOptions` in queries.ts. Contracts: route-handlers.md › Admin.
-- [ ] T026 [P] [US1] Student lesson components in src/features/progress/components/:
+- [X] T026 [P] [US1] Student lesson components in src/features/progress/components/:
   - `lesson-work-tabs.tsx`: shadcn `Tabs` with `?tab=lesson|assignment|notes` in the URL. The Assignment tab only when there's a prompt; for now it shows the rendered prompt and the `submission_required` banner. The Notes tab label shows the count. The Lesson tab takes 002's lesson content as `children`.
   - `lesson-bottom-bar.tsx`: the states in contracts/ui-routes.md › Bottom bar, without the timer. `useMutation` with an optimistic update and rollback on `['lesson',id,'work']`, invalidating the keys in contracts/server-actions.md. On `submission_required` it switches to the Assignment tab instead of a toast.
-- [ ] T027 [US1] Wire the lesson page src/app/s/lessons/[lessonId]/page.tsx:
+- [X] T027 [US1] Wire the lesson page src/app/s/lessons/[lessonId]/page.tsx:
   - prefetch `lessonWorkQuery` next to 002's lesson query;
   - wrap 002's `StudentLessonView` content in `LessonWorkTabs`;
   - render `LessonBottomBar`.
 
   Keep 002's `LockedLesson` path unchanged. Remove the "writing and submitting come with 004" comment in src/features/courses/components/student-lesson-view.tsx.
-- [ ] T028 [P] [US1] Show progress on the student Courses list and course screen:
+- [X] T028 [P] [US1] Show progress on the student Courses list and course screen:
   - src/features/courses/components/student-course-list.tsx: `ProgressBar` in the course accent, "{percent}%" ("—" when null), "{done} of {total}" before 003's due text;
   - the course screen header: a progress card ("{percent}%", bar, "{done} of {total} lessons").
 
   Update the stale "come with 004" comments.
-- [ ] T029 [US1] Admin screens:
+- [X] T029 [US1] Admin screens:
   - src/app/a/(tabs)/students/page.tsx: one `StudentProgressCard` per linked student (src/features/progress/components/student-progress-card.tsx: avatar, name, course bars; the whole card is a link) under 001's invite and request cards;
   - new src/app/a/students/[studentId]/page.tsx with `StudentDetail` (student-detail.tsx);
   - new src/app/a/students/[studentId]/lessons/[lessonId]/page.tsx with `LessonReview` (lesson-review.tsx: header, Tabs shell) and `ReviewBar` (review-bar.tsx: Mark done / "Done · {date} by {name}" + Reopen, hidden when `courseActive` is false; optimistic, as in T026).
-- [ ] T030 [US1] Add the `lessonWork` strings (tabs, bottom bar states, banner, "Marked done by {name}", Next lesson) and the `adminStudents` strings (card, detail, review shell, Mark done, Reopen) to src/i18n/messages/en.json, my.json and ja.json. Add `errors.submission_required`. All three files must have the same keys.
-- [ ] T031 [US1] Run T015–T018 until they pass. Run 002's and 003's e2e specs that touch the lesson page and the Courses list (`us4-student-reads`, `us3-student-due`) to check nothing regressed.
+- [X] T030 [US1] Add the `lessonWork` strings (tabs, bottom bar states, banner, "Marked done by {name}", Next lesson) and the `adminStudents` strings (card, detail, review shell, Mark done, Reopen) to src/i18n/messages/en.json, my.json and ja.json. Add `errors.submission_required`. All three files must have the same keys.
+- [X] T031 [US1] Run T015–T018 until they pass. Run 002's and 003's e2e specs that touch the lesson page and the Courses list (`us4-student-reads`, `us3-student-due`) to check nothing regressed. (2026-11-22: the full suite was run, 114/114 on the :3100 build. The 002 and 003 card checks now expect "{done} of {total}" instead of "N lessons", as on screen 05-Courses.)
 
 **Checkpoint**: US1 works and can be demoed on its own.
 

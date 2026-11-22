@@ -68,7 +68,8 @@ test('the Courses tab lists assigned Active and Archived courses only', async ({
   const card = page.getByRole('link', { name: /JLPT N4 Grammar/ })
   await expect(card).toBeVisible()
   // Spec 003 US3 scenario 5: the card shows the student's own course deadline, not the target date.
-  await expect(card).toContainText('3 lessons · no deadline')
+  // Spec 004 US1: active cards count done of total ("12 of 20" on screen 05-Courses).
+  await expect(card).toContainText('0 of 3 · no deadline')
   await expect(page.getByText('Not ready')).toHaveCount(0)
   await expect(page.getByText('Someone else’s')).toHaveCount(0)
   await expectNoSeriousA11yViolations(page)
