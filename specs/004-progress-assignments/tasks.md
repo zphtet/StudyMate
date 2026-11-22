@@ -368,17 +368,17 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T069 [P] [US4] Write unit tests in src/features/progress/focus.test.ts (research.md R3; data-model.md StudySession.planned_minutes, StudySession.ended_at):
+- [X] T069 [P] [US4] Write unit tests in src/features/progress/focus.test.ts (research.md R3; data-model.md StudySession.planned_minutes, StudySession.ended_at):
   - `countedSeconds(startedAt, endedAt | null, plannedMinutes, now)` is capped at the plan and runs on while open;
   - `remainingSeconds` uses a server clock offset;
   - `shouldDiscard` is true below 60 s.
-- [ ] T070 [P] [US4] Add tests against the dev database to src/features/progress/repo.test.ts (data-model.md StudySession.started_at, StudySession.ended_at, StudySession.planned_minutes, StudySession.lesson_id):
+- [X] T070 [P] [US4] Add tests against the dev database to src/features/progress/repo.test.ts (data-model.md StudySession.started_at, StudySession.ended_at, StudySession.planned_minutes, StudySession.lesson_id):
   - `startFocus` stamps server time, closes an earlier open session at its planned end, and sets `lesson_progress` to `in_progress` unless it is done;
   - `stopFocus` caps `ended_at` and deletes a session under 60 s;
   - stopping an already-closed session returns its seconds;
   - `getActiveSession` returns null for an expired open session;
   - a later undo leaves `in_progress` (US1 rule).
-- [ ] T071 [P] [US4] Write Playwright tests in tests/e2e/us4-focus.spec.ts (390×844, axe):
+- [X] T071 [P] [US4] Write Playwright tests in tests/e2e/us4-focus.spec.ts (390×844, axe):
   - scenario 1: seed a session started 14 min 50 s ago; open the lesson → the countdown shows about 0:10, reaches 0 and stops itself; the toast appears; the lesson minutes and the Progress week bar grow;
   - Stop after a few seconds → nothing counted;
   - scenario 2: seed a session started 3 h ago → no timer; Progress counts 15 min;
@@ -386,16 +386,16 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ### Implementation for User Story 4
 
-- [ ] T072 [P] [US4] Implement src/features/progress/focus.ts (research.md R3). T069 passes.
-- [ ] T073 [US4] Repo in src/features/progress/repo.ts: `startFocus` (one transaction), `stopFocus` and `getActiveSession` (data-model.md › Study session lifecycle; StudySession.lesson_id, StudySession.started_at, StudySession.ended_at, StudySession.planned_minutes). T070 passes.
-- [ ] T074 [US4] Add the Server Actions `startFocus` and `stopFocus` to src/features/progress/actions.ts (contracts/server-actions.md › Focus timer; guards first). Add Route Handler GET src/app/api/focus/route.ts (`requireRole('student')`, returns `now` and the open session) and `focusQuery()` in queries.ts.
-- [ ] T075 [US4] Timer UI:
+- [X] T072 [P] [US4] Implement src/features/progress/focus.ts (research.md R3). T069 passes.
+- [X] T073 [US4] Repo in src/features/progress/repo.ts: `startFocus` (one transaction), `stopFocus` and `getActiveSession` (data-model.md › Study session lifecycle; StudySession.lesson_id, StudySession.started_at, StudySession.ended_at, StudySession.planned_minutes). T070 passes.
+- [X] T074 [US4] Add the Server Actions `startFocus` and `stopFocus` to src/features/progress/actions.ts (contracts/server-actions.md › Focus timer; guards first). Add Route Handler GET src/app/api/focus/route.ts (`requireRole('student')`, returns `now` and the open session) and `focusQuery()` in queries.ts.
+- [X] T075 [US4] Timer UI:
   - `useCountdown` in src/features/progress/use-countdown.ts: ticks every 1 s from `startedAt` + `plannedMinutes` adjusted by the server offset, and calls `stopFocus` at 0;
   - `focus-button.tsx`: "Focus 15" with a ▾ menu for 15 / 25 min (shadcn `dropdown-menu`), the "mm:ss · Stop" state (`aria-live` announces each minute), and "Focus running · {lesson}";
   - wire it into `lesson-bottom-bar.tsx` with optimistic `['focus']` updates and the invalidations in contracts/server-actions.md;
   - the toast "Focus done · {n} min added", vibrating only when supported and the user hasn't asked for reduced motion.
-- [ ] T076 [US4] Add the focus strings in `lessonWork` (button, menu, running, stop, toast) and `errors.session_not_found` to src/i18n/messages/en.json, my.json and ja.json.
-- [ ] T077 [US4] Run T069–T071 until they pass.
+- [X] T076 [US4] Add the focus strings in `lessonWork` (button, menu, running, stop, toast) and `errors.session_not_found` to src/i18n/messages/en.json, my.json and ja.json.
+- [X] T077 [US4] Run T069–T071 until they pass.
 
 **Checkpoint**: all four stories work.
 

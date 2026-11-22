@@ -192,7 +192,8 @@
     "submission_empty": "提出する前に、文章を書くか写真を追加してください。",
     "submission_not_found": "この提出物は表示できません。",
     "invalid_transition": "このステータスには変更できません。",
-    "too_many_images": "写真は5枚まで追加できます。"
+    "too_many_images": "写真は5枚まで追加できます。",
+    "session_not_found": "この集中セッションが見つかりません。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -647,6 +648,15 @@
       "submitted": "提出済み · {date}",
       "needsRedo": "やり直し",
       "reviewed": "確認済み"
+    },
+    "focus": {
+      "start": "集中 {minutes}",
+      "length": "集中する時間",
+      "option": "{minutes}分",
+      "running": "{time} · 停止",
+      "minutesLeft": "{count, plural, other {残り#分}}",
+      "runningNow": "集中タイマー作動中",
+      "finished": "集中完了 · {minutes}分を記録しました"
     }
   },
   "adminStudents": {

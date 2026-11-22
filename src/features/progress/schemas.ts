@@ -80,10 +80,11 @@ export const postNoteSchema = z.object({
 
 // ── Focus timer (research.md R3) ─────────────────────────────────────────────────────────────
 
-export const startFocusSchema = z.object({
-  lessonId: uuid,
-  minutes: z.union([z.literal(FOCUS_MINUTES[0]), z.literal(FOCUS_MINUTES[1])]),
-})
+export const focusMinutesSchema = z.union([
+  z.literal(FOCUS_MINUTES[0]),
+  z.literal(FOCUS_MINUTES[1]),
+])
+export const startFocusSchema = z.object({ lessonId: uuid, minutes: focusMinutesSchema })
 export const stopFocusSchema = z.object({ sessionId: uuid })
 
 export type Attachment = z.infer<typeof attachmentSchema>
@@ -91,3 +92,4 @@ export type SaveDraftInput = z.infer<typeof saveDraftSchema>
 export type ReviewSubmissionInput = z.infer<typeof reviewSubmissionSchema>
 export type PostNoteInput = z.infer<typeof postNoteSchema>
 export type StartFocusInput = z.infer<typeof startFocusSchema>
+export type FocusMinutes = z.infer<typeof focusMinutesSchema>

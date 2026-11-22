@@ -8,14 +8,17 @@ import { HttpError, NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
 import { addCalendarDays, addMonths, datesOfMonth, mondayOf, todayIn } from '@/lib/time'
 import { completionBlock } from './completion'
+import { MIN_COUNTED_SECONDS, remainingSeconds, shouldDiscard } from './focus'
 import { forecast } from './forecast'
 import { heatLevel } from './heat'
 import { reviewedNotice, submittedNotice } from './notices'
 import {
   attachmentSchema,
+  focusMinutesSchema,
   isOwnSubmissionPath,
   type Attachment,
   type SaveDraftInput,
+  type StartFocusInput,
 } from './schemas'
 import {
   activeDates,
@@ -28,6 +31,7 @@ import {
 import { adminCanReview, studentNext } from './submission-status'
 import type {
   CommentView,
+  FocusState,
   LessonWork,
   ProgressResponse,
   ProgressSummary,
@@ -791,5 +795,100 @@ export async function getSummary(student: Student, now = new Date()): Promise<Pr
     streak: facts.streak,
     week: { activeDays: facts.weekActiveDays, goal },
     continue: next,
+  }
+}
+
+// ── Focus timer (research.md R3; data-model.md › Study session) ──────────────────────────────
+// Every time is the database's now(), so a wrong phone clock can't add minutes. The cap is the
+// study_sessions_capped check; one running session per student is study_sessions_one_running.
+
+/** End of a running session: now, or its planned end if that came first. */
+const CAPPED_END = Prisma.sql`least(now(), started_at + planned_minutes * interval '1 minute')`
+
+/**
+ * US4 scenario 1: start a 15 or 25 min timer on a lesson the student can open, also after it is done
+ * (re-studying). In one transaction, an earlier running session ends (or is dropped if under a minute,
+ * FR-007), the new one starts, and a lesson not started yet becomes in progress.
+ */
+export async function startFocus(student: Student, { lessonId, minutes }: StartFocusInput) {
+  const place = await placeForAction(student, lessonId)
+  if (place.courseStatus !== 'active') fail('course_not_active')
+
+  const session = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`delete from study_sessions
+      where student_id = ${student.id}::uuid and ended_at is null
+        and ${COUNTED_SECONDS} < ${MIN_COUNTED_SECONDS}`
+    await tx.$executeRaw`update study_sessions set ended_at = ${CAPPED_END}
+      where student_id = ${student.id}::uuid and ended_at is null`
+    const [row] = await tx.$queryRaw<{ id: string; started_at: Date }[]>`
+      insert into study_sessions (student_id, lesson_id, started_at, planned_minutes)
+      values (${student.id}::uuid, ${lessonId}::uuid, now(), ${minutes})
+      returning id::text, started_at`
+    await tx.$executeRaw`
+      insert into lesson_progress (student_id, lesson_id, status, updated_at)
+      values (${student.id}::uuid, ${lessonId}::uuid, 'in_progress', now())
+      on conflict (student_id, lesson_id) do update set status = 'in_progress', updated_at = now()
+      where lesson_progress.status = 'not_started'`
+    return row
+  })
+  return {
+    sessionId: session.id,
+    startedAt: session.started_at.toISOString(),
+    plannedMinutes: minutes,
+  }
+}
+
+/**
+ * US4: Stop, or the countdown reaching 0. Ends the session at most at its plan; under a minute it is
+ * deleted and counts 0 (FR-007). Stopping a session that already ended returns what it counted.
+ */
+export async function stopFocus(student: Student, sessionId: string) {
+  const [row] = await prisma.$queryRaw<{ isRunning: boolean; seconds: number }[]>`
+    select ended_at is null as "isRunning", floor(${COUNTED_SECONDS})::int as seconds
+    from study_sessions where id = ${sessionId}::uuid and student_id = ${student.id}::uuid`
+  if (!row) fail('session_not_found')
+  if (!row.isRunning) return { countedSeconds: row.seconds }
+  if (shouldDiscard(row.seconds)) {
+    await prisma.$executeRaw`delete from study_sessions where id = ${sessionId}::uuid and ended_at is null`
+    return { countedSeconds: 0 }
+  }
+  const [stopped] = await prisma.$queryRaw<{ seconds: number }[]>`
+    update study_sessions set ended_at = ${CAPPED_END}
+    where id = ${sessionId}::uuid and ended_at is null
+    returning floor(${COUNTED_SECONDS})::int as seconds`
+  // Already ended by a start on another tab in the meantime: what was read is what it counted.
+  return { countedSeconds: stopped?.seconds ?? row.seconds }
+}
+
+/**
+ * GET /api/focus: the running session with the server's clock. A session past its plan is null: it
+ * already counts in full (US4 scenario 2) and the next start or stop closes it.
+ */
+export async function getActiveSession(student: { id: string }): Promise<FocusState> {
+  const [[{ now }], open] = await Promise.all([
+    prisma.$queryRaw<{ now: Date }[]>`select now()`,
+    prisma.studySession.findFirst({
+      where: { studentId: student.id, endedAt: null },
+      select: {
+        id: true,
+        lessonId: true,
+        startedAt: true,
+        plannedMinutes: true,
+        lesson: { select: { title: true } },
+      },
+    }),
+  ])
+  const isRunning = open && remainingSeconds(open, now, 0) > 0
+  return {
+    now: now.toISOString(),
+    session: isRunning
+      ? {
+          id: open.id,
+          lessonId: open.lessonId,
+          lessonTitle: open.lesson?.title ?? null,
+          startedAt: open.startedAt.toISOString(),
+          plannedMinutes: focusMinutesSchema.parse(open.plannedMinutes),
+        }
+      : null,
   }
 }

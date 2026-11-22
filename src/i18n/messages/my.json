@@ -192,7 +192,8 @@
     "submission_empty": "မတင်သွင်းမီ တစ်ခုခု ရေးပါ သို့မဟုတ် ဓာတ်ပုံ ထည့်ပါ။",
     "submission_not_found": "ဤတင်သွင်းချက်ကို မကြည့်နိုင်ပါ။",
     "invalid_transition": "ဤအခြေအနေသို့ ပြောင်း၍မရပါ။",
-    "too_many_images": "ဓာတ်ပုံ ၅ ပုံအထိသာ ထည့်နိုင်သည်။"
+    "too_many_images": "ဓာတ်ပုံ ၅ ပုံအထိသာ ထည့်နိုင်သည်။",
+    "session_not_found": "ဤအာရုံစိုက်ချိန်ကို ရှာမတွေ့ပါ။"
   },
   "validation": {
     "nameRequired": "သင့်အမည် ထည့်ပါ",
@@ -647,6 +648,15 @@
       "submitted": "တင်သွင်းပြီး · {date}",
       "needsRedo": "ပြန်လုပ်ရန်",
       "reviewed": "စစ်ဆေးပြီး"
+    },
+    "focus": {
+      "start": "အာရုံစိုက် {minutes}",
+      "length": "အာရုံစိုက်ချိန်",
+      "option": "{minutes} မိနစ်",
+      "running": "{time} · ရပ်ရန်",
+      "minutesLeft": "{count, plural, other {# မိနစ် ကျန်သည်}}",
+      "runningNow": "အာရုံစိုက်နေဆဲ",
+      "finished": "အာရုံစိုက်ပြီး · {minutes} မိနစ် ထည့်ပြီး"
     }
   },
   "adminStudents": {

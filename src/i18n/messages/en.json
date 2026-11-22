@@ -192,7 +192,8 @@
     "submission_empty": "Write something or add a photo before you submit.",
     "submission_not_found": "This submission isn't available.",
     "invalid_transition": "That status change isn't allowed.",
-    "too_many_images": "You can add up to 5 photos."
+    "too_many_images": "You can add up to 5 photos.",
+    "session_not_found": "This focus session wasn't found."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -647,6 +648,15 @@
       "submitted": "Submitted · {date}",
       "needsRedo": "Needs redo",
       "reviewed": "Reviewed"
+    },
+    "focus": {
+      "start": "Focus {minutes}",
+      "length": "Focus length",
+      "option": "{minutes} min",
+      "running": "{time} · Stop",
+      "minutesLeft": "{count, plural, one {# minute left} other {# minutes left}}",
+      "runningNow": "Focus running",
+      "finished": "Focus done · {minutes} min added"
     }
   },
   "adminStudents": {

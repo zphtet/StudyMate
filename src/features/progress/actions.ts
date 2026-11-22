@@ -15,6 +15,8 @@ import {
   reviewSubmissionSchema,
   saveDraftSchema,
   setLessonDoneSchema,
+  startFocusSchema,
+  stopFocusSchema,
   submitAssignmentSchema,
   undoCompletionSchema,
 } from './schemas'
@@ -80,4 +82,17 @@ export const postNote = action(postNoteSchema, async ({ lessonId, studentId, bod
   if (studentId && studentId !== me.id) fail('forbidden')
   await requireLessonReader(lessonId)
   return repo.postNote(me, { lessonId, studentId: me.id, body })
+})
+
+/** US4: Focus 15 or 25 on a lesson the student can open (research.md R3). course_not_active. */
+export const startFocus = action(startFocusSchema, async (input) => {
+  const me = await requireRole('student')
+  await requireLessonReader(input.lessonId)
+  return repo.startFocus(me, input)
+})
+
+/** US4: Stop, or the countdown at 0. session_not_found when it isn't the caller's. */
+export const stopFocus = action(stopFocusSchema, async ({ sessionId }) => {
+  const me = await requireRole('student')
+  return repo.stopFocus(me, sessionId)
 })

@@ -1,10 +1,12 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { clockOffset } from './focus'
 import type {
   AdminLessonReview,
   AdminStudentCard,
   AdminStudentDetail,
   CommentView,
+  FocusState,
   LessonWork,
   ProgressResponse,
   ProgressSummary,
@@ -80,4 +82,18 @@ export const progressQuery = (view: ProgressView) =>
 export const summaryQuery = queryOptions({
   queryKey: progressKeys.summary,
   queryFn: () => api<ProgressSummary>('/api/progress/summary'),
+})
+
+/**
+ * The running focus timer. `offsetMs` (server − device clock) is taken when the answer arrives, so
+ * the countdown stays right on a phone whose clock is off (research.md R3).
+ */
+export type FocusData = FocusState & { offsetMs: number }
+
+export const focusQuery = queryOptions({
+  queryKey: focusKeys.active,
+  queryFn: async (): Promise<FocusData> => {
+    const state = await api<FocusState>('/api/focus')
+    return { ...state, offsetMs: clockOffset(new Date(state.now), new Date()) }
+  },
 })

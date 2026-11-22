@@ -4,10 +4,12 @@
 // US2 (T033): drafts, submit, review, notices and Notes (research.md R7–R9; data-model.md
 // Submission.body_md, Submission.attachments, Submission.status, Submission.submitted_at,
 // Submission.reviewed_at, Comment.target_type, Comment.target_id).
+// US4 (T070): the focus timer (research.md R3; data-model.md StudySession.started_at,
+// StudySession.ended_at, StudySession.planned_minutes, StudySession.lesson_id).
 // Zin (admin) teaches May (Tokyo, reads Japanese); Aung (admin) only has a pending request from May.
 // Fixtures are deleted afterwards.
 import { randomUUID } from 'node:crypto'
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import ja from '@/i18n/messages/ja.json'
 import { ActionFailure } from '@/lib/action'
 import { prisma } from '@/lib/prisma'
@@ -15,12 +17,15 @@ import {
   completeLesson,
   dailyActivity,
   dailyActivityForStudents,
+  getActiveSession,
   getLessonWork,
   getNotes,
   postNote,
   reviewSubmission,
   saveDraft,
   setLessonDone,
+  startFocus,
+  stopFocus,
   submitAssignment,
   undoCompletion,
 } from './repo'
@@ -688,5 +693,164 @@ describe('dailyActivity', () => {
     queries.mockRestore()
     expect(byStudent.get(aya.id)).toEqual(await dailyActivity(aya.id, aya.timezone))
     expect(byStudent.get(ken.id)).toEqual(await dailyActivity(ken.id, ken.timezone))
+  })
+})
+
+describe('focus timer (US4)', () => {
+  const MINUTE = 60_000
+  const sessionsOf = (lessonId: string) =>
+    prisma.studySession.findMany({
+      where: { studentId: may.id, lessonId },
+      orderBy: { startedAt: 'asc' },
+    })
+  /** An open session that started `minutesAgo` ago, written directly as if left by another device. */
+  const openSession = (lessonId: string, minutesAgo: number, plannedMinutes = 15) =>
+    prisma.studySession.create({
+      data: {
+        studentId: may.id,
+        lessonId,
+        startedAt: new Date(Date.now() - minutesAgo * MINUTE),
+        plannedMinutes,
+      },
+    })
+
+  // One running session per student (study_sessions_one_running): each test starts with none.
+  beforeEach(async () => {
+    await prisma.studySession.deleteMany({ where: { studentId: may.id, endedAt: null } })
+  })
+
+  test('startFocus stamps server time and marks the lesson in progress', async () => {
+    const course = await makeCourse()
+    const before = Date.now()
+    const result = await startFocus(may, { lessonId: course.lessonIds[0], minutes: 25 })
+
+    expect(result.plannedMinutes).toBe(25)
+    // The database clock, so allow a little drift from this machine's.
+    expect(Math.abs(Date.parse(result.startedAt) - before)).toBeLessThan(10_000)
+    const [row] = await sessionsOf(course.lessonIds[0])
+    expect(row).toMatchObject({ id: result.sessionId, endedAt: null, plannedMinutes: 25 })
+    expect((await progressOf(course.lessonIds[0]))?.status).toBe('in_progress')
+  })
+
+  test('startFocus closes an earlier open session at its planned end', async () => {
+    const course = await makeCourse()
+    const old = await openSession(course.lessonIds[0], 40)
+    await startFocus(may, { lessonId: course.lessonIds[0], minutes: 15 })
+
+    const rows = await sessionsOf(course.lessonIds[0])
+    expect(rows).toHaveLength(2)
+    expect(rows[0].endedAt?.getTime()).toBe(old.startedAt.getTime() + 15 * MINUTE)
+    expect(rows[1].endedAt).toBeNull()
+  })
+
+  test('startFocus on a done lesson keeps it done (re-studying)', async () => {
+    const course = await makeCourse()
+    await completeLesson(may, course.lessonIds[0])
+    await startFocus(may, { lessonId: course.lessonIds[0], minutes: 15 })
+    expect((await progressOf(course.lessonIds[0]))?.status).toBe('done')
+  })
+
+  test('startFocus on a locked lesson → lesson_locked; nothing is written', async () => {
+    const course = await makeCourse()
+    await expectCode(
+      startFocus(may, { lessonId: course.lessonIds[1], minutes: 15 }),
+      'lesson_locked',
+    )
+    expect(await sessionsOf(course.lessonIds[1])).toHaveLength(0)
+  })
+
+  test('startFocus in an Archived course → course_not_active', async () => {
+    const course = await makeCourse({ status: 'archived' })
+    await prisma.lessonProgress.create({
+      data: {
+        studentId: may.id,
+        lessonId: course.lessonIds[0],
+        status: 'done',
+        completedAt: new Date(),
+      },
+    })
+    await expectCode(
+      startFocus(may, { lessonId: course.lessonIds[0], minutes: 15 }),
+      'course_not_active',
+    )
+  })
+
+  test('stopFocus ends a running session now and returns its seconds', async () => {
+    const course = await makeCourse()
+    const open = await openSession(course.lessonIds[0], 2)
+    const { countedSeconds } = await stopFocus(may, open.id)
+
+    expect(countedSeconds).toBeGreaterThanOrEqual(115)
+    expect(countedSeconds).toBeLessThan(135)
+    const [row] = await sessionsOf(course.lessonIds[0])
+    expect(row.endedAt).not.toBeNull()
+  })
+
+  test('stopFocus caps ended_at at the plan (US4 scenario 2)', async () => {
+    const course = await makeCourse()
+    const open = await openSession(course.lessonIds[0], 180)
+    await expect(stopFocus(may, open.id)).resolves.toEqual({ countedSeconds: 15 * 60 })
+    const [row] = await sessionsOf(course.lessonIds[0])
+    expect(row.endedAt?.getTime()).toBe(open.startedAt.getTime() + 15 * MINUTE)
+  })
+
+  test('stopFocus under 60 s deletes the session and counts nothing (FR-007)', async () => {
+    const course = await makeCourse()
+    const { sessionId } = await startFocus(may, { lessonId: course.lessonIds[0], minutes: 15 })
+    await expect(stopFocus(may, sessionId)).resolves.toEqual({ countedSeconds: 0 })
+    expect(await sessionsOf(course.lessonIds[0])).toHaveLength(0)
+  })
+
+  test('stopping an already closed session returns its seconds', async () => {
+    const course = await makeCourse()
+    const open = await openSession(course.lessonIds[0], 30, 25)
+    await stopFocus(may, open.id)
+    await expect(stopFocus(may, open.id)).resolves.toEqual({ countedSeconds: 25 * 60 })
+  })
+
+  test("another student's session → session_not_found", async () => {
+    // Closed, because Aya may already have a running session from the dailyActivity tests.
+    const other = await prisma.studySession.create({
+      data: {
+        studentId: aya.id,
+        startedAt: new Date(Date.now() - 20 * MINUTE),
+        endedAt: new Date(Date.now() - 5 * MINUTE),
+        plannedMinutes: 15,
+      },
+    })
+    await expectCode(stopFocus(may, other.id), 'session_not_found')
+    await prisma.studySession.delete({ where: { id: other.id } })
+  })
+
+  test('getActiveSession returns the running session with its lesson and the server time', async () => {
+    const course = await makeCourse()
+    const open = await openSession(course.lessonIds[0], 5, 25)
+    const active = await getActiveSession(may)
+
+    expect(Math.abs(Date.parse(active.now) - Date.now())).toBeLessThan(10_000)
+    expect(active.session).toEqual({
+      id: open.id,
+      lessonId: course.lessonIds[0],
+      lessonTitle: 'L1',
+      startedAt: open.startedAt.toISOString(),
+      plannedMinutes: 25,
+    })
+  })
+
+  test('getActiveSession is null for an open session past its plan: it already counts in full', async () => {
+    const course = await makeCourse()
+    await openSession(course.lessonIds[0], 180)
+    await expect(getActiveSession(may)).resolves.toMatchObject({ session: null })
+  })
+
+  test('a later undo leaves the lesson in progress (US1 rule)', async () => {
+    const course = await makeCourse()
+    await openSession(course.lessonIds[0], 3)
+    const { sessionId } = await startFocus(may, { lessonId: course.lessonIds[0], minutes: 15 })
+    await prisma.studySession.delete({ where: { id: sessionId } })
+    await completeLesson(may, course.lessonIds[0])
+    await expect(undoCompletion(may, course.lessonIds[0])).resolves.toEqual({
+      status: 'in_progress',
+    })
   })
 })

@@ -13,11 +13,13 @@ import { useErrorMessage } from '@/lib/use-error-message'
 import { completeLesson, undoCompletion } from '../actions'
 import { lessonWorkKeys, lessonWorkQuery, progressKeys } from '../queries'
 import type { LessonWork } from '../types'
+import { useFocusTimer } from '../use-focus-timer'
+import { FocusButton } from './focus-button'
 
 // Lesson screen bottom bar (contracts/ui-routes.md › Bottom bar; US1). Mark complete and Undo update
 // the lesson at once and roll back on error (SC-001, research.md R14); Today, Courses and Progress
 // refetch. "Submit before complete" switches to the Assignment tab instead of showing an error.
-// The focus timer joins the left side with US4.
+// The focus timer (US4) sits on the left until the lesson is done; its countdown keeps running after.
 
 export function LessonBottomBar({
   lessonId,
@@ -31,6 +33,7 @@ export function LessonBottomBar({
   const queryClient = useQueryClient()
   const errorMessage = useErrorMessage()
   const workKey = lessonWorkKeys.work(lessonId)
+  const focus = useFocusTimer(lessonId)
 
   const optimistic = (done: boolean) => async () => {
     await queryClient.cancelQueries({ queryKey: workKey })
@@ -121,10 +124,13 @@ export function LessonBottomBar({
               ))}
           </>
         ) : (
-          <Button size="xl" className="flex-1" disabled={busy} onClick={() => complete.mutate()}>
-            <Check aria-hidden />
-            {t('markComplete')}
-          </Button>
+          <>
+            <FocusButton lessonId={lessonId} timer={focus} />
+            <Button size="xl" className="flex-1" disabled={busy} onClick={() => complete.mutate()}>
+              <Check aria-hidden />
+              {t('markComplete')}
+            </Button>
+          </>
         )}
       </section>
     </BottomBar>

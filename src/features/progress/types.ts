@@ -1,5 +1,6 @@
 import type { CourseColor } from '@/features/courses/schemas'
 import type { SubmissionStatus } from '@/generated/prisma/client'
+import type { FocusMinutes } from './schemas'
 
 // Response shapes of the 004 Route Handlers (specs/004-progress-assignments/contracts/
 // route-handlers.md). Instants are ISO 8601 UTC strings, calendar dates YYYY-MM-DD in the student's
@@ -165,3 +166,15 @@ export type AdminLessonReview = {
   reviewComments: CommentView[]
   notesCount: number
 }
+
+/** A focus session still within its plan (research.md R3). Admins never see one (spec › Roles). */
+export type FocusSession = {
+  id: string
+  lessonId: string | null
+  lessonTitle: string | null
+  startedAt: string
+  plannedMinutes: FocusMinutes
+}
+
+/** GET /api/focus. `now` is the server clock, so the countdown can correct the phone's. */
+export type FocusState = { now: string; session: FocusSession | null }
