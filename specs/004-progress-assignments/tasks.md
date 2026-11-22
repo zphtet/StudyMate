@@ -379,7 +379,7 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
   - `getActiveSession` returns null for an expired open session;
   - a later undo leaves `in_progress` (US1 rule).
 - [X] T071 [P] [US4] Write Playwright tests in tests/e2e/us4-focus.spec.ts (390×844, axe):
-  - scenario 1: seed a session started 14 min 50 s ago; open the lesson → the countdown shows about 0:10, reaches 0 and stops itself; the toast appears; the lesson minutes and the Progress week bar grow;
+  - scenario 1: seed a session started 14 min 30 s ago; open the lesson → the countdown shows about 0:30, reaches 0 and stops itself; the toast appears; the lesson minutes and the Progress week bar grow;
   - Stop after a few seconds → nothing counted;
   - scenario 2: seed a session started 3 h ago → no timer; Progress counts 15 min;
   - a timer running on another lesson shows "Focus running · {lesson}".
@@ -403,28 +403,28 @@ As the Admin, comment and choose Needs redo; the student's open lesson shows it 
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T078 [P] Documentation (plan.md › Documentation updates):
+- [X] T078 [P] Documentation (plan.md › Documentation updates):
   - docs/data-model.md: `minutes_spent` meaning, `planned_minutes`, new indexes and checks, §4 replaced policies and bucket limits, §5 `requireAdminLessonTarget` and `requireSubmissionReviewer`, §6 Realtime tables;
   - docs/technical-spec.md: §3 `features/progress`, `lib/realtime.ts`, `lib/image.ts`, `lib/content.ts`; §7 `useRealtimeInvalidate` as built; drop "open question in spec 004" from the streak line; §12 the `--heat-*` tokens and `WeekBars` / `ProgressBar`.
-- [ ] T079 [P] Review every new `my` and `ja` string for completeness and tone. List the strings that need a native speaker under a `_review` note in specs/004-progress-assignments/quickstart.md, as 003 did.
-- [ ] T080 [P] Accessibility and layout pass at 390×844 and 1280×800:
+- [X] T079 [P] Review every new `my` and `ja` string for completeness and tone. List the strings that need a native speaker under a `_review` note in specs/004-progress-assignments/quickstart.md, as 003 did.
+- [X] T080 [P] Accessibility and layout pass at 390×844 and 1280×800:
   - 44 px targets; tablist keyboard use; labelled image buttons and heat cells;
   - focus order in the editor and the review screen;
   - the timer announcing once a minute;
   - contrast of the heat levels and forecast tones in light and dark.
 
   Fix findings in src/features/progress/components/ and src/components/shared/.
-- [ ] T081 Compare each changed screen with screenshots/10-Lesson.png, 06-Progress.png, 04-Today.png, 05-Courses.png, 11-Profile.png and 16-AdminStudents.png at 390×844. Fix layout, hierarchy and copy, keeping only the "partial" differences listed in contracts/ui-routes.md.
-- [ ] T082 Performance:
+- [X] T081 Compare each changed screen with screenshots/10-Lesson.png, 06-Progress.png, 04-Today.png, 05-Courses.png, 11-Profile.png and 16-AdminStudents.png at 390×844. Fix layout, hierarchy and copy, keeping only the "partial" differences listed in contracts/ui-routes.md.
+- [X] T082 Performance:
   - Lighthouse (mobile) performance ≥ 90 on `/s/progress` and `/s/lessons/[id]`;
   - `MdTextarea` is absent from the lesson page's first-load JS until the Assignment tab opens;
   - `/a/students` runs a fixed number of queries for 10 seeded students (check the Prisma query log);
   - `/s/progress` is one request with two grouped SQL queries plus `course_progress` (plan.md › Performance Goals).
 
   Record the results in specs/004-progress-assignments/quickstart.md §5, as 003 did.
-- [ ] T083 Run every gate from the package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e` (production build on :3100), `pnpm build`.
-- [ ] T084 Walk through quickstart.md §4 scenarios 1–12 and record, for each one, the test that covers it or what wasn't checked, as in 003's walkthrough.
-- [ ] T085 Set **Status** to `Implemented` in specs/004-progress-assignments/spec.md (constitution quality gate).
+- [X] T083 Run every gate from the package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e` (production build on :3100), `pnpm build`.
+- [X] T084 Walk through quickstart.md §4 scenarios 1–12 and record, for each one, the test that covers it or what wasn't checked, as in 003's walkthrough.
+- [X] T085 Set **Status** to `Implemented` in specs/004-progress-assignments/spec.md (constitution quality gate).
 
 ---
 

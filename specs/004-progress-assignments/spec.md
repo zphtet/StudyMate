@@ -2,7 +2,7 @@
 
 **Feature Branch**: `004-progress-assignments`
 **Created**: 2026-11-20
-**Status**: Draft
+**Status**: Implemented
 **Screens**: `10-Lesson.png`, `04-Today.png`, `05-Courses.png`, `06-Progress.png`, Admin `16-AdminStudents.png`
 
 ## Clarifications

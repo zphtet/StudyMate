@@ -42,10 +42,10 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 | `lesson_resources` (LessonResource) | Files, links, audio | `lesson_id`, `kind`, `storage_path`/`url` | 002 |
 | `course_assignments` (CourseAssignment) | Course → student + course deadline | `course_id`, `student_id`, `assigned_by`, `due_at`; unique (course, student) | 003 |
 | `lesson_deadlines` (LessonDeadline) | Per-lesson deadline override | PK (`lesson_id`, `student_id`), `due_at`, `set_by`; index `lesson_deadlines_student_due` (`student_id`, `due_at`) | 003 |
-| `lesson_progress` (LessonProgress) | Completion | PK (`student_id`, `lesson_id`), `status`, `completed_at`, `completed_by`, `minutes_spent`, `client_op_id` | 004 |
+| `lesson_progress` (LessonProgress) | Completion | PK (`student_id`, `lesson_id`), `status`, `completed_at`, `completed_by`, `minutes_spent` (see below), `client_op_id`; index `lesson_progress_student_completed` (`student_id`, `completed_at`) | 004 |
 | `submissions` (Submission) | Student assignment | `student_id`, `lesson_id` (unique pair), `body_md`, `attachments` (json), `status` | 004 |
-| `comments` (Comment) | Feedback thread | `author_id`, `student_id`, `target_type`, `target_id`, `body` | 004 |
-| `study_sessions` (StudySession) | Focus timer | `student_id`, `lesson_id`, `started_at`, `ended_at` | 004 |
+| `comments` (Comment) | Notes and review comments | `author_id`, `student_id`, `target_type` (`lesson` = Notes, `submission` = review), `target_id`, `body`; index `comments_thread` (`student_id`, `target_type`, `target_id`, `created_at`) | 004 |
+| `study_sessions` (StudySession) | Focus timer | `student_id`, `lesson_id`, `started_at`, `ended_at`, `planned_minutes` (15 or 25); index `study_sessions_student_started` (`student_id`, `started_at`) | 004 |
 | `shift_patterns` (ShiftPattern) | Rotation | `student_id`, `sequence` e.g. `DDDONNOO`, `start_date`, `presets` (json) | 005 |
 | `shifts` (Shift) | One row per shift | `student_id`, `type`, `start_at`, `end_at` (next day for nights), `sleep_minutes`, `pattern_id`, `overridden` | 005 |
 | `notification_rules` (NotificationRule) | Automatic reminders | `admin_id`, `student_id` (null = all), `trigger`, `config` (json), `message`, `channels`, `enabled` | 006 |
@@ -59,6 +59,12 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 
 **View**: `course_progress` (student, course → published lessons, done, percent).
 
+**Study time (spec 004 research R2, R3)** comes from two facts, never recalculated after they are written:
+- `study_sessions`: counted seconds = `least(coalesce(ended_at, now()), started_at + planned_minutes) − started_at`. `planned_minutes` is 15 or 25; `started_at` and `ended_at` are server time. A session counts on the local date it started. A stop under 60 s deletes the row.
+- `lesson_progress.minutes_spent`: **only** the estimate credited at completion when the lesson has no focus session (= `lessons.est_minutes`), else 0. Undo and reopen set it back to 0. It counts on the local date of `completed_at`. Never add timer minutes to it: they would count twice.
+
+A lesson's total = `minutes_spent` + its sessions' counted minutes. Daily totals, streaks and the heat calendar read both (`dailyActivity()` in `src/features/progress/repo.ts`).
+
 ---
 
 ## 4. Rules that live only in SQL
@@ -67,14 +73,23 @@ Prisma can't describe these, so they stay in the SQL migration. When Prisma gene
 
 | Kind | What | Why |
 | --- | --- | --- |
-| CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h, `sequence` format; spec 002: `courses_color_check`, `courses_description_check`, `courses_level_tag_check`, `course_sections_title_check`, `course_sections_position_check`, `lessons_position_check`, `lessons_assignment_prompt_check`, `lessons_unlock_rule_check`, `lesson_resources_name_check`, `lesson_resources_size_check`, `lesson_resources_target_check` | Data integrity |
+| CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h, `sequence` format; spec 002: `courses_color_check`, `courses_description_check`, `courses_level_tag_check`, `course_sections_title_check`, `course_sections_position_check`, `lessons_position_check`, `lessons_assignment_prompt_check`, `lessons_unlock_rule_check`, `lesson_resources_name_check`, `lesson_resources_size_check`, `lesson_resources_target_check`; spec 004: `study_sessions_planned` (`planned_minutes in (15, 25)`), `study_sessions_capped` (`ended_at` ≤ `started_at + planned_minutes`, so a session never counts past its length; research R3) | Data integrity |
 | EXCLUDE constraint | `shifts`: no overlapping working shifts per student (`btree_gist`) | Overlap rule from spec 005 |
-| Partial unique indexes | one active invite per admin; one active admin link per student; spec 003: `notification_rules_default_once` (`admin_id`, `student_id`, `trigger`) where `config->>'preset' = 'default'` (default reminders at most once) | Spec 001, 003 |
+| Partial unique indexes | one active invite per admin; one active admin link per student; spec 003: `notification_rules_default_once` (`admin_id`, `student_id`, `trigger`) where `config->>'preset' = 'default'` (default reminders at most once); spec 004: `study_sessions_one_running` (`student_id`) where `ended_at is null` (one running focus session per student) | Spec 001, 003, 004 |
 | Partial indexes | active courses/lessons, active assignments, undelivered messages; spec 002: `courses_deleted`, `lessons_deleted` (Recently deleted and the daily purge) | Performance |
 | Triggers | `handle_new_user` (profile + invite on sign-up), `prevent_role_change` | Spec 001 |
-| Functions | `is_admin_of`, `can_read_course`, `can_read_lesson` (002: Published, non-deleted, readable course, and completed-only in Archived courses; used by `lessons`, `lesson_resources` and `lesson-files` policies), `uuid_folder` (002: Storage path folder as uuid), `request_join`, `respond_join`, `preview_invite`, `effective_due`, `busy_segments`, `next_free_at`, `status_at`, `status_now`, `custom_access_token_hook` | Shared logic |
-| RLS policies | every table + Storage buckets; spec 003 replaced `deadlines_write` (owner's Published, non-deleted lesson with an active assignment for that student, `set_by` = caller; mirrors `requireLessonDeadlineTarget`) | Protects supabase-js access (Realtime, Storage, any client query) |
+| Functions | `is_admin_of`, `can_read_course`, `can_read_lesson` (002: Published, non-deleted, readable course, and completed-only in Archived courses; used by `lessons`, `lesson_resources` and `lesson-files` policies), `uuid_folder` (002: Storage path folder as uuid), `admin_lesson_target` (004: the Admin's lesson rule, mirrors `requireAdminLessonTarget`; used by the progress and comment policies), `request_join`, `respond_join`, `preview_invite`, `effective_due`, `busy_segments`, `next_free_at`, `status_at`, `status_now`, `custom_access_token_hook` | Shared logic |
+| RLS policies | every table + Storage buckets; spec 003 replaced `deadlines_write` (owner's Published, non-deleted lesson with an active assignment for that student, `set_by` = caller; mirrors `requireAdminLessonTarget`); spec 004 replaced the progress, submission, comment and submission-file policies (below) | Protects supabase-js access (Realtime, Storage, any client query) |
+| Storage bucket settings | spec 004: `submissions` bucket `file_size_limit` 2 MB (2097152), `allowed_mime_types` `image/webp`, `image/jpeg` (the browser resizes and re-encodes photos first; research R7) | Upload limits hold even for uploads that skip the app |
+| Realtime publication | tables in `supabase_realtime` (§6) | Prisma has no publications |
 | FK to `auth.users` | `profiles.id` | Prisma only manages `public` |
+
+**Policies replaced by spec 004** (`*_progress/migration.sql`, research R11). 0_init allowed more than the guards (a student could mark their own work Reviewed or write `completed_by` as anyone), so the migration replaces them by hand:
+- `lesson_progress`: `progress_student` → `progress_student_read`, `_insert`, `_update`: the student writes own rows for lessons they can read (`can_read_lesson`), `completed_by` null or self. `progress_admin_write` → `progress_admin_insert`, `_update`: `admin_lesson_target(lesson_id, student_id)`, `completed_by` null or self. `progress_admin_read` is unchanged. Nobody deletes: undo and reopen are updates.
+- `submissions`: `subs_student` → `subs_student_read`, `_insert`, `_update`: the student inserts as `draft` or `submitted`, and updates only while the row is `draft` or `needs_redo`, to `draft`, `needs_redo` or `submitted` (with `reviewed_at` null on submit). `subs_admin_review`: only a non-Draft row of a linked student on a lesson in a course the Admin owns, to `reviewed` or `needs_redo`. `subs_admin_read` is unchanged.
+- `comments_write`: the target must belong to the thread. A `lesson` target needs the student author and `can_read_lesson`, or `admin_lesson_target` for the Admin. A `submission` target needs the linked Admin, a non-Draft submission of that `student_id`, in a course they own.
+- Storage `submission_files_rw` and `submission_files_admin_read` (paths `<student_id>/<lesson_id>/<file>`): `uuid_folder()` instead of raw `::uuid` casts. The student reads and writes their own folder; the Admin reads a file only when that lesson's submission isn't a Draft.
+- `study_sessions` policies are unchanged; the checks above enforce the cap.
 
 Call SQL functions from Prisma with typed raw queries, e.g.
 ```ts
@@ -86,6 +101,9 @@ const [s] = await prisma.$queryRaw<{ state: string; until: Date }[]>`select * fr
 ## 5. Security model with Prisma
 
 - **Prisma bypasses RLS.** It connects as a database owner role. Every Route Handler and Server Action must call a guard from `src/server/auth/guards.ts` (`requireUser`, `requireRole`, `requireAdminOf`, `requireSelfOrAdminOf`, `requireCourseOwner`, `requireCourseReader`) before any query, and scope `where` clauses by the current user.
+- Spec 004 guards, each one query that mirrors a policy:
+  - `requireAdminLessonTarget(lessonId, studentId)`: renamed from 003's `requireLessonDeadlineTarget`, because deadlines, marking done or reopening, and Admin Notes all need it. A Published, non-deleted lesson in a course the caller owns, a student linked to them, an active assignment of that course for the student. Mirrors `deadlines_write` and SQL `admin_lesson_target()`.
+  - `requireSubmissionReviewer(submissionId)` (new): the submission isn't a Draft, its student is actively linked to the caller, and its lesson is in a course the caller owns. Returns `{ me, submission }`. Anything else is 404 `submission_not_found`, so a guessed id reveals nothing. Mirrors `subs_admin_review`.
 - **RLS stays on** as a second line of defence and because Supabase **Realtime** and **Storage** use it with the user's token.
 - Tests: guard tests (Vitest against the dev database) mirror the pgTAP RLS tests (`pnpm test:db`) — same allowed/denied cases.
 
@@ -101,6 +119,15 @@ const [s] = await prisma.$queryRaw<{ state: string; until: Date }[]>`select * fr
 **Environments**: development uses its own Supabase project (values in `.env`, see `.env.example`); production uses a separate project whose values live only in Vercel. Never put production URLs in `.env`: `pnpm prisma migrate deploy` and `pnpm test:db` run against whatever `DIRECT_URL` points to.
 
 With the Supabase CLI and Docker (optional), both variables can point to the local stack instead: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+
+**Realtime**: the browser subscribes with supabase-js and the user's token; Realtime applies the subscriber's SELECT policies, so a client only hears about rows it may read. Tables in the `supabase_realtime` publication:
+
+| Table | Added by | Used for |
+| --- | --- | --- |
+| `student_links` | 001 (`*_auth_email_limits_realtime`) | live link updates (spec 001 research R7) |
+| `submissions`, `comments`, `lesson_progress` | 004 (`*_progress`) | the Admin's Students list and lesson review, the student's lesson screen (spec 004 research R10) |
+
+Clients refetch through TanStack Query on an event and never trust the payload (`useRealtimeInvalidate`, technical spec §7).
 
 ---
 

@@ -107,11 +107,17 @@ studymate/
 │  │  ├─ assignments/ (spec 003: actions.ts, queries.ts, repo.ts [Assign sheet, deadlines],
 │  │  │               student-repo.ts [Today, due status], plan-repo.ts [Plan week/month, clashes],
 │  │  │               status.ts [pure deadline rules], notices.ts, plan-selection.ts, components/)
-│  │  ├─ progress/ ├─ shifts/ ├─ notifications/ ├─ appearance/
+│  │  ├─ progress/    (spec 004: actions.ts, queries.ts, repo.ts [completion, submissions, Notes,
+│  │  │               focus sessions, dailyActivity, Progress screen], admin-repo.ts [Students cards,
+│  │  │               student detail, lesson review], pure rules: completion.ts, submission-status.ts,
+│  │  │               focus.ts, streak.ts, forecast.ts, heat.ts; notices.ts, upload.ts [photo upload
+│  │  │               to the `submissions` bucket], use-focus-timer.ts, use-countdown.ts, components/)
+│  │  ├─ shifts/ ├─ notifications/ ├─ appearance/
 │  ├─ components/
 │  │  ├─ ui/                           # shadcn/ui generated
 │  │  ├─ layout/ (BottomNav, SideNav, PageHeader)
-│  │  └─ shared/ (Markdown, CalendarMonth, DayBar, TimeBoth, StatusChip, ProgressBar, EmptyState)
+│  │  └─ shared/ (Markdown, MdTextarea, CalendarMonth, DayBar, TimeBoth, StatusChip, ProgressBar,
+│  │             WeekBars, EmptyState)
 │  ├─ lib/
 │  │  ├─ prisma.ts                     # PrismaClient singleton (adapter-pg, pooler URL)
 │  │  ├─ supabase/ (server.ts, client.ts)  # auth, storage, realtime
@@ -119,6 +125,9 @@ studymate/
 │  │  ├─ availability.ts               # pure: busy_segments() rows → Shift / Sleep (`night` = Sleep,
 │  │  │                                #   `quiet` ignored: it only delays notifications), free gaps,
 │  │  │                                #   clashAt, suggestSlot ("Move to …", spec 003 FR-009)
+│  │  ├─ realtime.ts                   # useRealtimeInvalidate: Realtime events → refetch (§7)
+│  │  ├─ image.ts                      # browser photo resizing before upload (1600 px, WebP/JPEG)
+│  │  ├─ content.ts                    # MAX_CONTENT_BYTES (200 KB Markdown: lessons, answers), utf8Bytes
 │  │  ├─ offline/ (db.ts [Dexie], queue.ts, sync.ts)
 │  │  └─ utils.ts                      # cn(), etc.
 │  ├─ i18n/ (request.ts, messages/en.json, my.json, ja.json)
@@ -272,7 +281,12 @@ const create = useMutation({
 - Every Route Handler / Server Action starts with a guard; every Prisma `where` includes the user scope.
 - Multi-row changes (assign to many students, reorder lessons) use `prisma.$transaction`.
 - Optimistic updates for instant actions (mark complete, toggle rule, reorder) with rollback in `onError`.
-- **Realtime → cache**: `useRealtimeInvalidate(table, filter, queryKey)` subscribes with supabase-js (RLS applies) and calls `invalidateQueries` for `student_links`, `submissions`, `notifications`, `lesson_progress`.
+- **Realtime → cache** (`src/lib/realtime.ts`, spec 004 research R10): `useRealtimeInvalidate({ table, filter?, queryKeys, when? })` loads the browser client after the first paint (a dynamic import, spec 004 T082), subscribes to `postgres_changes` on one table and invalidates `queryKeys` when a row changes. It never patches the cache from the payload, so reads keep one path.
+  - `table` is `submissions`, `comments` or `lesson_progress` (the tables in the publication, `docs/data-model.md` §6). `filter` is a Realtime filter such as `student_id=eq.<id>`.
+  - It calls `supabase.realtime.setAuth()` before joining: a channel that joins before the session is read stays anonymous, and RLS then hides every change.
+  - `when(row)` skips events that can't change the screen (the viewer's own autosaves, other lessons). It is read when the event arrives, so a new function each render doesn't resubscribe.
+  - Events within 150 ms are grouped across all subscriptions, so one write (a review updates the submission and adds a comment) refetches each key once.
+  - Used by the Admin's Students list, the Admin's lesson review and the student's lesson screen. It unsubscribes on unmount.
 - Dates cross the wire as ISO strings; parse with `@date-fns/tz` in the client.
 
 ## 8. Time & scheduling rules (constitution IV)
@@ -280,7 +294,7 @@ const create = useMutation({
 - DB stores `timestamptz`. UI converts with `@date-fns/tz` using `profiles.timezone`.
 - Entering a time for a student (deadline, message) uses the **student's** zone; the UI shows "18:00 her time · 15:30 your time".
 - Overnight shift input: if `end_time <= start_time`, `end_at = start_at date + 1 day`. Implemented in `lib/time.ts` with property tests.
-- Study-day boundary for streaks: local midnight in the student's zone (open question in spec 004).
+- Study-day boundary for streaks: local midnight in the student's zone; shifts play no part (spec 004 research R4, `src/features/progress/streak.ts`).
 - Quick times in the message composer that are already past today roll to tomorrow.
 
 ---
@@ -327,6 +341,7 @@ const create = useMutation({
 - **i18n**: `next-intl` without locale prefix; locale from `locale` cookie (synced from profile, default from `Accept-Language`). Messages in `src/i18n/messages/{en,my,ja}.json`. Dates/numbers through `next-intl` formatters with the user's timezone.
 - **Contrast check**: a Vitest test computes contrast for every theme × mode token pair (≥ 4.5:1).
 - **Spec 003 tokens**: `--destructive-soft` (late chips and cards, a hex value per mode so the contrast test checks it against `--destructive`); `--avail-shift` (= `--primary`), `--avail-sleep` and `--avail-free` (`color-mix` of `--muted-foreground` / `--success` with `--card`, so every theme and mode gets them; graphics, not text).
+- **Spec 004 tokens**: `--heat-1..4` for the Progress calendar shades (research R5): `color-mix(in srgb, var(--primary) N%, var(--card))` at 18 %, 35 % and 60 %, then `--primary`, so every theme and mode gets them. Tailwind classes `bg-heat-1..4`. Day numbers are `--foreground` on levels 1–3 and `--primary-foreground` on 4; the contrast test mixes the tokens the same way and checks them at 4.5:1. `heatLevel(seconds)` (`progress/heat.ts`) picks the level: none, < 15 min, < 30, < 60, ≥ 60.
 
 ---
 
@@ -343,13 +358,18 @@ const create = useMutation({
 
 Markdown editing: `@uiw/react-md-editor` wrapped in `LessonEditor` (dynamic import, theme follows `data-color-mode` from next-themes, toolbar trimmed to heading, bold, italic, list, quote, link, image, code; image/audio buttons upload to Storage then insert the URL).
 
-Custom shared components: `Markdown`, `CalendarMonth` (with overnight shift bars), `DayBar` (24 h availability), `StatusChip`, `ProgressRing`, `TimeBoth` (her time · your time).
+Custom shared components: `Markdown`, `CalendarMonth` (with overnight shift bars), `DayBar` (24 h availability), `StatusChip`, `ProgressBar`, `WeekBars`, `TimeBoth` (her time · your time).
 
 As built in spec 003:
 - `TimeBoth` / `useTimeBoth()` (`time-both.tsx`): the student's time first, the viewer's beside it only when the clocks differ. Default "Tue 1 Dec, 23:59 (Tokyo) · 22:29 (Yangon)"; `compact` "21:00 · 18:30 yours" for Plan cards and "Move to …".
 - `DayBar` (`day-bar.tsx`, with `DayBarLegend` and `DayBarScale`): one local day 00–24 scaled to its real length (23/25 h on DST days), Shift / Sleep segments from the server and free gaps between them, optional now-marker; `role="img"` with a text summary ("Sleep 00:00–08:00, Free 08:00–22:00, Shift 22:00–24:00").
 - `CalendarMonth` (`calendar-month.tsx`): a native table, weeks from Monday, one focusable day (arrow keys by day/week, Home/End), a badge slot per day and `onSelectDay`. 005 adds the shift bars.
 - `StatusChip` gained the `danger` and `warning` tones.
+
+As built in spec 004:
+- `ProgressBar` (`progress-bar.tsx`): course progress on Courses, the course screen, Progress, Today and the Admin cards. `role="progressbar"` with an accessible name; `percent` null (no published lessons) reads "—". The fill is a theme-token class (default `bg-primary`; a course passes its own colour class), never a hex value.
+- `WeekBars` (`week-bars.tsx`): 7 bars of study time, Monday to Sunday, for the Progress Week view and the Courses tab's "Studied this week" card (research R5). Heights are relative to the week's longest day, an empty day keeps a 4 px stub, today is emphasised. Each day reads "Monday 16 November, 45 min" to screen readers.
+- `CalendarMonth` gained `dayClassName` (the heat shades) and an optional `onSelectDay`.
 
 ---
 
