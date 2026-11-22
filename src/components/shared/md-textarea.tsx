@@ -4,8 +4,9 @@ import { useTheme } from 'next-themes'
 import dynamic from 'next/dynamic'
 import type { JSX } from 'react'
 
-// @uiw/react-md-editor (research.md R6), browser only. The build without code highlighting keeps the
-// phone bundle small. Its own toolbar is hidden: LessonEditor draws one with 44 px buttons.
+// @uiw/react-md-editor (spec 002 research.md R6), browser only; used by the lesson editor (002) and
+// the assignment editor (004). The build without code highlighting keeps the phone bundle small. Its
+// own toolbar is hidden: callers draw one with 44 px buttons.
 const MDEditor = dynamic(() => import('@uiw/react-md-editor/nohighlight'), {
   ssr: false,
   loading: () => <div className="h-90 animate-pulse bg-muted/40" />,

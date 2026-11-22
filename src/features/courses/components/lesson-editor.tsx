@@ -5,13 +5,13 @@ import { useTranslations } from 'next-intl'
 import { useRef, useState, type ChangeEvent } from 'react'
 import { toast } from 'sonner'
 import { Markdown } from '@/components/shared/markdown'
+import { MdTextarea } from '@/components/shared/md-textarea'
 import { Segmented } from '@/components/shared/segmented'
 import { useMediaQuery } from '@/components/shared/use-media-query'
 import { Button } from '@/components/ui/button'
+import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
 import { useErrorMessage } from '@/lib/use-error-message'
-import { MAX_CONTENT_BYTES, utf8Bytes } from '../schemas'
 import type { UploadKind } from '../upload'
-import { MdTextarea } from './md-textarea'
 
 // Markdown editor of the lesson screen (screen 20-AdminLessonEdit; spec 002 US2 scenario 2,
 // research.md R6). Phones switch Write / Preview; wide screens show both. The preview is the shared

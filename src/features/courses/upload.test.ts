@@ -1,7 +1,7 @@
 // Spec 002 US2 (T038), research.md R3: client-side checks before a lesson file is uploaded.
 import { describe, expect, test } from 'vitest'
 import { isStoragePathFor, MAX_FILE_BYTES } from './schemas'
-import { checkFile, extensionFor, fitWithin, MAX_IMAGE_EDGE, storagePathFor } from './upload'
+import { checkFile, extensionFor, storagePathFor } from './upload'
 
 const COURSE = 'c0000000-0000-4000-8000-000000000001'
 const LESSON = 'c0000000-0000-4000-8000-000000000002'
@@ -31,21 +31,6 @@ describe('checkFile', () => {
     expect(checkFile({ size: 12 * 1024 * 1024, type: 'image/gif' }, { resizes: true })).toBe(
       'file_too_large',
     )
-  })
-})
-
-describe('fitWithin', () => {
-  test(`keeps images up to ${MAX_IMAGE_EDGE} px unchanged`, () => {
-    expect(fitWithin(1600, 900)).toEqual({ width: 1600, height: 900 })
-    expect(fitWithin(300, 200)).toEqual({ width: 300, height: 200 })
-  })
-
-  test('shrinks the long edge to 1600 px and keeps the aspect ratio', () => {
-    expect(fitWithin(4000, 3000)).toEqual({ width: 1600, height: 1200 })
-    expect(fitWithin(3000, 4000)).toEqual({ width: 1200, height: 1600 })
-    const { width, height } = fitWithin(4032, 1908)
-    expect(width).toBe(1600)
-    expect(height).toBe(Math.round((1908 * 1600) / 4032))
   })
 })
 

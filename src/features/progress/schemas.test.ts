@@ -2,7 +2,7 @@
 // Submission.attachments, Comment.body, StudySession.planned_minutes. Forms and actions share these.
 import { randomUUID } from 'node:crypto'
 import { describe, expect, test } from 'vitest'
-import { MAX_CONTENT_BYTES } from '@/features/courses/schemas'
+import { MAX_CONTENT_BYTES } from '@/lib/content'
 import {
   attachmentsSchema,
   bodyMdSchema,

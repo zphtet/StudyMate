@@ -1,31 +1,12 @@
 import 'server-only'
-import { createFormatter, createTranslator } from 'next-intl'
+import { createTranslator } from 'next-intl'
 import { hasLocale, type Locale } from '@/i18n/locales'
 import { recordNotice } from '@/server/notifications/record'
+import { textsFor, type NoticeRecipient } from '@/server/notifications/texts'
 
 // Notice texts for spec 003 (FR-012; data-model.md › Notifications recorded by 003). The student
 // reads them later (006 delivers), so they are written in the STUDENT's language with times in the
-// student's zone. createTranslator works outside a request (Server Actions, tests), unlike
-// getTranslations, which reads the viewer's cookies.
-
-export type NoticeStudent = { id: string; locale: string; timezone: string }
-
-async function textsFor(student: NoticeStudent) {
-  const locale: Locale = hasLocale(student.locale) ? student.locale : 'en'
-  const messages = (await import(`@/i18n/messages/${locale}.json`)).default
-  const t = createTranslator({ locale, messages, namespace: 'notices' })
-  const format = createFormatter({ locale, timeZone: student.timezone })
-  const when = (at: Date) =>
-    format.dateTime(at, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    })
-  return { t, when }
-}
+// student's zone (textsFor).
 
 /** "New course: {course}" — only for students newly assigned or reassigned with "Notify now". */
 export async function assignedNotice({
@@ -34,7 +15,7 @@ export async function assignedNotice({
   course,
   dueAt,
 }: {
-  student: NoticeStudent
+  student: NoticeRecipient
   admin: { displayName: string }
   course: { id: string; title: string }
   dueAt: Date | null
@@ -59,7 +40,7 @@ export async function deadlineNotice({
   item,
   dueAt,
 }: {
-  student: NoticeStudent
+  student: NoticeRecipient
   admin: { displayName: string }
   item: { kind: 'course' | 'lesson'; id: string; title: string }
   dueAt: Date | null
@@ -78,7 +59,7 @@ export async function deadlineNotice({
 }
 
 /** Default reminder messages (FR-013) in the student's language. */
-export async function defaultReminderMessages(student: NoticeStudent) {
+export async function defaultReminderMessages(student: NoticeRecipient) {
   const locale: Locale = hasLocale(student.locale) ? student.locale : 'en'
   const messages = (await import(`@/i18n/messages/${locale}.json`)).default
   const t = createTranslator({ locale, messages, namespace: 'reminders.default' })

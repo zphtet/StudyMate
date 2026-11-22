@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_CONTENT_BYTES, utf8Bytes } from '@/features/courses/schemas'
+import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
 
 // Spec 004 contracts/server-actions.md › Field schemas. Shared by the forms and the Server Actions.
 // Field rules: specs/004-progress-assignments/data-model.md. Messages are `validation.*` keys

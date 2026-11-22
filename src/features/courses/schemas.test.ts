@@ -1,11 +1,11 @@
 // @vitest-environment node
 // Spec 002 contracts/server-actions.md › Field schemas; field rules from data-model.md.
+import { MAX_CONTENT_BYTES } from '@/lib/content'
 import { describe, expect, test } from 'vitest'
 import {
   courseFieldsSchema,
   isStoragePathFor,
   lessonFieldsSchema,
-  MAX_CONTENT_BYTES,
   MAX_FILE_BYTES,
   resourceSchema,
 } from './schemas'

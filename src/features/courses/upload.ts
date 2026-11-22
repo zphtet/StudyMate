@@ -1,3 +1,4 @@
+import { resizeImage } from '@/lib/image'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { ActionResultError } from '@/lib/result'
 import { ALLOWED_MIME_TYPES, MAX_FILE_BYTES, type ResourceInput } from './schemas'
@@ -8,9 +9,6 @@ import { ALLOWED_MIME_TYPES, MAX_FILE_BYTES, type ResourceInput } from './schema
 
 const BUCKET = 'lesson-files'
 
-/** Long edge of inline images after resizing. */
-export const MAX_IMAGE_EDGE = 1600
-const IMAGE_QUALITY = 0.82
 /** Photos straight from a phone may be larger than 10 MB before they are resized. */
 const MAX_SOURCE_IMAGE_BYTES = 40 * 1024 * 1024
 /** Re-encoded by the canvas; GIFs keep their animation, so they are uploaded as they are. */
@@ -44,15 +42,6 @@ export function checkFile(
   return file.size > limit ? 'file_too_large' : null
 }
 
-/** Size that fits `max` px on the long edge, keeping the aspect ratio; smaller images stay as they are. */
-export function fitWithin(width: number, height: number, max = MAX_IMAGE_EDGE) {
-  const long = Math.max(width, height)
-  if (long <= max) return { width, height }
-  return width >= height
-    ? { width: max, height: Math.round((height * max) / width) }
-    : { width: Math.round((width * max) / height), height: max }
-}
-
 /** File extension for the storage path: from the type when known, else from the name. */
 export function extensionFor(name: string, type: string) {
   const fromType = EXTENSION_BY_TYPE[type]
@@ -81,39 +70,6 @@ function displayName(name: string, extension: string, kind: UploadKind) {
   return result
 }
 
-function toBlob(canvas: HTMLCanvasElement, type: string) {
-  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, IMAGE_QUALITY))
-}
-
-/** Shrinks a photo to MAX_IMAGE_EDGE and re-encodes it as WebP (JPEG where WebP can't be made). */
-async function resizeImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file)
-  const { width, height } = fitWithin(bitmap.width, bitmap.height)
-  if (width === bitmap.width && file.size <= MAX_FILE_BYTES) {
-    bitmap.close()
-    return file
-  }
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const context = canvas.getContext('2d')
-  if (!context) throw new ActionResultError('upload_failed')
-  context.drawImage(bitmap, 0, 0, width, height)
-  const webp = await toBlob(canvas, 'image/webp')
-  if (webp?.type === 'image/webp') {
-    bitmap.close()
-    return webp
-  }
-  // JPEG has no transparency: paint a white background first.
-  context.fillStyle = '#ffffff'
-  context.fillRect(0, 0, width, height)
-  context.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close()
-  const jpeg = await toBlob(canvas, 'image/jpeg')
-  if (!jpeg) throw new ActionResultError('upload_failed')
-  return jpeg
-}
-
 /**
  * Checks, resizes (inline images) and uploads one file; returns the input for addLessonResource.
  * Throws ActionResultError with file_too_large, file_type_not_allowed, upload_failed or offline.
@@ -133,7 +89,7 @@ export async function uploadLessonFile({
   const problem = checkFile(file, { resizes })
   if (problem) throw new ActionResultError(problem)
 
-  const body = resizes ? await resizeImage(file) : file
+  const body = resizes ? await resizeImage(file, { keepUpTo: MAX_FILE_BYTES }) : file
   if (body.size > MAX_FILE_BYTES) throw new ActionResultError('file_too_large')
   const type = body.type || file.type
   const extension = extensionFor(file.name, type)

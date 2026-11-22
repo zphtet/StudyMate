@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { LessonFields, LessonFieldsInput } from './schemas'
-import { MAX_CONTENT_BYTES } from './schemas'
+import { MAX_CONTENT_BYTES } from '@/lib/content'
 import { useAutosave } from './use-autosave'
 
 const VALID: LessonFieldsInput = {

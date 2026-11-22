@@ -3,13 +3,8 @@
 import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
-import {
-  lessonFieldsSchema,
-  MAX_CONTENT_BYTES,
-  utf8Bytes,
-  type LessonFields,
-  type LessonFieldsInput,
-} from './schemas'
+import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
+import { lessonFieldsSchema, type LessonFields, type LessonFieldsInput } from './schemas'
 
 // Lesson autosave (spec 002 US2 scenario 5, research.md R6). 3 s after the last change every field
 // is saved at once; saves for one lesson run one after another (mutation scope). Pending changes are

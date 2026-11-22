@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { unwrap } from '@/lib/result'
+import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
 import { todayIn } from '@/lib/time'
 import { useErrorMessage, useValidationMessage } from '@/lib/use-error-message'
 import { cn } from '@/lib/utils'
@@ -34,13 +35,7 @@ import { inlineMediaMarkdown } from '../files'
 import { saveLesson, setLessonStatus } from '../lesson-actions'
 import { adminLessonQuery, courseKeys, lessonKeys } from '../queries'
 import { DeleteLessonSheet } from './delete-lesson-sheet'
-import {
-  lessonFieldsSchema,
-  MAX_CONTENT_BYTES,
-  utf8Bytes,
-  type LessonFields,
-  type LessonFieldsInput,
-} from '../schemas'
+import { lessonFieldsSchema, type LessonFields, type LessonFieldsInput } from '../schemas'
 import type { AdminLesson } from '../types'
 import { uploadLessonFile } from '../upload'
 import { useAutosave, type AutosaveStatus } from '../use-autosave'

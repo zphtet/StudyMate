@@ -7,11 +7,11 @@ import { describe, expect, test, vi } from 'vitest'
 import { Markdown } from '@/components/shared/markdown'
 import { MARKDOWN_SAMPLES } from '@/components/shared/markdown.samples'
 import { IntlWrapper } from '../../../../tests/utils/intl'
-import { MAX_CONTENT_BYTES } from '../schemas'
+import { MAX_CONTENT_BYTES } from '@/lib/content'
 import { LessonEditor } from './lesson-editor'
 
 // The real editor (@uiw/react-md-editor) loads with next/dynamic in the browser only.
-vi.mock('./md-textarea', () => ({
+vi.mock('@/components/shared/md-textarea', () => ({
   MdTextarea: ({
     value,
     onChange,

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
 
 // Spec 002 contracts/server-actions.md › Field schemas. Shared by the forms (react-hook-form +
 // zodResolver) and the Server Actions. Field rules: specs/002-courses-lessons/data-model.md.
@@ -8,8 +9,6 @@ import { z } from 'zod'
 export const COURSE_COLORS = ['indigo', 'teal', 'rust', 'berry', 'green', 'slate'] as const
 export type CourseColor = (typeof COURSE_COLORS)[number]
 
-/** data-model.md Lesson.contentMd (database CHECK octet_length <= 204800). */
-export const MAX_CONTENT_BYTES = 204_800
 /** data-model.md LessonResource.sizeBytes (and the lesson-files bucket limit). */
 export const MAX_FILE_BYTES = 10_485_760
 
@@ -28,8 +27,6 @@ export const ALLOWED_MIME_TYPES = [
   'audio/wav',
   'audio/webm',
 ] as const
-
-export const utf8Bytes = (text: string) => new TextEncoder().encode(text).length
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
