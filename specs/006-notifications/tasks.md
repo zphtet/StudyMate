@@ -52,21 +52,21 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 **Purpose**: database precondition, packages and three shared moves, each its own commit. Branch `006-notifications` already exists.
 
-- [ ] T001 Check the dev database precondition for the migration on `DIRECT_URL`. If any count isn't 0, stop and report.
+- [X] T001 Check the dev database precondition for the migration on `DIRECT_URL`. If any count isn't 0, stop and report. (2026-11-23: 0, 0 and 0.)
   - `select count(*) from scheduled_message_recipients where read_at is not null` (data-model.md ScheduledMessageRecipient.read_at is dropped);
   - `select count(*) from notification_rules where char_length(message) not between 1 and 500` (data-model.md NotificationRule.message, new CHECK);
   - `select count(*) from scheduled_messages where char_length(body) not between 1 and 1000` (data-model.md ScheduledMessage.body, new CHECK).
-- [ ] T002 Add the packages and the shadcn switch:
+- [X] T002 Add the packages and the shadcn switch:
   - `pnpm add web-push resend`;
   - `pnpm add -D @types/web-push`;
   - `pnpm dlx shadcn@latest add switch`, which creates src/components/ui/switch.tsx;
   - add `RESEND_FROM` (with a comment pointing at Resend's test sender) to .env.example.
-- [ ] T003 Extract `requireCronSecret(request)` to src/server/cron.ts (research R15): a constant-time compare of `Authorization: Bearer $CRON_SECRET` that throws a 401 `HttpError`.
+- [X] T003 Extract `requireCronSecret(request)` to src/server/cron.ts (research R15): a constant-time compare of `Authorization: Bearer $CRON_SECRET` that throws a 401 `HttpError`.
   - Write src/server/cron.test.ts first: a missing header, a wrong secret, an unset `CRON_SECRET` and the right secret.
   - Use it in src/app/api/cron/purge/route.ts and src/app/api/cron/rotations/route.ts.
   - No behaviour change: `us3-delete-restore` and `us2-rotation` still get 401. Commit on its own.
-- [ ] T004 [P] Move src/features/shifts/week-check.ts and its test to src/lib/week-check.ts and src/lib/week-check.test.ts (the dispatcher sends the Sunday check, FR-010). Update the imports in src/features/shifts/repo.ts and src/features/shifts/components/week-check-card.tsx. No behaviour change. Commit on its own.
-- [ ] T005 [P] Move 004's activity code to shared places (the dispatcher needs streak, inactivity and the week's numbers; research R3, R13):
+- [X] T004 [P] Move src/features/shifts/week-check.ts and its test to src/lib/week-check.ts and src/lib/week-check.test.ts (the dispatcher sends the Sunday check, FR-010). Update the imports in src/features/shifts/repo.ts and src/features/shifts/components/week-check-card.tsx. No behaviour change. Commit on its own.
+- [X] T005 [P] Move 004's activity code to shared places (the dispatcher needs streak, inactivity and the week's numbers; research R3, R13):
   - src/features/progress/streak.ts and its test → src/lib/streak.ts and src/lib/streak.test.ts;
   - `activityRows`, `dailyActivity`, `dailyActivityForStudents` and `weekFacts` from src/features/progress/repo.ts → src/server/activity.ts;
   - their tests from src/features/progress/repo.test.ts → src/server/activity.test.ts;
