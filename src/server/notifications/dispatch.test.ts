@@ -12,6 +12,7 @@ import { zonedToUtc } from '@/lib/time'
 import { emailRecorder } from '../../../tests/utils/email-recorder'
 import { pushRecorder } from '../../../tests/utils/push-recorder'
 import { dispatch } from './dispatch'
+import type { PushPayload } from './push'
 import { recordNotice } from './record'
 import { textsFor } from './texts'
 
@@ -344,49 +345,75 @@ describe('retention (research R9)', () => {
   })
 })
 
+// Shared by US2–US4: an Admin in Yangon linked to May in Tokyo, rules, shifts and messages.
+const YANGON = 'Asia/Yangon'
+
+async function pair({ studentZone = TOKYO }: { studentZone?: string } = {}) {
+  const zin = await newUser({ role: 'admin', name: 'Zin', timezone: YANGON })
+  const may = await newUser({ name: 'May', timezone: studentZone })
+  await link(zin.id, may.id)
+  return { zin, may }
+}
+
+const link = (adminId: string, studentId: string, status: 'active' | 'removed' = 'active') =>
+  prisma.studentLink.create({ data: { adminId, studentId, status } })
+
+function rule(
+  ownerId: string,
+  studentId: string | null,
+  trigger: 'daily' | 'due_soon' | 'streak_risk' | 'inactive' | 'weekly_summary',
+  config: Record<string, unknown>,
+  data: { message?: string; channels?: string[]; enabled?: boolean } = {},
+) {
+  return prisma.notificationRule.create({
+    data: {
+      ownerId,
+      studentId,
+      trigger,
+      config: config as never,
+      message: data.message ?? '{name}, time for today’s lesson.',
+      channels: data.channels ?? ['push'],
+      enabled: data.enabled ?? true,
+    },
+  })
+}
+const dailyRule = (ownerId: string, studentId: string | null, data = {}) =>
+  rule(ownerId, studentId, 'daily', { time: '20:00', days: [1, 2, 3, 4, 5] }, data)
+
+const ruleRows = (userId: string) =>
+  prisma.notification.findMany({
+    where: { userId, sourceType: 'rule' },
+    orderBy: { occurrenceKey: 'asc' },
+  })
+
+const shift = (studentId: string, startAt: Date, endAt: Date) =>
+  prisma.shift.create({ data: { studentId, type: 'custom', startAt, endAt } })
+
+async function message(
+  adminId: string,
+  studentIds: string[],
+  deliverAt: Date,
+  data: { body?: string; lessonId?: string; urgent?: boolean } = {},
+) {
+  return prisma.scheduledMessage.create({
+    data: {
+      adminId,
+      body: data.body ?? '{name}, “{lesson}” is only 15 min.',
+      lessonId: data.lessonId,
+      mode: 'fixed',
+      sendAt: deliverAt,
+      urgent: data.urgent ?? false,
+      recipients: { create: studentIds.map((studentId) => ({ studentId, deliverAt })) },
+    },
+  })
+}
+
+const messageRows = (userId: string) =>
+  prisma.notification.findMany({ where: { userId, sourceType: 'message' } })
+
 // US2 (T038): rule occurrences, channels, who gets them, lapsing, the re-check before delivery and
 // the weekly summary (research R2 step 1, R3, R4, R13; FR-011, FR-017–FR-020).
 describe('rules (US2)', () => {
-  const YANGON = 'Asia/Yangon'
-
-  async function pair({ studentZone = TOKYO }: { studentZone?: string } = {}) {
-    const zin = await newUser({ role: 'admin', name: 'Zin', timezone: YANGON })
-    const may = await newUser({ name: 'May', timezone: studentZone })
-    await link(zin.id, may.id)
-    return { zin, may }
-  }
-
-  const link = (adminId: string, studentId: string, status: 'active' | 'removed' = 'active') =>
-    prisma.studentLink.create({ data: { adminId, studentId, status } })
-
-  function rule(
-    ownerId: string,
-    studentId: string | null,
-    trigger: 'daily' | 'due_soon' | 'streak_risk' | 'inactive' | 'weekly_summary',
-    config: Record<string, unknown>,
-    data: { message?: string; channels?: string[]; enabled?: boolean } = {},
-  ) {
-    return prisma.notificationRule.create({
-      data: {
-        ownerId,
-        studentId,
-        trigger,
-        config: config as never,
-        message: data.message ?? '{name}, time for today’s lesson.',
-        channels: data.channels ?? ['push'],
-        enabled: data.enabled ?? true,
-      },
-    })
-  }
-  const dailyRule = (ownerId: string, studentId: string | null, data = {}) =>
-    rule(ownerId, studentId, 'daily', { time: '20:00', days: [1, 2, 3, 4, 5] }, data)
-
-  const ruleRows = (userId: string) =>
-    prisma.notification.findMany({
-      where: { userId, sourceType: 'rule' },
-      orderBy: { occurrenceKey: 'asc' },
-    })
-
   async function assignedLesson(
     adminId: string,
     studentId: string,
@@ -420,9 +447,6 @@ describe('rules (US2)', () => {
         plannedMinutes: 15,
       },
     })
-
-  const shift = (studentId: string, startAt: Date, endAt: Date) =>
-    prisma.shift.create({ data: { studentId, type: 'custom', startAt, endAt } })
 
   test('independent test: Daily 20:00 Mon–Fri reaches May at 20:00 her time on weekdays only', async () => {
     const { zin, may } = await pair()
@@ -752,27 +776,6 @@ describe('messages (US3)', () => {
     return { zin, may }
   }
 
-  async function message(
-    adminId: string,
-    studentIds: string[],
-    deliverAt: Date,
-    data: { body?: string; lessonId?: string; urgent?: boolean } = {},
-  ) {
-    return prisma.scheduledMessage.create({
-      data: {
-        adminId,
-        body: data.body ?? '{name}, “{lesson}” is only 15 min.',
-        lessonId: data.lessonId,
-        mode: 'fixed',
-        sendAt: deliverAt,
-        urgent: data.urgent ?? false,
-        recipients: { create: studentIds.map((studentId) => ({ studentId, deliverAt })) },
-      },
-    })
-  }
-
-  const messageRows = (userId: string) =>
-    prisma.notification.findMany({ where: { userId, sourceType: 'message' } })
   const status = async (id: string) =>
     (await prisma.scheduledMessage.findUniqueOrThrow({ where: { id } })).status
 
@@ -788,7 +791,8 @@ describe('messages (US3)', () => {
     })
     const sent = await message(zin.id, [may.id], at('2027-03-03', '18:00'), { lessonId: lesson.id })
 
-    expect((await runFor([zin.id, may.id], at('2027-03-03', '17:55'))).result.handedOver).toBe(0)
+    // Messages are handed over up to 10 minutes ahead (T068), so 17:45 is the last run without it.
+    expect((await runFor([zin.id, may.id], at('2027-03-03', '17:45'))).result.handedOver).toBe(0)
     const { result } = await runFor([zin.id, may.id], at('2027-03-03', '18:00'))
     expect(result).toMatchObject({ handedOver: 1, delivered: 1, pushes: 1 })
     const [row] = await messageRows(may.id)
@@ -888,5 +892,321 @@ describe('messages (US3)', () => {
     expect(await messageRows(may.id)).toMatchObject([{ deliveredAt: null }])
     await runFor([zin.id, may.id], at('2027-03-05', '12:00'))
     expect((await messageRows(may.id))[0].deliveredAt).toEqual(at('2027-03-05', '12:00'))
+  })
+})
+
+// US4 (T065): the 10-minute look-ahead, rows pulled forward and bundled into one push, and the whole
+// pipeline checked against SC-002 and SC-003 over simulated runs (research R2, R5; FR-003, FR-017).
+// A dispatcher run against the shared dev database takes about 5 s, so sweeps stay short.
+describe('held, bundled and on time (US4)', { timeout: 240_000 }, () => {
+  /** Runs on one Tokyo day at these clock times. */
+  const on = (date: string, ...times: string[]) => times.map((time) => at(date, time))
+
+  type Swept = { at: Date; userId: string; endpoint: string; payload: PushPayload }
+
+  /**
+   * One dispatcher run at each instant, as pg_cron would make them, recording every push with its run
+   * and recipient. Runs against the dev database are slow (~5 s), so callers pick the runs that matter:
+   * the one that makes a row, the one before it is due, the one it is due in, and some in between.
+   * Never leave a gap of more than 15 minutes before a rule's time (the look-back would miss it).
+   */
+  async function sweep(userIds: string[], instants: Date[]) {
+    const owners = new Map(
+      (
+        await prisma.pushSubscription.findMany({
+          where: { userId: { in: userIds } },
+          select: { endpoint: true, userId: true },
+        })
+      ).map((d) => [d.endpoint, d.userId]),
+    )
+    const pushes: Swept[] = []
+    for (const now of instants) {
+      const { pushes: sent } = await runFor(userIds, now)
+      for (const { target, payload } of sent) {
+        pushes.push({
+          at: now,
+          userId: owners.get(target.endpoint) ?? '',
+          endpoint: target.endpoint,
+          payload,
+        })
+      }
+    }
+    return pushes
+  }
+
+  /** SC-002: no row reached its recipient inside one of their busy blocks, unless urgent. */
+  async function expectNoBusyDelivery(userIds: string[]) {
+    const inside = await prisma.$queryRaw<{ id: string; title: string; delivered_at: Date }[]>`
+      select n.id::text, n.title, n.delivered_at from notifications n
+      where n.user_id = any(${userIds}::uuid[]) and n.delivered_at is not null and not n.urgent
+        and exists (
+          select 1 from busy_segments(n.user_id, n.delivered_at - interval '1 day', n.delivered_at + interval '1 day') b
+          where b.start_at <= n.delivered_at and b.end_at > n.delivered_at)`
+    expect(inside).toEqual([])
+  }
+
+  /**
+   * SC-003: each device gets at most one push per run, and each user exactly one push per run in which
+   * pushable rows of theirs were delivered (each user here has one device).
+   */
+  async function expectOnePushPerDelivery(pushes: Swept[], userIds: string[]) {
+    const perRun = pushes.map((p) => `${p.endpoint}@${p.at.toISOString()}`)
+    expect(new Set(perRun).size).toBe(perRun.length)
+    for (const userId of userIds) {
+      const delivered = await prisma.notification.findMany({
+        where: { userId, push: true, deliveredAt: { not: null } },
+        select: { deliveredAt: true },
+      })
+      const runs = new Set(delivered.map((r) => r.deliveredAt?.toISOString()))
+      expect(pushes.filter((p) => p.userId === userId)).toHaveLength(runs.size)
+    }
+  }
+
+  const everyDay = [1, 2, 3, 4, 5, 6, 7]
+
+  describe('look-ahead (research R2 steps 1–2)', () => {
+    test('a Daily 20:00 row is made at 19:50 and waits for 20:00', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      await dailyRule(zin.id, may.id)
+
+      expect((await runFor([zin.id, may.id], at('2027-03-03', '19:45'))).result.occurrences).toBe(0)
+      const early = await runFor([zin.id, may.id], at('2027-03-03', '19:50'))
+      expect(early.result.occurrences).toBe(1)
+      expect(early.pushes).toHaveLength(0)
+      expect(await ruleRows(may.id)).toMatchObject([
+        { deliverAt: at('2027-03-03', '20:00'), deliveredAt: null },
+      ])
+      expect((await runFor([zin.id, may.id], at('2027-03-03', '19:55'))).pushes).toHaveLength(0)
+
+      const onTime = await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+      expect(onTime.pushes).toHaveLength(1)
+      expect((await ruleRows(may.id))[0].deliveredAt).toEqual(at('2027-03-03', '20:00'))
+    })
+
+    test('a message for 18:00 is handed over at 17:50 (then sent) and pushed at 18:00', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      const planned = await message(zin.id, [may.id], at('2027-03-03', '18:00'))
+
+      const early = await runFor([zin.id, may.id], at('2027-03-03', '17:50'))
+      expect(early.result.handedOver).toBe(1)
+      expect(early.pushes).toHaveLength(0)
+      const [recipient] = await prisma.scheduledMessageRecipient.findMany({
+        where: { messageId: planned.id },
+      })
+      expect(recipient.deliveredAt).toEqual(at('2027-03-03', '17:50'))
+      expect(
+        (await prisma.scheduledMessage.findUniqueOrThrow({ where: { id: planned.id } })).status,
+      ).toBe('sent')
+      expect(await messageRows(may.id)).toMatchObject([
+        { deliverAt: at('2027-03-03', '18:00'), deliveredAt: null },
+      ])
+
+      const onTime = await runFor([zin.id, may.id], at('2027-03-03', '18:00'))
+      expect(onTime.pushes).toHaveLength(1)
+      expect((await messageRows(may.id))[0].deliveredAt).toEqual(at('2027-03-03', '18:00'))
+    })
+  })
+
+  describe('pulled forward and bundled (US4 scenario 3; research R5)', () => {
+    test('a notice due now and a Daily due 5 minutes later: one push now, two inbox rows', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      await rule(zin.id, may.id, 'daily', { time: '12:05', days: everyDay })
+      const notice = await pending(may.id, at('2027-03-03', '12:00'))
+
+      const { pushes } = await runFor([zin.id, may.id], at('2027-03-03', '12:00'))
+      expect(pushes).toHaveLength(1)
+      const [{ payload }] = pushes
+      expect(payload).toMatchObject({ title: '2 reminders', url: '/s/inbox', tag: 'bundle' })
+      expect(payload.body.split(' · ').sort()).toEqual([
+        'Daily study reminder',
+        'Particles: needs redo',
+      ])
+      expect((await row(notice.id))?.deliveredAt).toEqual(at('2027-03-03', '12:00'))
+      expect((await ruleRows(may.id))[0].deliveredAt).toEqual(at('2027-03-03', '12:00'))
+    })
+
+    test('a Daily at 20:00 and a message at 20:05: one push at 20:00', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      await dailyRule(zin.id, may.id)
+      await message(zin.id, [may.id], at('2027-03-03', '20:05'), { body: 'Particle で' })
+
+      const pushes = await sweep(
+        [zin.id, may.id],
+        on('2027-03-03', '19:50', '19:55', '20:00', '20:05', '20:10'),
+      )
+      expect(pushes.map((p) => [p.at, p.payload.title])).toEqual([
+        [at('2027-03-03', '20:00'), '2 reminders'],
+      ])
+      expect((await messageRows(may.id))[0].deliveredAt).toEqual(at('2027-03-03', '20:00'))
+    })
+
+    test('two items 15 minutes apart: two pushes', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      await rule(zin.id, may.id, 'daily', { time: '12:15', days: everyDay })
+      await pending(may.id, at('2027-03-03', '12:00'))
+
+      const pushes = await sweep(
+        [zin.id, may.id],
+        on('2027-03-03', '12:00', '12:05', '12:10', '12:15'),
+      )
+      expect(pushes.map((p) => [p.at, p.payload.tag === 'bundle'])).toEqual([
+        [at('2027-03-03', '12:00'), false],
+        [at('2027-03-03', '12:15'), false],
+      ])
+    })
+
+    test('an inbox-only row next to a pushable one: the one-row notification', async () => {
+      const may = await newUser()
+      await device(may.id)
+      const notice = await pending(may.id, at('2027-03-03', '12:00'))
+      const copy = await pending(may.id, at('2027-03-03', '12:00'), { push: false })
+
+      const { pushes } = await runFor([may.id], at('2027-03-03', '12:00'))
+      expect(pushes.map((p) => p.payload.tag)).toEqual([notice.id])
+      expect((await row(copy.id))?.deliveredAt).toEqual(at('2027-03-03', '12:00'))
+    })
+
+    test('a notice and a message held by the same shift: one push when it ends', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      await shift(may.id, at('2027-03-03', '10:00'), at('2027-03-03', '19:00'))
+      await pending(may.id, at('2027-03-03', '11:00'))
+      await message(zin.id, [may.id], at('2027-03-03', '12:00'))
+
+      const pushes = await sweep(
+        [zin.id, may.id],
+        [
+          at('2027-03-03', '11:00'),
+          at('2027-03-03', '12:00'),
+          at('2027-03-03', '18:55'),
+          at('2027-03-03', '19:00'),
+        ],
+      )
+      expect(pushes.map((p) => [p.at, p.payload.title])).toEqual([
+        [at('2027-03-03', '19:00'), '2 reminders'],
+      ])
+      const delivered = await prisma.notification.findMany({ where: { userId: may.id } })
+      expect(delivered.map((r) => r.deliveredAt)).toEqual([
+        at('2027-03-03', '19:00'),
+        at('2027-03-03', '19:00'),
+      ])
+    })
+
+    test('a busy recipient’s rows due soon keep their time; urgent pulls nothing forward', async () => {
+      const { zin, may } = await pair()
+      await device(may.id)
+      await shift(may.id, at('2027-03-03', '10:00'), at('2027-03-03', '19:00'))
+      await rule(zin.id, may.id, 'daily', { time: '12:05', days: everyDay })
+      const notice = await pending(may.id, at('2027-03-03', '12:00'))
+      await message(zin.id, [may.id], at('2027-03-03', '12:00'), { urgent: true, body: 'Urgent' })
+
+      const { pushes } = await runFor([zin.id, may.id], at('2027-03-03', '12:00'))
+      expect(pushes).toHaveLength(1)
+      expect(pushes[0].payload.title).toBe('Message from Zin')
+      expect((await ruleRows(may.id))[0]).toMatchObject({
+        deliverAt: at('2027-03-03', '12:05'),
+        deliveredAt: null,
+      })
+      expect(await row(notice.id)).toMatchObject({
+        deliverAt: at('2027-03-03', '19:00'),
+        deliveredAt: null,
+      })
+    })
+  })
+
+  test('independent test: Daily at 20:00; a 23:00 message at 15:30 the next day; urgent at 23:00', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    // Night shift with 8 h sleep: sleep runs 07:30–15:30 after the 30-minute buffer.
+    await prisma.shift.create({
+      data: {
+        studentId: may.id,
+        type: 'night',
+        startAt: at('2027-03-03', '22:00'),
+        endAt: at('2027-03-04', '07:00'),
+        sleepMinutes: 480,
+      },
+    })
+    await dailyRule(zin.id, may.id)
+    await message(zin.id, [may.id], at('2027-03-03', '23:00'), { body: 'Normal' })
+    await message(zin.id, [may.id], at('2027-03-03', '23:00'), { body: 'Urgent', urgent: true })
+
+    // The rows are made at 19:50 and 22:50; the rest are spot checks through the shift and sleep.
+    const instants = [
+      ...on('2027-03-03', '19:50', '20:00', '22:00', '22:50', '23:00', '23:05'),
+      ...on('2027-03-04', '03:00', '07:15', '08:00', '12:00', '15:25', '15:30', '15:35'),
+    ]
+    const pushes = await sweep([zin.id, may.id], instants)
+
+    expect(pushes.map((p) => [p.at, p.payload.body])).toEqual([
+      [at('2027-03-03', '20:00'), 'May, time for today’s lesson.'],
+      [at('2027-03-03', '23:00'), 'Urgent'],
+      [at('2027-03-04', '15:30'), 'Normal'],
+    ])
+    await expectNoBusyDelivery([zin.id, may.id])
+    await expectOnePushPerDelivery(pushes, [may.id])
+  })
+
+  test('scenario 4: Streak at risk at 21:30, held by a shift from 21:00, lapses unsent', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    await shift(may.id, at('2027-03-03', '21:00'), at('2027-03-04', '06:00'))
+    await rule(zin.id, may.id, 'streak_risk', { time: '21:30' })
+
+    const pushes = await sweep(
+      [zin.id, may.id],
+      [
+        ...on('2027-03-03', '21:20', '21:30', '21:35'),
+        ...on('2027-03-04', '00:00'),
+        at('2027-03-04', '08:00'),
+      ],
+    )
+    expect(pushes).toEqual([])
+    expect(await ruleRows(may.id)).toEqual([])
+    await expectNoBusyDelivery([zin.id, may.id])
+  })
+
+  test('scenario 5: without shifts, only waking and quiet hours hold', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    await prisma.$executeRaw`update profiles set quiet_start = '12:00', quiet_end = '13:00' where id = ${may.id}::uuid`
+    await rule(zin.id, may.id, 'daily', { time: '12:30', days: everyDay })
+    await dailyRule(zin.id, may.id)
+
+    const pushes = await sweep(
+      [zin.id, may.id],
+      [
+        ...on('2027-03-03', '12:20', '12:30', '12:55', '13:00', '13:05'),
+        ...on('2027-03-03', '19:50', '20:00'),
+      ],
+    )
+    expect(pushes.map((p) => p.at)).toEqual([at('2027-03-03', '13:00'), at('2027-03-03', '20:00')])
+    await expectNoBusyDelivery([zin.id, may.id])
+    await expectOnePushPerDelivery(pushes, [may.id])
+  })
+
+  test('the Admin’s own hours: a 23:00 notice for Zin arrives at 08:00 Yangon (FR-003; R14)', async () => {
+    const { zin } = await pair()
+    await device(zin.id)
+    await prisma.$executeRaw`update profiles set quiet_start = '22:00', quiet_end = '07:00' where id = ${zin.id}::uuid`
+    const notice = await pending(zin.id, at('2027-03-03', '23:00', YANGON), { url: '/a/students' })
+
+    const pushes = await sweep(
+      [zin.id],
+      [
+        at('2027-03-03', '23:00', YANGON),
+        at('2027-03-04', '07:00', YANGON),
+        at('2027-03-04', '07:55', YANGON),
+        at('2027-03-04', '08:00', YANGON),
+      ],
+    )
+    expect(pushes.map((p) => p.at)).toEqual([at('2027-03-04', '08:00', YANGON)])
+    expect((await row(notice.id))?.deliveredAt).toEqual(at('2027-03-04', '08:00', YANGON))
+    await expectNoBusyDelivery([zin.id])
   })
 })

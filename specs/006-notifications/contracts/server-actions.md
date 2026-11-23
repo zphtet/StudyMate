@@ -105,7 +105,7 @@ input = {
 - Guard `requireRole('admin')` + `requireAdminOf` for each student.
 - `fixed` in the past → `message_time_past`.
 - Recipient `deliver_at`: `now`, `at`, or that student's `next_free_at(now)` (R11).
-- Update: only recipients not handed over yet (`delivered_at` null); a message fully handed over → `message_already_sent`.
+- Update: only recipients not handed over yet (`delivered_at` null); a message fully handed over → `message_already_sent`. The dispatcher hands recipients over up to 10 minutes before their `deliver_at` (research R2 step 2), so editing closes then.
 
 ### `cancelMessage({ id })`
 - Guard `requireRole('admin')`. Deletes recipients not handed over yet; status → `cancelled` (or `sent` if some already went). `message_not_found` / `message_already_sent`.

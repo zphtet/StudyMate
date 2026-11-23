@@ -1107,7 +1107,8 @@
     "copyTitle": "{name} ထံ: {title}",
     "inactiveAdminTitle": "{name} {days} ရက် မလေ့လာရသေးပါ",
     "inactiveAdminBody": "နောက်ဆုံး လေ့လာခဲ့သည်- {date}။",
-    "messageTitle": "{admin} ထံမှ မက်ဆေ့ချ်"
+    "messageTitle": "{admin} ထံမှ မက်ဆေ့ချ်",
+    "bundleTitle": "{n, plural, other {သတိပေးချက် # ခု}}"
   },
   "composer": {
     "newTitle": "မက်ဆေ့ချ်အသစ်",

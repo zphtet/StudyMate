@@ -27,12 +27,14 @@ Phase 0 decisions for [plan.md](plan.md). Each one records what was chosen, why,
 ## R2. The dispatcher: one function, every 5 minutes
 
 - **Decision**: `dispatch(now)` in `src/server/notifications/dispatch.ts`, called by `POST /api/cron/dispatch`. It works in four steps, each one set-based (a fixed number of SQL statements per run, whatever the number of users):
-  1. **Rule occurrences**: insert a row for each rule occurrence due in `(now − 15 min, now]`. The 15-minute look-back covers a late or missed tick; `on conflict do nothing` keeps it to one.
-  2. **Messages**: copy due `scheduled_message_recipients` (`deliver_at ≤ now`, not handed over yet) into rows; mark them handed over and the message `sent` once all its recipients are.
+  1. **Rule occurrences**: insert a row for each rule occurrence in `(now − 15 min, now + 10 min]`, due at its own instant. The 15-minute look-back covers a late or missed tick; the 10-minute look-ahead gives bundling (R5) the rows due soon; `on conflict do nothing` keeps it to one.
+  2. **Messages**: copy `scheduled_message_recipients` due within 10 minutes (`deliver_at ≤ now + 10 min`, not handed over yet) into rows due at their planned time; mark them handed over and the message `sent` once all its recipients are. So Edit and Cancel send close up to 10 minutes before the message's time (decided 2026-11-23 for bundling; spec US3 scenario 6 still holds: "until it is sent").
   3. **Availability**: for each recipient with pending rows due (`deliver_at ≤ now`), `next_free_at(user, now)` in one statement. When it is later than now:
      - non-urgent rows move to that time;
      - rows whose `expires_at` is at or before the new time are deleted (lapsed).
-  4. **Delivery**: drop rows that lapsed or no longer apply (R4); then, per recipient, send one push for everything due, including rows due in the next 10 minutes (bundling, R5); set `delivered_at`; send the weekly-summary email.
+
+     When it isn't (the recipient is free), their rows due in the next 10 minutes move to now (pulled forward, R5). The same statement does both.
+  4. **Delivery**: drop rows that lapsed or no longer apply (R4), pulled-forward rows included; then set `delivered_at` and send each recipient one push for everything due (bundling, R5); send the weekly-summary email.
 - **Scheduling**: `pg_cron` + `pg_net` call the route every 5 minutes with `CRON_SECRET` from Supabase Vault (technical-spec §9; the SQL is already drafted at the end of `0_init`). The URL depends on the deployment, so it is a deploy step (quickstart §6), not a migration. Vercel Hobby crons run only daily. There's no scheduler in development: tests call `dispatch(now)` directly, and e2e calls the route with the secret.
 - **Rationale**: SC-001 (within 5 minutes) with a bounded amount of work per run.
 - **Alternatives**: Vercel Cron (5-minute schedules need a paid plan); Supabase Edge Functions (the constitution keeps server logic in Next.js).
@@ -69,8 +71,10 @@ Phase 0 decisions for [plan.md](plan.md). Each one records what was chosen, why,
 ## R5. Bundling and push payloads
 
 - **Decision**: per recipient, one push per run for all rows due now plus those due within the next 10 minutes (they are pulled forward a little), so several items at once arrive as one notification (US4 scenario 3).
+  - **Where the rows due soon come from**: rule occurrences and message hand-overs look 10 minutes ahead (R2 steps 1–2), and held rows wait at the recipient's next free moment. Only a free recipient's rows are pulled forward, and only when something of theirs is due now; otherwise each row keeps its time.
+  - Built as the pure `bundle(rows, { inbox, bundleTitle })` in `src/server/notifications/bundle.ts`.
   - One row: its title and text, and its link.
-  - Several: "{n} reminders", with the first titles in the body, opening the inbox.
+  - Several: "{n} reminders" (`pushTexts.bundleTitle`), with the first three titles in the body (urgent first, joined with " · "), opening the inbox.
   - Payload: `{ title, body, url, tag }`. `tag` is the row id (or `bundle`), so the phone replaces rather than stacks a repeated notification. TTL is 24 h. Each row is still its own inbox item.
 - **Rationale**: Edge Cases (one notification for 3 things) with no extra state.
 

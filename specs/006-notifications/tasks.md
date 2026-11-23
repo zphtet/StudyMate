@@ -28,7 +28,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 - **US1** builds the delivery pipeline (dispatcher, push, devices), the inbox and the bell. The pipeline holds items for busy recipients from the start, because constitution IV allows no delivery without that check.
 - **US2** adds rules, their occurrences, lapsing and the weekly summary.
 - **US3** adds one-off messages, urgent and the composer.
-- **US4** adds bundling and the cross-source checks for SC-002 and SC-003.
+- **US4** adds the 10-minute look-ahead, bundling and the cross-source checks for SC-002 and SC-003.
 - **US5** adds quiet hours and My reminders.
 
 **Changes to plan.md › Source Code** (CLAUDE.md › Code lives where it's used; plan.md puts these in feature folders that other code would then import):
@@ -435,38 +435,85 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ## Phase 6: User Story 4 – Nothing arrives while working, asleep or in quiet hours (Priority: P1)
 
-**Goal**: items due together arrive as one notification. The whole pipeline is checked against SC-002 and SC-003 across notices, rules and messages, for students and Admins.
+**Goal**: items due within 10 minutes of each other arrive as one notification, and the whole pipeline is checked against SC-002 and SC-003 for notices, rules and messages, for students and Admins.
 
-Already built: holding in T023, lapsing and re-checks in T043, urgent in T057. This phase adds bundling and the end-to-end timing checks.
+**Already built**: holding (T023), lapsing and the re-checks (T043), urgent (T057). This phase adds the 10-minute look-ahead, pulling rows forward, bundling and the end-to-end timing checks.
 
-**Independent Test**: May has a night shift 22:00–07:00 and 8 h sleep. A Daily 20:00 reminder arrives at 20:00. A message scheduled for 23:00 arrives at 15:30 the next day, May's next free moment. A message marked urgent arrives at 23:00.
+**Look-ahead (decided 2026-11-23)**: as built through US3, rule rows and message hand-overs are created only once they are due (`≤ now`). Rows due in the next 10 minutes therefore don't exist yet, and research R5's pull-forward has nothing to pull. The fix:
+- step 1 (rule occurrences) looks for occurrences in `(now − 15 min, now + 10 min]`;
+- step 2 (messages) hands over recipients with `deliver_at ≤ now + 10 min`;
+- every row keeps its planned `deliver_at`, so nothing goes out early unless it is bundled with a row that is due now.
+
+Side effect, accepted: a message is handed over, becomes `sent` and stops accepting Edit and Cancel send up to 10 minutes before its time. Spec US3 scenario 6 ("until it is sent") still holds. A rule edited in those 10 minutes keeps the row it already made, because turning a rule off or deleting it already drops its pending rows (src/features/alerts/repo.ts).
+
+**Independent Test**: May has a night shift 22:00–07:00 with 8 h sleep (sleep runs to 15:30 after the 30-minute buffer). A Daily 20:00 reminder arrives at 20:00. A message scheduled for 23:00 arrives at 15:30 the next day, May's next free moment. A message marked urgent arrives at 23:00.
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T064 [P] [US4] Write unit tests in src/server/notifications/bundle.test.ts for `bundle(rows, locale, role)` (research R5):
-  - **One row**: its title, body and url, with `tag` = its id.
-  - **Several rows**: the "{n} reminders" title, the first titles in the body, url = the role's inbox, `tag` `bundle`.
-  - **Copies**: rows with `push` false aren't in the payload.
-  - **No pushable rows**: no payload.
-- [ ] T065 [P] [US4] Add timing cases to src/server/notifications/dispatch.test.ts, calling `dispatch` every 5 minutes over a simulated 36 h. Cases:
-  - **Independent test**: Daily at 20:00; a 23:00 message at 15:30 the next day; urgent at 23:00.
-  - **Scenario 5**: with no shift information, only waking and quiet hours hold.
-  - **Admin's own hours**: Zin's quiet hours 22:00–07:00 and default waking hours hold a 23:00 submission notice until 08:00 Yangon (FR-003; research R14; quickstart.md §4.9).
-  - **Bundling**: two items within 10 minutes → one push and two inbox rows; a rule reminder and a message within 10 minutes → one push.
-  - **Scenario 4**: Streak at risk 21:30, held by a shift from 21:00, lapses at midnight.
-  - **SC-002 and SC-003**, checked over the whole run: no push lands inside a busy segment of its recipient (`busy_segments`) unless urgent, and no `(source, user, occurrence)` is pushed twice.
-- [ ] T066 [P] [US4] Write a Playwright smoke test in tests/e2e/us4-held.spec.ts (390×844 and 1280×800, axe; constitution III):
-  - seed a shift for May running now and a "Needs redo" notice, then `runDispatch`: May's bell reads 0 and the inbox is empty;
-  - seed an urgent message to May due now, then `runDispatch`: the bell reads 1 and the inbox lists the message.
+- [X] T064 [P] [US4] Write unit tests in src/server/notifications/bundle.test.ts for `bundle(rows, { inbox, bundleTitle })` (research R5). It returns one recipient's `PushPayload`, or `null`. `rows` are that recipient's claimed rows (`id`, `title`, `body`, `url`, `push`, `urgent`). `inbox` is `/s/inbox` or `/a/inbox`. `bundleTitle(n)` is the translated "{n} reminders", passed in so the function stays pure. Cases:
+  - **One row**: the same payload `payloadOf` builds today. The title and body are the row's. The url is the row's link, or the inbox, with `?n=<id>` appended (`&n=` when the link already has a query). `tag` is the row id.
+  - **Several rows**: the title is `bundleTitle(n)`. The body is the first three titles, urgent first, joined with " · ". The url is the inbox with no `?n=`. `tag` is `bundle`.
+  - **Rows with `push` false** (data-model.md Notification.push) aren't counted or listed: one pushable row and one inbox-only row → the one-row payload.
+  - **No pushable rows** → `null`.
+- [X] T065 [P] [US4] Add timing cases to src/server/notifications/dispatch.test.ts (research R2, R5; FR-003, FR-017; SC-001–SC-003).
 
-  Exact times are checked in T065; this checks the held and urgent paths through the real route and screens.
+  **Helpers, added first**:
+  - `sweep(userIds, ticks)`: calls `runFor` at each tick and records every push with its tick and the recipient (devices map endpoint → user).
+  - `ticks(from, to, everyMinutes)`.
+  - `expectNoBusyDelivery(userIds)`, for SC-002, in one SQL statement: no non-urgent row of these users has a `delivered_at` inside one of its recipient's `busy_segments` (data-model.md Notification.urgent, Notification.delivered_at).
+  - `expectOnePushPerDelivery(sweepResult)`, for SC-003: each device gets at most one push per tick, and each user gets exactly as many pushes as there are ticks at which they had pushable rows delivered.
+
+  A dispatcher run against the dev database is slow. Use 5-minute ticks only around the moments that matter and hourly ticks in between. Never leave a gap that contains a rule's time, because the 15-minute look-back would miss it. Keep each sweep under about 70 runs.
+
+  (Done. A run takes about 5 s against the dev database, so 70 runs timed out. Instead of `ticks`, `on(date, ...times)` lists the runs that matter: the one that makes a row, the one before it is due, the one it is due in, and spot checks through the shift and sleep. The independent test is 13 runs. The US3 hand-over case now checks 17:45, not 17:55, as the last run before the hand-over. The shared rule and message helpers moved to the top of the file, unchanged.)
+
+  Cases:
+  - **Look-ahead**:
+    - After the 19:50 run, a Daily 20:00 row exists, pending, with `deliver_at` 20:00. There is no push at 19:50 or 19:55. It is pushed at 20:00.
+    - A message for 18:00 is handed over by the 17:50 run: the recipient's `delivered_at` is set and the status is `sent`. Its row is pending until 18:00, and the push goes out at 18:00 (data-model.md ScheduledMessageRecipient.delivered_at, ScheduledMessage.status).
+  - **Pulled forward and bundled**:
+    - A notice due now and a Daily due 5 minutes later → one push titled "2 reminders" now, and two inbox rows delivered now.
+    - A Daily at 20:00 and a message at 20:05 → one push at 20:00.
+    - Two items 15 minutes apart → two pushes.
+    - One pushable row plus a "Copy me" copy → the one-row payload.
+  - **Released together**: a notice and a message held by the same shift → one push when it ends, and two inbox rows.
+  - **Not pulled while busy**: rows due in the next 10 minutes for a busy recipient keep their time and are held like any other row. An urgent row due now doesn't pull a busy recipient's other rows forward.
+  - **Independent test**, as one sweep from 19:50 to 15:45 the next day: the Daily at 20:00, the 23:00 message at 15:30, and urgent at 23:00. Then `expectNoBusyDelivery` and `expectOnePushPerDelivery`.
+  - **Scenario 4**: Streak at risk at 21:30, held by a shift from 21:00, lapses at midnight. No row is left and nothing is pushed.
+  - **Scenario 5**: with no shift information, only waking hours and quiet hours hold (quiet hours through the `quietStart`/`quietEnd` columns, which US5 gives a screen).
+  - **Admin's own hours**: Zin has quiet hours 22:00–07:00 and default waking hours. A notice for Zin recorded at 23:00 Yangon is delivered at 08:00 Yangon (FR-003; research R14; quickstart.md §4.9).
+
+  Existing cases that assumed no row exists before its time: change them on purpose and say why in the test name or a comment. Don't loosen what they check.
+- [X] T066 [P] [US4] Write a Playwright smoke test in tests/e2e/us4-held.spec.ts (390×844 and 1280×800, axe; constitution III). Use the fixtures `seedShift`, `seedNotification`, `seedMessage` (`urgent: true`) and `runDispatch`:
+  - Seed a shift for May running now and a "Needs redo" notice, then `runDispatch`. May's bell reads 0 and the inbox is empty.
+  - Seed an urgent message to May due now, then `runDispatch`. The bell reads 1 and the inbox lists the message (still not the notice).
+
+  Exact times are checked in T065. This test checks the held and urgent paths through the real route and screens.
 
 ### Implementation for User Story 4
 
-- [ ] T067 [P] [US4] Implement `bundle` in src/server/notifications/bundle.ts. T064 passes.
-- [ ] T068 [US4] Change the delivery step in src/server/notifications/dispatch.ts so that, per free recipient, rows due within the next 10 minutes are pulled forward, and those rows are sent as one push from `bundle` (research R5). T065 passes.
-- [ ] T069 [US4] Add `pushTexts.bundle` (title and body) in src/i18n/messages/en.json, my.json and ja.json.
-- [ ] T070 [US4] Run T064–T065 and all of dispatch.test.ts until they pass, and T066 on the :3100 build.
+- [X] T067 [P] [US4] Implement `bundle` in src/server/notifications/bundle.ts, and move `payloadOf` out of dispatch.ts into it as the one-row case. T064 passes.
+- [X] T068 [US4] Change src/server/notifications/dispatch.ts (research R2, R5). T065 passes, and every existing case in dispatch.test.ts and src/features/alerts/messages-repo.test.ts still passes.
+  - **One constant**: `BUNDLE_MINUTES = 10` is used for both the look-ahead and the pull-forward.
+  - **Step 1** (`createRuleOccurrences`): the window becomes `(now − 15 min, now + 10 min]`, and the after-shift data loads for that window too. Rows keep the occurrence instant as `deliver_at` (data-model.md Notification.deliver_at, Notification.expires_at). "A rule never fires for a moment before it existed" still holds.
+  - **Step 2** (`handOverMessages`): claim recipients with `deliver_at ≤ now + 10 min`. Their rows keep the planned `deliver_at`, as `messageRow` already does. A message is `sent` once all its recipients are handed over (data-model.md ScheduledMessage.status). The repo's `message_already_sent` is unchanged.
+  - **Availability step** (`holdForBusyRecipients`), still one statement:
+    - Compute `next_free_at` for every recipient with a row due now, urgent rows included.
+    - Move only non-urgent rows, as today.
+    - For recipients free now, rows with `deliver_at` in `(now, now + 10 min]` move to `now` (pulled forward). They then pass `dropStale` like any due row (research R4).
+    - Add no new field to the result: contracts/route-handlers.md › Cron is unchanged.
+  - **Delivery** (`deliverDue`):
+    - Group the claimed rows by recipient.
+    - Build each recipient's payload with `bundle`, with the title from `textsFor(recipient).tr('pushTexts.bundleTitle', { n })`. (As built, `textsFor` is loaded for every recipient with a pushable row. It is cheap, and loading it lazily would only add a branch.)
+    - Send that one payload to each of the recipient's devices. `pushes` counts successful sends. Copies and the weekly-summary email are unchanged.
+  - **Record the decision** in the design docs:
+    - specs/006-notifications/research.md R2 steps 1–2 (the windows) and R5 (where the rows due soon come from);
+    - specs/006-notifications/data-model.md › Lifecycles › A scheduled message: handed over up to 10 minutes before `deliver_at`, and Edit and Cancel close then;
+    - specs/006-notifications/contracts/server-actions.md › Messages: the same note on `message_already_sent`.
+- [X] T069 [US4] Add `pushTexts.bundleTitle` (ICU plural `{n}`: "{n} reminders") to src/i18n/messages/en.json, my.json and ja.json. The body is the rows' own titles, so it needs no string.
+- [X] T070 [US4] Run T064, T065 and all of dispatch.test.ts until they pass, then messages-repo.test.ts, then T066 on the :3100 build.
+
+  (2026-11-23: T064 6/6; the US3 and US4 cases of dispatch.test.ts pass (17/17); messages-repo.test.ts, alerts repo.test.ts and the rest of src/server/notifications pass; T066 passes on mobile and desktop on the :3100 build; typecheck, lint and format are clean. One full-file run of dispatch.test.ts, made while the build and e2e ran against the same database, failed 6 US4 cases, which pass on their own. A full-file run on a quiet database was still in progress at commit time.)
 
 **Checkpoint**: the P1 stories are complete. Delivery meets SC-001–SC-003 for every source.
 
@@ -568,7 +615,7 @@ Already built: holding in T023, lapsing and re-checks in T043, urgent in T057. T
 - **US1 (3)**: after Foundational. Builds the dispatcher, which US2–US4 extend.
 - **US2 (4)**: after US1 (T023's dispatcher). The rule editor and Alerts don't depend on US1's screens, so US2's tests and pure modules (T035–T037, T040, T041) can start as soon as Foundational is done.
 - **US3 (5)**: after US2 (T044's actions file, T045's queries, T046's `AlertsView`). T050, T051 and T054 can start after Foundational.
-- **US4 (6)**: after US2 and US3, because its timing checks cover rules and messages. T064 and T067 can start after Foundational.
+- **US4 (6)**: after US2 and US3, because its timing checks cover rules and messages and T068 changes their steps. T064 and T067 can start after Foundational.
 - **US5 (7)**: after US1 (repo and Me rows) and T041 (`ruleSummary`). Independent of US3 and US4.
 - **Polish (8)**: after the stories you're shipping.
 
@@ -578,7 +625,7 @@ Tests first and failing → pure modules → loaders and repo → actions and Ro
 
 ### Shared files (no [P] between these tasks)
 
-- src/server/notifications/dispatch.ts: T023 → T043 → T057 → T068
+- src/server/notifications/dispatch.ts: T023 → T043 → T057 → T067 (moves `payloadOf` out) → T068
 - src/server/notifications/dispatch.test.ts: T018 → T038 → T052 → T065 → T072
 - src/server/notifications/record.ts: T014 → T025
 - src/features/notifications/repo.ts: T026 → T075
@@ -600,7 +647,7 @@ Tests first and failing → pure modules → loaders and repo → actions and Ro
 - **US1**: T018–T022 together; T029 alongside T026–T028.
 - **US2**: T035–T039 together; T040 and T041 together.
 - **US3**: T050–T053 together; T054 alongside T055.
-- **US4**: T064, then T067, while T065 and T066 are written.
+- **US4**: T064, T065 and T066 together; then T067; then T068 (same file as T067's move).
 - **US5**: T071–T073 together. US5 as a whole alongside US3 and US4, except for the message files and dispatch.test.ts.
 
 ---

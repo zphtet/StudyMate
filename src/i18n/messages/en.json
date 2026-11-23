@@ -1107,7 +1107,8 @@
     "copyTitle": "To {name}: {title}",
     "inactiveAdminTitle": "{name} hasn't studied for {days, plural, one {# day} other {# days}}",
     "inactiveAdminBody": "Last studied {date}.",
-    "messageTitle": "Message from {admin}"
+    "messageTitle": "Message from {admin}",
+    "bundleTitle": "{n, plural, one {# reminder} other {# reminders}}"
   },
   "composer": {
     "newTitle": "New message",

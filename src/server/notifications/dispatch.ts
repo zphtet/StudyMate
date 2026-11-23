@@ -12,8 +12,9 @@ import {
   type StudentData,
   type Window,
 } from './occurrences'
+import { bundle } from './bundle'
 import { messageRow, type HandedOver } from './message-rows'
-import type { PushPayload, PushSender } from './push'
+import type { PushSender } from './push'
 import { loadRuleTargets, loadStudentData, type Only, type RuleTarget } from './rule-data'
 import { copyRows, ruleRow, summaryEmail, type DeliveredRow } from './rule-rows'
 import { textsFor } from './texts'
@@ -47,8 +48,14 @@ const RETENTION_DAYS = 90
 /** The daily purge runs on the first tick after 03:00 UTC; ticks are 5 minutes apart (R9). */
 const PURGE_HOUR_UTC = 3
 const TICK_MINUTES = 5
-/** Rule occurrences are looked for in (now − 15 min, now], so a late or missed tick loses nothing (R2). */
+/** Rule occurrences are looked for from now − 15 min, so a late or missed tick loses nothing (R2). */
 const LOOK_BACK_MINUTES = 15
+/**
+ * Items due within this long of each other arrive as one push (R5; US4 scenario 3). Rules and
+ * messages become rows this far ahead, at their planned time, and a free recipient's rows due this
+ * soon go out with what is due now.
+ */
+const BUNDLE_MINUTES = 10
 const MINUTE = 60_000
 const NO_DATA: StudentData = { lessons: [], activity: [], shifts: [] }
 
@@ -60,11 +67,12 @@ export async function dispatch(
   const only = (column: Prisma.Sql) =>
     scope ? Prisma.sql`and ${column} = any(${scope.userIds}::uuid[])` : Prisma.empty
 
-  const created = await createRuleOccurrences(now, only)
-  const handedOver = await handOverMessages(now, only)
+  const soon = new Date(now.getTime() + BUNDLE_MINUTES * MINUTE)
+  const created = await createRuleOccurrences(now, soon, only)
+  const handedOver = await handOverMessages(now, soon, only)
   await createWeekChecks(now, only)
   const settled = await dropSettledWeekChecks(only)
-  const held = await holdForBusyRecipients(now, only)
+  const held = await holdForBusyRecipients(now, soon, only)
   const stale = await dropStale(now, only)
   const delivery = await deliverDue(now, deps, only)
   await purgeOld(now, only)
@@ -79,12 +87,13 @@ export async function dispatch(
 
 /**
  * Step 1 (research R2, R3; data-model.md Notification.source_type `rule`,
- * Notification.occurrence_key, Notification.expires_at): every occurrence due in the look-back window
- * becomes a row, rendered for its recipient. The unique key keeps it to one however many runs see it
- * (FR-004). A rule never fires for a moment before it existed.
+ * Notification.occurrence_key, Notification.expires_at): every occurrence in (now − 15 min,
+ * now + 10 min] becomes a row, rendered for its recipient, due at its own instant
+ * (Notification.deliver_at); the look-ahead lets the delivery step bundle it (R5). The unique key
+ * keeps it to one however many runs see it (FR-004). A rule never fires for a moment before it existed.
  */
-async function createRuleOccurrences(now: Date, only: Only) {
-  const window: Window = { from: new Date(now.getTime() - LOOK_BACK_MINUTES * MINUTE), to: now }
+async function createRuleOccurrences(now: Date, soon: Date, only: Only) {
+  const window: Window = { from: new Date(now.getTime() - LOOK_BACK_MINUTES * MINUTE), to: soon }
   const targets = await loadRuleTargets(only)
   if (targets.length === 0) return 0
   const needsShifts = targets.some((t) => t.rule.config.trigger === 'after_shift')
@@ -94,7 +103,7 @@ async function createRuleOccurrences(now: Date, only: Only) {
   )
   const windowOf = ({ rule }: RuleTarget): Window => ({
     from: rule.createdAt > window.from ? rule.createdAt : window.from,
-    to: now,
+    to: window.to,
   })
 
   const perStudent = targets.flatMap((target) =>
@@ -136,11 +145,13 @@ async function createRuleOccurrences(now: Date, only: Only) {
 /**
  * Step 2 (research R2, R11; data-model.md › Lifecycles › A scheduled message). First the Edge Cases:
  * an unlinked student's pending delivery is dropped, and a scheduled message left with no recipient
- * (all unlinked, or their profiles deleted) is cancelled. Then due recipients are claimed
- * (ScheduledMessageRecipient.delivered_at) and become rows in the same transaction, keyed `message`
- * (FR-004), and a message whose recipients have all been handed over is `sent`.
+ * (all unlinked, or their profiles deleted) is cancelled. Then recipients due within 10 minutes are
+ * claimed (ScheduledMessageRecipient.delivered_at) and become rows due at their planned time, in the
+ * same transaction, keyed `message` (FR-004); the look-ahead lets the delivery step bundle them (R5).
+ * A message whose recipients have all been handed over is `sent`, so Edit and Cancel send close up
+ * to 10 minutes before its time (decided 2026-11-23, tasks.md Phase 6).
  */
-async function handOverMessages(now: Date, only: Only) {
+async function handOverMessages(now: Date, soon: Date, only: Only) {
   await prisma.$executeRaw`
     delete from scheduled_message_recipients r using scheduled_messages m
     where m.id = r.message_id and m.status = 'scheduled' and r.delivered_at is null
@@ -160,7 +171,7 @@ async function handOverMessages(now: Date, only: Only) {
         update scheduled_message_recipients r set delivered_at = ${now}
         from scheduled_messages m
         where m.id = r.message_id and m.status = 'scheduled'
-          and r.delivered_at is null and r.deliver_at <= ${now}
+          and r.delivered_at is null and r.deliver_at <= ${soon}
           ${only(Prisma.sql`r.student_id`)}
         returning r.message_id, r.student_id, r.deliver_at
       )
@@ -253,17 +264,20 @@ async function dropSettledWeekChecks(only: Only) {
 }
 
 /**
- * Step 3 (FR-003, FR-017; research R2, R14): rows due for a recipient who is on shift, asleep, outside
- * waking hours or in quiet hours move to their next free moment (data-model.md
- * Notification.deliver_at). A rule reminder that would lapse by then is deleted instead
- * (Notification.expires_at): it is never sent and never in the inbox. One `next_free_at` per
- * recipient, in one statement. Urgent rows go anyway (Notification.urgent).
+ * Step 3 (FR-003, FR-017; research R2, R5, R14), one statement with one `next_free_at` per recipient
+ * who has rows due:
+ * - Busy (on shift, asleep, outside waking hours or in quiet hours): their due rows move to the next
+ *   free moment (data-model.md Notification.deliver_at). A rule reminder that would lapse by then is
+ *   deleted instead (Notification.expires_at): never sent, never in the inbox. Urgent rows go anyway
+ *   (Notification.urgent).
+ * - Free: their rows due in the next 10 minutes are pulled forward to now, so they arrive in the same
+ *   push (R5). A busy recipient's rows keep their time, even when an urgent row goes now.
  */
-async function holdForBusyRecipients(now: Date, only: Only) {
+async function holdForBusyRecipients(now: Date, soon: Date, only: Only) {
   const [counts] = await prisma.$queryRaw<{ lapsed: number; postponed: number }[]>`
     with due as (
       select distinct user_id from notifications
-      where delivered_at is null and deliver_at <= ${now} and not urgent ${only(Prisma.sql`user_id`)}
+      where delivered_at is null and deliver_at <= ${now} ${only(Prisma.sql`user_id`)}
     ), free as (
       select user_id, next_free_at(user_id, ${now}) as at from due
     ), busy as (
@@ -277,6 +291,11 @@ async function holdForBusyRecipients(now: Date, only: Only) {
     ), moved as (
       update notifications n set deliver_at = b.at from busy b
       where n.id = b.id and (b.expires_at is null or b.expires_at > b.at)
+      returning n.id
+    ), pulled as (
+      update notifications n set deliver_at = ${now} from free f
+      where n.user_id = f.user_id and f.at <= ${now} and n.delivered_at is null
+        and n.deliver_at > ${now} and n.deliver_at <= ${soon}
       returning n.id
     )
     select (select count(*) from lapsed)::int as lapsed, (select count(*) from moved)::int as postponed`
@@ -328,6 +347,7 @@ type DueRow = DeliveredRow & {
   title: string
   url: string | null
   push: boolean
+  urgent: boolean
   role: 'student' | 'admin'
   locale: string
   timezone: string
@@ -335,10 +355,11 @@ type DueRow = DeliveredRow & {
 
 /**
  * Step 4 (research R2, R5, R6): rows due now are claimed (delivered_at set) before anything is sent,
- * so a retry or a second run never sends them twice (FR-004). Then one push per row with `push`
- * (data-model.md Notification.push) to every device of its recipient, with the row's stored title,
- * body and url (data-model.md Notification.title, Notification.body, Notification.url). A device the
- * push service no longer knows is removed; other failures still count as delivered (the inbox has it).
+ * so a retry or a second run never sends them twice (FR-004). Then each recipient gets one push to
+ * every device: one row with `push` (data-model.md Notification.push) keeps its stored title, body and
+ * url (data-model.md Notification.title, Notification.body, Notification.url); several become one
+ * "{n} reminders" (`bundle`). A device the push service no longer knows is removed; other failures
+ * still count as delivered (the inbox has it).
  */
 async function deliverDue(now: Date, { push: sender, email }: DispatchDeps, only: Only) {
   const due = await prisma.$queryRaw<DueRow[]>`
@@ -349,21 +370,21 @@ async function deliverDue(now: Date, { push: sender, email }: DispatchDeps, only
       where delivered_at is null and deliver_at <= ${now} ${only(Prisma.sql`user_id`)}
       for update skip locked)
     returning n.id::text, n.user_id::text, n.source_type, n.source_id::text, n.occurrence_key,
-              n.title, n.body, n.url, n.push, p.role::text as role, p.locale, p.timezone`
+              n.title, n.body, n.url, n.push, n.urgent, p.role::text as role, p.locale,
+              p.timezone`
 
-  const toPush = due.filter((row) => row.push)
-  const devices = toPush.length
+  const payloads = await pushPayloads(due)
+  const devices = payloads.size
     ? await prisma.pushSubscription.findMany({
-        where: { userId: { in: [...new Set(toPush.map((row) => row.user_id))] } },
+        where: { userId: { in: [...payloads.keys()] } },
         select: { id: true, userId: true, endpoint: true, p256dh: true, auth: true },
       })
     : []
 
-  const sends = toPush.flatMap((row) =>
-    devices
-      .filter((device) => device.userId === row.user_id)
-      .map(async (device) => ({ device, result: await sender.send(device, payloadOf(row)) })),
-  )
+  const sends = devices.flatMap((device) => {
+    const payload = payloads.get(device.userId)
+    return payload ? [sender.send(device, payload).then((result) => ({ device, result }))] : []
+  })
   const results = await Promise.all(sends)
   const gone = [...new Set(results.filter((r) => r.result === 'gone').map((r) => r.device.id))]
   if (gone.length > 0) await prisma.pushSubscription.deleteMany({ where: { id: { in: gone } } })
@@ -405,18 +426,24 @@ async function emailSummaries(due: DueRow[], sender: EmailSender) {
   }
 }
 
-/**
- * One row's phone notification. Tapping it opens the row's link, or the inbox, with `?n=<id>` so the
- * app marks it read (FR-007; research R9). `tag` is the row id, so a resent notice replaces the old one.
- */
-function payloadOf(row: DueRow): PushPayload {
-  const url = row.url ?? (row.role === 'admin' ? '/a/inbox' : '/s/inbox')
-  return {
-    title: row.title,
-    body: row.body,
-    url: `${url}${url.includes('?') ? '&' : '?'}n=${row.id}`,
-    tag: row.id,
-  }
+/** Each recipient's one phone notification for what was just delivered, in their language (R5). */
+async function pushPayloads(due: DueRow[]) {
+  const byRecipient = Map.groupBy(
+    due.filter((row) => row.push),
+    (row) => row.user_id,
+  )
+  const entries = await Promise.all(
+    [...byRecipient].map(async ([userId, rows]) => {
+      const [{ role, locale, timezone }] = rows
+      const { tr } = await textsFor({ id: userId, locale, timezone })
+      const payload = bundle(rows, {
+        inbox: role === 'admin' ? '/a/inbox' : '/s/inbox',
+        bundleTitle: (n) => tr('pushTexts.bundleTitle', { n }),
+      })
+      return payload ? [[userId, payload] as const] : []
+    }),
+  )
+  return new Map(entries.flat())
 }
 
 /** Items older than 90 days are deleted once a day, on the first tick after 03:00 UTC (R9). */

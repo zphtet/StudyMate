@@ -85,7 +85,7 @@ Rows for the Admin from `to: admin` follow the rule's `push` channel and wait fo
 ## Derived values
 
 - **Unread count**: delivered rows of the user with `read_at` null.
-- **Read status of a message** (Alerts): per recipient, from the `notifications` row (`source_type = 'message'`, `source_id` = message): `scheduled` while there is no row or the row is still pending (held because the student is busy), `delivered` once the row's `delivered_at` is set, `read` once its `read_at` is set. A held recipient stays `scheduled` on Alerts, but Edit and Cancel are refused once it is handed over (ScheduledMessageRecipient.delivered_at).
+- **Read status of a message** (Alerts): per recipient, from the `notifications` row (`source_type = 'message'`, `source_id` = message): `scheduled` while there is no row or the row is still pending (held because the student is busy, or handed over up to 10 minutes early), `delivered` once the row's `delivered_at` is set, `read` once its `read_at` is set. A held recipient stays `scheduled` on Alerts, but Edit and Cancel are refused once it is handed over (ScheduledMessageRecipient.delivered_at).
 - **Is a moment busy** for a recipient: `next_free_at(user, at) > at`. It covers shift, sleep, outside waking hours and quiet hours, for students and Admins (R14). The composer shows which kind from `busy_segments`.
 
 ## Lifecycles
@@ -107,7 +107,7 @@ older than 90 days ─► deleted
 ```text
 scheduled ─edit─► scheduled          (each recipient row until handed over)
 scheduled ─cancel / no recipient left─► cancelled
-each recipient: deliver_at reached ─► handed over (delivered_at) ─► a notifications row (above)
+each recipient: deliver_at within 10 min ─► handed over (delivered_at) ─► a notifications row due at deliver_at (above)
 all recipients handed over ─► sent
 ```
 

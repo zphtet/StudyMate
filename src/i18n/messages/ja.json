@@ -1107,7 +1107,8 @@
     "copyTitle": "{name}さんへ: {title}",
     "inactiveAdminTitle": "{name}さんが{days}日間学習していません",
     "inactiveAdminBody": "最後の学習: {date}",
-    "messageTitle": "{admin}さんからのメッセージ"
+    "messageTitle": "{admin}さんからのメッセージ",
+    "bundleTitle": "{n, plural, other {# 件のリマインダー}}"
   },
   "composer": {
     "newTitle": "新しいメッセージ",
