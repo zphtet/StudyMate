@@ -193,7 +193,11 @@
     "submission_not_found": "This submission isn't available.",
     "invalid_transition": "That status change isn't allowed.",
     "too_many_images": "You can add up to 5 photos.",
-    "session_not_found": "This focus session wasn't found."
+    "session_not_found": "This focus session wasn't found.",
+    "shift_overlap": "Overlaps your shift {time}",
+    "shift_too_long": "A shift can be at most 24 h",
+    "shift_not_found": "That shift no longer exists.",
+    "rotation_not_found": "You don't have a rotation."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -217,7 +221,11 @@
     "sectionTitleRequired": "Enter a section name",
     "content_too_long": "Longer than 200 KB: shorten it to save",
     "commentRequired": "Write a comment",
-    "commentTooLong": "Use 2000 characters or fewer"
+    "commentTooLong": "Use 2000 characters or fewer",
+    "timeInvalid": "Enter a time.",
+    "presetSameTimes": "Start and end can't be the same.",
+    "wakingOrder": "Waking hours must start before they end.",
+    "rotationEmpty": "Add at least one Day, Evening or Night."
   },
   "students": {
     "title": "Students",
@@ -781,5 +789,147 @@
     "days": "{count, plural, one {# day} other {# days}}",
     "title": "Weekly goal",
     "description": "Days a week you want to study"
+  },
+  "shifts": {
+    "title": "Shifts",
+    "addShift": "Add shift",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "legend": "Shift types in this month",
+    "types": {
+      "day": "Day",
+      "evening": "Evening",
+      "night": "Night",
+      "off": "Off",
+      "custom": "Custom"
+    },
+    "named": {
+      "day": "Day shift",
+      "evening": "Evening shift",
+      "night": "Night shift",
+      "off": "Day off",
+      "custom": "Custom shift"
+    },
+    "shiftSameDay": "{type} {start} to {end}",
+    "shiftOvernight": "{type} {start} to {weekday} {end}",
+    "selected": "selected",
+    "today": "Today · {date}",
+    "edit": "Edit",
+    "editLabel": "Edit {date}",
+    "dayShifts": "Shifts on {date}",
+    "overnightRange": "{start} → {weekday} {end}",
+    "fromYesterday": "{type} (from {weekday})",
+    "wholeDay": "All day",
+    "noShift": "No shift on this day.",
+    "settings": "Shift settings",
+    "settingsHint": "Preset times, sleep and waking hours",
+    "empty": "Add your shifts so your admin plans around them.",
+    "noShiftFree": "No shift. Free {ranges}",
+    "sleepAuto": "Sleep, auto {hours} h",
+    "freeToStudy": "Free to study",
+    "calendarRow": "Shift calendar",
+    "weekShifts": "{count, plural, =0 {No shifts this week} one {# shift this week} other {# shifts this week}}"
+  },
+  "shiftEditor": {
+    "title": "Shift · {date}",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveShift": "Save shift",
+    "type": "Shift type",
+    "starts": "Starts",
+    "ends": "Ends",
+    "nextDay": "+1 day",
+    "duration": "{minutes, plural, =0 {{hours} h} other {{hours} h # min}}",
+    "crossesMidnight": "{duration} · crosses midnight, ends the next morning",
+    "strip": "The shift on {start} and {end}",
+    "stripStart": "{weekday} 00:00",
+    "midnight": "midnight",
+    "stripEnd": "{weekday} 24:00",
+    "repeat": "Repeat",
+    "justThisDay": "Just this day",
+    "blockSleep": "Block sleep after this shift",
+    "sleepUntil": "No reminders until {time} {weekday} ({duration})",
+    "delete": "Delete shift",
+    "deleteTitle": "Delete this shift?",
+    "deleteBody": "It will be removed from your calendar.",
+    "deleteGenerated": "This day becomes Off; your rotation won't fill it again.",
+    "keep": "Keep it",
+    "saved": "Shift saved",
+    "deleted": "Shift deleted",
+    "myRotation": "My rotation",
+    "myRotationHint": "Fill future weeks from my pattern; edited days stay as I set them",
+    "myRotationCustom": "A custom shift can't be part of a rotation."
+  },
+  "shiftSettings": {
+    "title": "Shift settings",
+    "description": "Times used by Add shift and your rotation.",
+    "presets": "Preset times",
+    "starts": "{type} starts",
+    "ends": "{type} ends",
+    "sleep": "Sleep after a shift",
+    "waking": "Waking hours",
+    "wakingFrom": "Awake from",
+    "wakingTo": "Awake until",
+    "wakingHint": "Free time to study is only counted inside these hours.",
+    "save": "Save",
+    "saved": "Shift settings saved"
+  },
+  "availabilityStatus": {
+    "onShiftUntil": "On {type} shift until {time}",
+    "onShift": "On {type} shift",
+    "sleepingUntil": "Sleeping until {time}",
+    "sleeping": "Sleeping",
+    "free": "Free now",
+    "unknown": "No shift info",
+    "types": {
+      "day": "day",
+      "evening": "evening",
+      "night": "night",
+      "off": "day-off",
+      "custom": "custom"
+    }
+  },
+  "rotation": {
+    "title": "My rotation",
+    "cancel": "Cancel",
+    "pattern": "Pattern",
+    "patternHint": "Tap a day to remove it. Up to 28 days.",
+    "add": "+ {type}",
+    "tile": "Day {number}: {type}. Remove",
+    "letters": {
+      "D": "D",
+      "E": "E",
+      "N": "N",
+      "O": "O"
+    },
+    "startsOn": "Starts on",
+    "preview": "Next 14 days",
+    "previewEmpty": "Add days to see the next two weeks.",
+    "save": "Save rotation",
+    "delete": "Delete rotation",
+    "deleteTitle": "Delete your rotation?",
+    "deleteBody": "Future shifts from this rotation will be removed. Days you edited stay.",
+    "keep": "Keep it",
+    "saved": "Rotation saved",
+    "deleted": "Rotation deleted",
+    "kept": "Kept your own shifts on {count, plural, one {# day} other {# days}}.",
+    "row": "My rotation",
+    "rowValue": "{sequence} from {date}",
+    "setUp": "Set up a rotation"
+  },
+  "weekCheck": {
+    "title": "Next week's shifts — correct?",
+    "body": "Week of {date}",
+    "confirm": "Confirm",
+    "edit": "Edit"
+  },
+  "shiftBanner": {
+    "label": "Your shift today",
+    "nightTonight": "Night shift tonight · {start}–{end}",
+    "shiftToday": "{type} today · {start}–{end}",
+    "onShiftUntil": "On shift until {time}",
+    "freeNow": "Good window to study now: about {minutes} min free",
+    "freeNowHours": "Good window to study now: about {hours} h free",
+    "freeAt": "Free again at {time}"
   }
 }

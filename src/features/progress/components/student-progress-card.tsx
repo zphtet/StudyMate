@@ -1,15 +1,17 @@
 'use client'
 
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { UsersRound } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { useEffect } from 'react'
 import { EmptyState } from '@/components/shared/empty-state'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { ProgressBar } from '@/components/shared/progress-bar'
 import { StatusChip } from '@/components/shared/status-chip'
 import { useDuration } from '@/components/shared/use-duration'
 import { COURSE_COLOR_CLASSES } from '@/features/courses/components/course-icon'
+import { useStatusText } from '@/features/shifts/components/use-status-text'
 import { useRealtimeInvalidate } from '@/lib/realtime'
 import { adminProgressKeys, studentCardsQuery } from '../queries'
 import type { AdminStudentCard, CourseProgress } from '../types'
@@ -18,7 +20,9 @@ import type { AdminStudentCard, CourseProgress } from '../types'
 // linked student with "{n} overdue" and "{n} to review", tiles for the day streak, this week's time
 // and lessons done (the student's own Mon–Sun), and per-course progress bars. The student's name is
 // the card's link and covers the whole card. New submissions and completions arrive live
-// (research.md R10; SC-002): RLS limits the events to linked students' visible rows.
+// (research.md R10; SC-002): RLS limits the events to linked students' visible rows. Spec 005 US4
+// adds each student's live status under the name; it changes with the clock, so the list refetches
+// when the earliest shown time passes (and on window focus), not through Realtime (005 research R8).
 
 export function StudentCardList() {
   const t = useTranslations('students')
@@ -31,6 +35,7 @@ export function StudentCardList() {
     when: (row) => row.status === 'submitted',
   })
   useRealtimeInvalidate({ table: 'lesson_progress', queryKeys })
+  useRefetchAtNextChange(data.students)
   if (data.students.length === 0) {
     return (
       <EmptyState icon={UsersRound} title={t('emptyTitle')}>
@@ -49,9 +54,31 @@ export function StudentCardList() {
   )
 }
 
+/** 32-bit setTimeout limit; statuses change within 2 days anyway. */
+const MAX_DELAY_MS = 2_147_483_647
+
+/** Refetch the cards a second after the earliest status change (spec 005 US4: "changes by itself"). */
+function useRefetchAtNextChange(students: AdminStudentCard[]) {
+  const queryClient = useQueryClient()
+  const next = students
+    .map((s) => s.status.until)
+    .filter((until): until is string => until !== null)
+    .sort()[0]
+  useEffect(() => {
+    if (!next) return
+    const delay = Math.min(Math.max(new Date(next).getTime() - Date.now(), 0) + 1000, MAX_DELAY_MS)
+    const timer = setTimeout(
+      () => queryClient.invalidateQueries({ queryKey: adminProgressKeys.cards }),
+      delay,
+    )
+    return () => clearTimeout(timer)
+  }, [next, queryClient])
+}
+
 function StudentProgressCard({ student }: { student: AdminStudentCard }) {
   const t = useTranslations('adminStudents')
   const duration = useDuration()
+  const statusText = useStatusText()
   return (
     <article
       aria-label={student.displayName}
@@ -59,15 +86,20 @@ function StudentProgressCard({ student }: { student: AdminStudentCard }) {
     >
       <div className="flex items-center gap-3">
         <InitialAvatar name={student.displayName} seed={student.id} className="size-12" />
-        <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">
-          {/* The name is the link; it covers the whole card, so the card is one tap target. */}
-          <Link
-            href={`/a/students/${student.id}`}
-            className="outline-none after:absolute after:inset-0 after:rounded-3xl"
-          >
-            {student.displayName}
-          </Link>
-        </h2>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-lg font-semibold">
+            {/* The name is the link; it covers the whole card, so the card is one tap target. */}
+            <Link
+              href={`/a/students/${student.id}`}
+              className="outline-none after:absolute after:inset-0 after:rounded-3xl"
+            >
+              {student.displayName}
+            </Link>
+          </h2>
+          <p data-testid="availability" className="text-sm text-muted-foreground">
+            {statusText(student.status, student.timezone)}
+          </p>
+        </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {student.overdueCount > 0 && (
             <StatusChip tone="danger">{t('overdue', { count: student.overdueCount })}</StatusChip>

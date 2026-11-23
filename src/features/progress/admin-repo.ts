@@ -1,6 +1,7 @@
 import 'server-only'
 import { countOverdue } from '@/features/assignments/student-repo'
 import { flatten, groupCourse } from '@/features/courses/order'
+import type { AvailabilityStatus, ShiftType } from '@/features/shifts/types'
 import type { CourseColor } from '@/features/courses/schemas'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
@@ -114,11 +115,12 @@ export async function getStudentCards(
   })
   const students = links.map((l) => l.student)
   const ids = students.map((s) => s.id)
-  const [progress, toReview, activity, overdue] = await Promise.all([
+  const [progress, toReview, activity, overdue, statuses] = await Promise.all([
     progressOfStudents(admin.id, ids),
     submissionsToReview(admin.id, ids),
     dailyActivityForStudents(ids),
     countOverdue(ids, now),
+    statusOfStudents(ids, now),
   ])
   const waiting = (studentId: string) => toReview.filter((r) => r.student_id === studentId).length
   return {
@@ -132,9 +134,46 @@ export async function getStudentCards(
         weekSeconds: week.weekSeconds,
         weekLessonsDone: week.weekLessonsDone,
         courses: progress.get(s.id) ?? [],
+        status: statuses.get(s.id) ?? UNKNOWN,
       }
     }),
   }
+}
+
+const UNKNOWN: AvailabilityStatus = { state: 'unknown', until: null, shiftType: null }
+
+/**
+ * Spec 005 US4 (research R8): each student's live status at `now` from SQL status_at() (FR-006, the
+ * one rule) and the type of the working shift running then, in one statement for all students.
+ * status_at runs as the server connection; the caller's links scope is the access rule.
+ */
+async function statusOfStudents(ids: string[], now: Date) {
+  if (ids.length === 0) return new Map<string, AvailabilityStatus>()
+  const rows = await prisma.$queryRaw<
+    {
+      student_id: string
+      state: AvailabilityStatus['state']
+      until: Date | null
+      shift_type: ShiftType | null
+    }[]
+  >`
+    select p.id as student_id, s.state, s.until,
+           (select sh.type::text from shifts sh
+             where sh.student_id = p.id and sh.type <> 'off'
+               and sh.start_at <= ${now} and sh.end_at > ${now}
+             limit 1) as shift_type
+      from unnest(${ids}::uuid[]) as p(id)
+      cross join lateral status_at(p.id, ${now}) s`
+  return new Map(
+    rows.map((r) => [
+      r.student_id,
+      {
+        state: r.state,
+        until: r.until?.toISOString() ?? null,
+        shiftType: r.state === 'on_shift' ? r.shift_type : null,
+      },
+    ]),
+  )
 }
 
 /** The Admin's own Active courses assigned to this student, with lessons in course order. */

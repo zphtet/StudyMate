@@ -193,7 +193,11 @@
     "submission_not_found": "この提出物は表示できません。",
     "invalid_transition": "このステータスには変更できません。",
     "too_many_images": "写真は5枚まで追加できます。",
-    "session_not_found": "この集中セッションが見つかりません。"
+    "session_not_found": "この集中セッションが見つかりません。",
+    "shift_overlap": "{time}のシフトと重なっています",
+    "shift_too_long": "シフトは最長24時間です",
+    "shift_not_found": "そのシフトはもうありません。",
+    "rotation_not_found": "ローテーションがありません。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -217,7 +221,11 @@
     "sectionTitleRequired": "セクション名を入力してください",
     "content_too_long": "200KBを超えています。保存するには短くしてください",
     "commentRequired": "コメントを入力してください",
-    "commentTooLong": "2000文字以内で入力してください"
+    "commentTooLong": "2000文字以内で入力してください",
+    "timeInvalid": "時刻を入力してください。",
+    "presetSameTimes": "開始と終了を同じにはできません。",
+    "wakingOrder": "起きる時刻は寝る時刻より前にしてください。",
+    "rotationEmpty": "日勤・遅番・夜勤を少なくとも1日追加してください。"
   },
   "students": {
     "title": "学生",
@@ -781,5 +789,147 @@
     "days": "{count}日",
     "title": "週の目標",
     "description": "1週間に学習したい日数"
+  },
+  "shifts": {
+    "title": "シフト",
+    "addShift": "シフトを追加",
+    "previousMonth": "前の月",
+    "nextMonth": "次の月",
+    "legend": "今月のシフトの種類",
+    "types": {
+      "day": "日勤",
+      "evening": "遅番",
+      "night": "夜勤",
+      "off": "休み",
+      "custom": "カスタム"
+    },
+    "named": {
+      "day": "日勤",
+      "evening": "遅番",
+      "night": "夜勤",
+      "off": "休み",
+      "custom": "カスタムシフト"
+    },
+    "shiftSameDay": "{type} {start}〜{end}",
+    "shiftOvernight": "{type} {start}〜{weekday} {end}",
+    "selected": "選択中",
+    "today": "今日 · {date}",
+    "edit": "編集",
+    "editLabel": "{date}を編集",
+    "dayShifts": "{date}のシフト",
+    "overnightRange": "{start} → {weekday} {end}",
+    "fromYesterday": "{type}（{weekday}から）",
+    "wholeDay": "終日",
+    "noShift": "この日はシフトがありません。",
+    "settings": "シフト設定",
+    "settingsHint": "プリセット時刻・睡眠・起きている時間",
+    "empty": "シフトを追加すると、管理者がそれに合わせて計画できます。",
+    "noShiftFree": "シフトなし。空き {ranges}",
+    "sleepAuto": "睡眠（自動{hours}時間）",
+    "freeToStudy": "学習できる時間",
+    "calendarRow": "シフトカレンダー",
+    "weekShifts": "{count, plural, =0 {今週のシフトはありません} other {今週のシフト{count}件}}"
+  },
+  "shiftEditor": {
+    "title": "シフト · {date}",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "saveShift": "シフトを保存",
+    "type": "シフトの種類",
+    "starts": "開始",
+    "ends": "終了",
+    "nextDay": "翌日",
+    "duration": "{minutes, plural, =0 {{hours}時間} other {{hours}時間#分}}",
+    "crossesMidnight": "{duration} · 日付をまたぎ、翌朝に終わります",
+    "strip": "{start}と{end}のシフト",
+    "stripStart": "{weekday} 0:00",
+    "midnight": "0時",
+    "stripEnd": "{weekday} 24:00",
+    "repeat": "繰り返し",
+    "justThisDay": "この日だけ",
+    "blockSleep": "このシフトの後に睡眠時間を確保",
+    "sleepUntil": "{weekday} {time}まで通知しません（{duration}）",
+    "delete": "シフトを削除",
+    "deleteTitle": "このシフトを削除しますか？",
+    "deleteBody": "カレンダーから削除されます。",
+    "deleteGenerated": "この日は休みになり、ローテーションで再び埋まることはありません。",
+    "keep": "残す",
+    "saved": "シフトを保存しました",
+    "deleted": "シフトを削除しました",
+    "myRotation": "マイローテーション",
+    "myRotationHint": "パターンで今後の週を埋めます。編集した日はそのまま残ります",
+    "myRotationCustom": "カスタムシフトはローテーションに含められません。"
+  },
+  "shiftSettings": {
+    "title": "シフト設定",
+    "description": "シフト追加とローテーションで使う時刻です。",
+    "presets": "プリセット時刻",
+    "starts": "{type}の開始",
+    "ends": "{type}の終了",
+    "sleep": "シフト後の睡眠",
+    "waking": "起きている時間",
+    "wakingFrom": "起きる時刻",
+    "wakingTo": "寝る時刻",
+    "wakingHint": "学習できる空き時間は、この時間内だけで数えます。",
+    "save": "保存",
+    "saved": "シフト設定を保存しました"
+  },
+  "availabilityStatus": {
+    "onShiftUntil": "{type}中・{time}まで",
+    "onShift": "{type}中",
+    "sleepingUntil": "睡眠中・{time}まで",
+    "sleeping": "睡眠中",
+    "free": "今は空いています",
+    "unknown": "シフト情報なし",
+    "types": {
+      "day": "日勤",
+      "evening": "遅番",
+      "night": "夜勤",
+      "off": "休み",
+      "custom": "シフト"
+    }
+  },
+  "rotation": {
+    "title": "マイローテーション",
+    "cancel": "キャンセル",
+    "pattern": "パターン",
+    "patternHint": "日をタップすると削除します。最長28日です。",
+    "add": "+ {type}",
+    "tile": "{number}日目: {type}。削除",
+    "letters": {
+      "D": "日",
+      "E": "遅",
+      "N": "夜",
+      "O": "休"
+    },
+    "startsOn": "開始日",
+    "preview": "今後14日間",
+    "previewEmpty": "日を追加すると、2週間分が表示されます。",
+    "save": "ローテーションを保存",
+    "delete": "ローテーションを削除",
+    "deleteTitle": "ローテーションを削除しますか？",
+    "deleteBody": "このローテーションの今後のシフトは削除されます。編集した日は残ります。",
+    "keep": "残す",
+    "saved": "ローテーションを保存しました",
+    "deleted": "ローテーションを削除しました",
+    "kept": "{count}日分は自分で入れたシフトを残しました。",
+    "row": "マイローテーション",
+    "rowValue": "{date}から {sequence}",
+    "setUp": "ローテーションを設定"
+  },
+  "weekCheck": {
+    "title": "来週のシフトはこれで合っていますか？",
+    "body": "{date}の週",
+    "confirm": "確認",
+    "edit": "編集"
+  },
+  "shiftBanner": {
+    "label": "今日のシフト",
+    "nightTonight": "今夜は夜勤 · {start}–{end}",
+    "shiftToday": "今日は{type} · {start}–{end}",
+    "onShiftUntil": "{time}までシフト中",
+    "freeNow": "今が学習のチャンス：約{minutes}分空いています",
+    "freeNowHours": "今が学習のチャンス：約{hours}時間空いています",
+    "freeAt": "次の空き時間は{time}から"
   }
 }

@@ -2,6 +2,7 @@
 
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import type { ReactNode } from 'react'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { LanguageButtons } from '@/components/shared/language-buttons'
 import { SettingsGroup, SettingsRow, SettingsSection } from '@/components/shared/settings'
@@ -12,9 +13,10 @@ import { meQuery } from '../queries'
 import { EditProfileSheet } from './edit-profile-sheet'
 import { WeeklyGoalSheet } from './weekly-goal-sheet'
 
-// Me (screen 11-Profile). Students set their weekly goal here (spec 004 FR-008). The other study rows
-// (shifts, quiet hours, reminders) arrive with 005–006; colour themes, fonts and text size with 007.
-export function MeView() {
+// Me (screen 11-Profile). Students set their weekly goal here (spec 004 FR-008); the page puts
+// 005's Shift calendar row above it (`studyRows`). Quiet hours and reminders arrive with 006; colour
+// themes, fonts and text size with 007.
+export function MeView({ studyRows }: { studyRows?: ReactNode }) {
   const t = useTranslations()
   const { data: me } = useSuspenseQuery(meQuery)
   const base = me.role === 'admin' ? '/a/me' : '/s/me'
@@ -46,6 +48,7 @@ export function MeView() {
       {me.role === 'student' && (
         <SettingsSection title={t('me.study')}>
           <SettingsGroup>
+            {studyRows}
             <WeeklyGoalSheet days={me.weeklyGoalDays} />
           </SettingsGroup>
         </SettingsSection>

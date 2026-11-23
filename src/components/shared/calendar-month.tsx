@@ -82,7 +82,7 @@ export function CalendarMonth({
           <tr key={week.find(Boolean) ?? ''}>
             {week.map((date, i) =>
               date ? (
-                <td key={date} className="p-0">
+                <td key={date} className="p-0 align-top">
                   <button
                     ref={(node) => {
                       if (node) buttons.current.set(date, node)

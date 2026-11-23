@@ -63,6 +63,11 @@ const pairs: [string, string][] = [
   ['course-berry', 'course-berry-soft'],
   ['course-green', 'course-green-soft'],
   ['course-slate', 'course-slate-soft'],
+  // Shift types (spec 005 research R5): chip and tile text on its colour.
+  ['shift-day-foreground', 'shift-day'],
+  ['shift-evening-foreground', 'shift-evening'],
+  ['shift-night-foreground', 'shift-night'],
+  ['shift-custom-foreground', 'shift-custom'],
 ]
 
 /** Spec 004 heat shades: `color-mix(in srgb, var(--a) N%, var(--b))` (or `var(--a)`) from :root. */

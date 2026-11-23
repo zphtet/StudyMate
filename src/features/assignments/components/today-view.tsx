@@ -17,8 +17,8 @@ import { DueChip } from './due-chip'
 
 // Student Today (screen 04-Today, partial per contracts/ui-routes.md): date line, greeting, then
 // "Overdue · N" (oldest first) and "Due today" (earliest first), 5 rows each, then "Show all (N)".
-// Spec 004's streak and goal cards go in `top` and Continue in `bottom`; the bell (006) and the shift
-// banner (005) come later.
+// Spec 005's shift banner and Sunday check, then 004's streak and goal cards, go in `top`; Continue
+// in `bottom`. The bell (006) comes later.
 
 const PAGE = 5
 

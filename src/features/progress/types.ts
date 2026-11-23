@@ -1,5 +1,6 @@
 import type { CourseColor } from '@/features/courses/schemas'
 import type { SubmissionStatus } from '@/generated/prisma/client'
+import type { AvailabilityStatus } from '@/features/shifts/types'
 import type { FocusMinutes } from './schemas'
 
 // Response shapes of the 004 Route Handlers (specs/004-progress-assignments/contracts/
@@ -82,6 +83,8 @@ export type AdminStudentCard = StudentRef & {
   weekSeconds: number
   weekLessonsDone: number
   courses: CourseProgress[]
+  /** Spec 005 US4: live status from status_now() (research R8). */
+  status: AvailabilityStatus
 }
 
 /** One local day of a period. */

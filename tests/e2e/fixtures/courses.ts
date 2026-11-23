@@ -133,24 +133,107 @@ export async function setLessonDeadline(
   )
 }
 
-/** Spec 003 (shifts come with 005): one working shift, optionally followed by a sleep block. */
+type ShiftSeed = {
+  /** Spec 005 data-model.md Shift.pattern_id: set on rows a rotation generated. */
+  patternId?: string
+  /** Spec 005 data-model.md Shift.overridden: a generated row the student edited or deleted. */
+  overridden?: boolean
+}
+
+/**
+ * Spec 003/005: one shift, optionally followed by a sleep block. An Off day (`type: 'off'`) is the
+ * whole local `date` in `timeZone` with no sleep (spec 005 research R2). Returns the shift id.
+ */
 export async function seedShift(
   studentId: string,
+  shift:
+    | (ShiftSeed & {
+        startAt: string
+        endAt: string
+        type?: 'day' | 'evening' | 'night' | 'custom'
+        sleepMinutes?: number
+      })
+    | (ShiftSeed & { type: 'off'; date: string; timeZone: string }),
+) {
+  const { patternId = null, overridden = false } = shift
+  const [row] =
+    shift.type === 'off'
+      ? await sql<{ id: string }>(
+          `insert into shifts (student_id, type, start_at, end_at, pattern_id, overridden)
+           values ($1, 'off', $2::date::timestamp at time zone $3,
+                   ($2::date + 1)::timestamp at time zone $3, $4, $5)
+           returning id`,
+          [studentId, shift.date, shift.timeZone, patternId, overridden],
+        )
+      : await sql<{ id: string }>(
+          `insert into shifts (student_id, type, start_at, end_at, sleep_minutes, pattern_id, overridden)
+           values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+          [
+            studentId,
+            shift.type ?? 'night',
+            shift.startAt,
+            shift.endAt,
+            shift.sleepMinutes ?? 0,
+            patternId,
+            overridden,
+          ],
+        )
+  return row.id
+}
+
+/**
+ * Spec 005: a rotation row (data-model.md ShiftPattern.sequence, ShiftPattern.start_date). Rows it
+ * generates are seeded with seedShift({ patternId }). Returns the rotation id.
+ */
+export async function seedRotation(
+  studentId: string,
   {
-    startAt,
-    endAt,
-    type = 'night',
-    sleepMinutes = 0,
-  }: {
-    startAt: string
-    endAt: string
-    type?: 'day' | 'evening' | 'night' | 'off' | 'custom'
+    sequence,
+    startDate,
+    generatedUntil = null,
+    active = true,
+  }: { sequence: string; startDate: string; generatedUntil?: string | null; active?: boolean },
+) {
+  const [row] = await sql<{ id: string }>(
+    `insert into shift_patterns (student_id, sequence, start_date, generated_until, active)
+     values ($1, $2, $3, $4, $5) returning id`,
+    [studentId, sequence, startDate, generatedUntil, active],
+  )
+  return row.id
+}
+
+/**
+ * Spec 005: the student's shift settings (data-model.md Profile.shift_presets, Profile.sleep_minutes,
+ * Profile.waking_start, Profile.waking_end) and the Sunday check week (Profile.shifts_confirmed_week).
+ * Fields left out keep their value.
+ */
+export async function setShiftSettings(
+  studentId: string,
+  settings: {
+    presets?: { D: [string, string]; E: [string, string]; N: [string, string] }
     sleepMinutes?: number
+    wakingStart?: string
+    wakingEnd?: string
+    confirmedWeek?: string | null
   },
 ) {
   await sql(
-    `insert into shifts (student_id, type, start_at, end_at, sleep_minutes) values ($1, $2, $3, $4, $5)`,
-    [studentId, type, startAt, endAt, sleepMinutes],
+    `update profiles set
+       shift_presets = coalesce($2::jsonb, shift_presets),
+       sleep_minutes = coalesce($3::smallint, sleep_minutes),
+       waking_start = coalesce($4::time, waking_start),
+       waking_end = coalesce($5::time, waking_end),
+       shifts_confirmed_week = case when $6::boolean then $7::date else shifts_confirmed_week end
+     where id = $1`,
+    [
+      studentId,
+      settings.presets ? JSON.stringify(settings.presets) : null,
+      settings.sleepMinutes ?? null,
+      settings.wakingStart ?? null,
+      settings.wakingEnd ?? null,
+      'confirmedWeek' in settings,
+      settings.confirmedWeek ?? null,
+    ],
   )
 }
 

@@ -39,7 +39,12 @@ export function SettingsRow({
     <>
       {icon && <span className="flex size-6 shrink-0 items-center justify-center">{icon}</span>}
       <span className="min-w-0 flex-1 truncate text-[1.0625rem]">{label}</span>
-      {value && <span className="shrink-0 text-[0.9375rem] text-muted-foreground">{value}</span>}
+      {/* At most half the row, so a long value (a 28-day rotation) never squeezes the label. */}
+      {value && (
+        <span className="max-w-1/2 min-w-0 truncate text-[0.9375rem] text-muted-foreground">
+          {value}
+        </span>
+      )}
       <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
     </>
   )

@@ -40,6 +40,14 @@
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
+  --color-shift-day: var(--shift-day);
+  --color-shift-day-foreground: var(--shift-day-foreground);
+  --color-shift-evening: var(--shift-evening);
+  --color-shift-evening-foreground: var(--shift-evening-foreground);
+  --color-shift-night: var(--shift-night);
+  --color-shift-night-foreground: var(--shift-night-foreground);
+  --color-shift-custom: var(--shift-custom);
+  --color-shift-custom-foreground: var(--shift-custom-foreground);
   --color-avail-shift: var(--avail-shift);
   --color-avail-sleep: var(--avail-sleep);
   --color-avail-free: var(--avail-free);
@@ -111,6 +119,17 @@
   --warning-border: #fde68a;
   --success: #15803d;
   --success-soft: #dcfce7;
+  /* Shift types (spec 005 research R5; screens 07-Shifts, 08-ShiftEdit): chip, tile and legend
+     colours with their text colour. Off uses --muted / --muted-foreground. Fixed per mode, not mixed
+     from the theme, so Day and Night stay recognisable in every theme; in the contrast test. */
+  --shift-day: #fde68a;
+  --shift-day-foreground: #78350f;
+  --shift-evening: #99f6e4;
+  --shift-evening-foreground: #134e4a;
+  --shift-night: #312e81;
+  --shift-night-foreground: #ffffff;
+  --shift-custom: #c7d2fe;
+  --shift-custom-foreground: #312e81;
   /* Availability bar (spec 003 DayBar; research R13): derived from the theme, so every theme and
      mode gets them. Mixed with the card so Sleep and Free stand out from the bar's muted track
      (screen 22-AdminPlan); not text, so not in the contrast test. */
@@ -181,6 +200,14 @@
   --warning-border: #854d0e;
   --success: #4ade80;
   --success-soft: #14532d;
+  --shift-day: #fcd34d;
+  --shift-day-foreground: #451a03;
+  --shift-evening: #5eead4;
+  --shift-evening-foreground: #042f2e;
+  --shift-night: #4338ca;
+  --shift-night-foreground: #ffffff;
+  --shift-custom: #a5b4fc;
+  --shift-custom-foreground: #1e1b4b;
   /* Course colours (spec 002 Course.color): glyph / tile */
   --course-indigo: #c7d2fe;
   --course-indigo-soft: #312e81;
