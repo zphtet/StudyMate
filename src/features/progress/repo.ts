@@ -6,7 +6,9 @@ import { getStudentCourse, placeStudentLesson } from '@/features/courses/student
 import { fail } from '@/lib/action'
 import { HttpError, NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
+import { isActiveDay } from '@/lib/streak'
 import { addCalendarDays, addMonths, datesOfMonth, mondayOf, todayIn } from '@/lib/time'
+import { COUNTED_SECONDS, dailyActivity, weekFacts } from '@/server/activity'
 import { completionBlock } from './completion'
 import { MIN_COUNTED_SECONDS, remainingSeconds, shouldDiscard } from './focus'
 import { forecast } from './forecast'
@@ -20,14 +22,6 @@ import {
   type SaveDraftInput,
   type StartFocusInput,
 } from './schemas'
-import {
-  activeDates,
-  bestStreak,
-  currentStreak,
-  isActiveDay,
-  weekActiveDays,
-  type DayActivity,
-} from './streak'
 import { adminCanReview, studentNext } from './submission-status'
 import type {
   CommentView,
@@ -49,13 +43,6 @@ import type {
 type Student = { id: string; timezone: string }
 type Admin = { id: string }
 type Reviewer = { id: string; displayName: string }
-
-/**
- * Counted seconds of a focus session: real time from its start, never past its planned length, so an
- * open session that ran out while the app was closed counts exactly its plan (FR-007, research R3).
- */
-const COUNTED_SECONDS = Prisma.sql`extract(epoch from least(coalesce(ended_at, now()),
-  started_at + planned_minutes * interval '1 minute') - started_at)`
 
 /** 002's place and lock check, as an action error code (lesson_locked, lesson_not_found). */
 function placeForAction(student: Student, lessonId: string) {
@@ -551,82 +538,6 @@ export async function postNote(
 }
 
 // ── Progress (US3; research.md R2, R4–R6, R13) ───────────────────────────────────────────────
-
-type ActivityRow = { student_id: string; date: string; seconds: number; completions: number }
-
-/**
- * Study seconds and completions per local day: counted focus seconds on the day a session started,
- * plus the completion credit and one completion on the day a lesson was completed (research.md R2).
- * `zone` is a time zone parameter or the students' own `p.timezone`; `from` / `to` are local dates.
- */
-function activityRows(
-  studentIds: string[],
-  zone: Prisma.Sql,
-  { from, to }: { from?: string; to?: string },
-) {
-  return prisma.$queryRaw<ActivityRow[]>`
-    select student_id::text, day::text as date, sum(seconds)::int as seconds,
-           sum(completions)::int as completions
-    from (
-      select s.student_id, (s.started_at at time zone ${zone})::date as day,
-             ${COUNTED_SECONDS} as seconds, 0 as completions
-      from study_sessions s join profiles p on p.id = s.student_id
-      where s.student_id = any(${studentIds}::uuid[])
-      union all
-      select lp.student_id, (lp.completed_at at time zone ${zone})::date,
-             lp.minutes_spent * 60, 1
-      from lesson_progress lp join profiles p on p.id = lp.student_id
-      where lp.student_id = any(${studentIds}::uuid[]) and lp.status = 'done'
-        and lp.completed_at is not null
-    ) a
-    where (${from ?? null}::date is null or day >= ${from ?? null}::date)
-      and (${to ?? null}::date is null or day <= ${to ?? null}::date)
-    group by student_id, day
-    order by student_id, day`
-}
-
-const toDay = ({ date, seconds, completions }: ActivityRow): DayActivity => ({
-  date,
-  seconds,
-  completions,
-})
-
-/** One student's days with any activity, oldest first (all of them without `from` / `to`). */
-export async function dailyActivity(
-  studentId: string,
-  timeZone: string,
-  range: { from?: string; to?: string } = {},
-) {
-  return (await activityRows([studentId], Prisma.sql`${timeZone}`, range)).map(toDay)
-}
-
-/** The Admin cards: every student's days in their own zone, in one query (no N+1). */
-export async function dailyActivityForStudents(
-  studentIds: string[],
-  range: { from?: string; to?: string } = {},
-) {
-  const byStudent = new Map<string, DayActivity[]>(studentIds.map((id) => [id, []]))
-  if (studentIds.length === 0) return byStudent
-  for (const row of await activityRows(studentIds, Prisma.sql`p.timezone`, range)) {
-    byStudent.get(row.student_id)?.push(toDay(row))
-  }
-  return byStudent
-}
-
-/** Streak and this local week's totals from a student's days (Admin cards, Today, Progress). */
-export function weekFacts(days: DayActivity[], today: string) {
-  const active = activeDates(days)
-  const monday = mondayOf(today)
-  const week = days.filter((d) => d.date >= monday && d.date <= addCalendarDays(monday, 6))
-  return {
-    streak: { current: currentStreak(active, today), best: bestStreak(active) },
-    monday,
-    active,
-    weekSeconds: week.reduce((sum, d) => sum + d.seconds, 0),
-    weekLessonsDone: week.reduce((sum, d) => sum + d.completions, 0),
-    weekActiveDays: weekActiveDays(active, monday),
-  }
-}
 
 /** The local month or week containing `today`, and the one before it. */
 function periodsOf(view: ProgressView, today: string) {

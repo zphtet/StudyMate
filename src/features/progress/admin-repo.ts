@@ -6,14 +6,8 @@ import type { CourseColor } from '@/features/courses/schemas'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
 import { todayIn } from '@/lib/time'
-import {
-  countNotes,
-  dailyActivityForStudents,
-  getReviewComments,
-  submissionSelect,
-  toSubmissionView,
-  weekFacts,
-} from './repo'
+import { dailyActivityForStudents, weekFacts } from '@/server/activity'
+import { countNotes, getReviewComments, submissionSelect, toSubmissionView } from './repo'
 import type {
   AdminLessonReview,
   AdminStudentCard,
