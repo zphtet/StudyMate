@@ -185,25 +185,25 @@ select is(public.effective_due('c3000000-0000-0000-0000-000000000006', 'c3000000
   'effective_due: null without an assignment');
 
 select lives_ok(
-  $$ insert into public.notification_rules (admin_id, student_id, trigger, config, message)
+  $$ insert into public.notification_rules (owner_id, student_id, trigger, config, message)
      values ('c3000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000003', 'daily',
-             '{"preset": "default", "time": "20:00", "days": [1, 2, 3, 4, 5, 6, 7]}', 'Time to study') $$,
+             '{"preset": "default", "time": "20:00", "days": [1, 2, 3, 4, 5]}', 'Time to study') $$,
   'the default daily rule is inserted');
 select throws_ok(
-  $$ insert into public.notification_rules (admin_id, student_id, trigger, config, message)
+  $$ insert into public.notification_rules (owner_id, student_id, trigger, config, message)
      values ('c3000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000003', 'daily',
-             '{"preset": "default", "time": "20:00", "days": [1, 2, 3, 4, 5, 6, 7]}', 'Time to study') $$,
+             '{"preset": "default", "time": "20:00", "days": [1, 2, 3, 4, 5]}', 'Time to study') $$,
   '23505', null,
   'a second default rule with the same admin, student and trigger is refused');
 select lives_ok(
-  $$ insert into public.notification_rules (admin_id, student_id, trigger, config, message)
+  $$ insert into public.notification_rules (owner_id, student_id, trigger, config, message)
      values ('c3000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000003', 'daily',
              '{"time": "07:00", "days": [1, 2, 3, 4, 5]}', 'Morning review'),
             ('c3000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000003', 'daily',
              '{"time": "12:00", "days": [6, 7]}', 'Weekend review') $$,
   'rules that are not the default preset are not limited');
 select lives_ok(
-  $$ insert into public.notification_rules (admin_id, student_id, trigger, config, message)
+  $$ insert into public.notification_rules (owner_id, student_id, trigger, config, message)
      values ('c3000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000003', 'due_soon',
              '{"preset": "default", "offsets_h": [24, 2]}', 'Due soon') $$,
   'the default set allows one rule per trigger');

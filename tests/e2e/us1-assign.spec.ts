@@ -172,7 +172,7 @@ test('scenarios 6–8: reminders, notices and the unlock setting are saved', asy
   await expect(page.getByText('Assignments saved')).toBeVisible()
 
   const rules = await sql<{ trigger: string }>(
-    `select trigger from notification_rules where admin_id = $1 and student_id = $2 and config->>'preset' = 'default'`,
+    `select trigger from notification_rules where owner_id = $1 and student_id = $2 and config->>'preset' = 'default'`,
     [admin.id, may.id],
   )
   expect(rules.map((r) => r.trigger).sort()).toEqual([

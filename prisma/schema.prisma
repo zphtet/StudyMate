@@ -152,7 +152,7 @@ model Profile {
   studySessions         StudySession[]
   shiftPatterns         ShiftPattern[]
   shifts                Shift[]
-  rulesCreated          NotificationRule[]          @relation("RuleAdmin")
+  rulesOwned            NotificationRule[]          @relation("RuleOwner")
   rulesForMe            NotificationRule[]          @relation("RuleStudent")
   messagesSent          ScheduledMessage[]
   messagesReceived      ScheduledMessageRecipient[]
@@ -195,22 +195,22 @@ model StudentLink {
 // ───────────────────────────── Courses & lessons (spec 002) ─────────────────────────────
 
 model Course {
-  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ownerId       String       @map("owner_id") @db.Uuid
-  isPersonal    Boolean      @default(false) @map("is_personal")
-  title         String
-  description   String?
-  icon          String       @default("文")
-  color         String       @default("indigo")
-  levelTag      String?      @map("level_tag")
-  targetDate    DateTime?    @map("target_date") @db.Date
-  unlockInOrder Boolean      @default(true) @map("unlock_in_order")
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId           String       @map("owner_id") @db.Uuid
+  isPersonal        Boolean      @default(false) @map("is_personal")
+  title             String
+  description       String?
+  icon              String       @default("文")
+  color             String       @default("indigo")
+  levelTag          String?      @map("level_tag")
+  targetDate        DateTime?    @map("target_date") @db.Date
+  unlockInOrder     Boolean      @default(true) @map("unlock_in_order")
   /// "Students can add personal notes" (spec 002 clarification): stored only until a notes feature exists
-  allowStudentNotes Boolean  @default(true) @map("allow_student_notes")
-  status        CourseStatus @default(draft)
-  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(6)
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  allowStudentNotes Boolean      @default(true) @map("allow_student_notes")
+  status            CourseStatus @default(draft)
+  deletedAt         DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   owner       Profile            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   sections    CourseSection[]
@@ -441,28 +441,33 @@ model Shift {
 
 model NotificationRule {
   id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  adminId   String      @map("admin_id") @db.Uuid
-  /// null = all linked students
+  /// the Admin who made it, or the student for a personal reminder (spec 006 R10)
+  ownerId   String      @map("owner_id") @db.Uuid
+  /// null = all students linked to the owner at each occurrence (spec 006 FR-020)
   studentId String?     @map("student_id") @db.Uuid
   trigger   RuleTrigger
-  /// e.g. {"time":"20:00","days":[1,2,3,4,5]} or {"offsets_h":[24,2]}
+  /// per trigger: src/lib/notifications/rule-config.ts (data-model.md › Config by trigger)
   config    Json        @default("{}")
+  /// 1–500 characters (CHECK notification_rules_message_len)
   message   String
-  channels  String[]    @default(["push", "inapp"])
+  /// push and/or copy; the inbox always gets it (spec 006 FR-001, FR-018)
+  channels  String[]    @default(["push"])
   enabled   Boolean     @default(true)
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  admin   Profile  @relation("RuleAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  owner   Profile  @relation("RuleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   student Profile? @relation("RuleStudent", fields: [studentId], references: [id], onDelete: Cascade)
 
-  // + unique index notification_rules_default_once (admin_id, student_id, trigger)
+  // + unique index notification_rules_default_once (owner_id, student_id, trigger)
   //   WHERE config->>'preset' = 'default' — in SQL (spec 003 FR-013)
+  // + CHECK notification_rules_personal_daily: owner_id <> student_id or trigger = 'daily' (spec 006)
   @@map("notification_rules")
 }
 
 model ScheduledMessage {
   id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   adminId   String        @map("admin_id") @db.Uuid
+  /// 1–1000 characters (CHECK scheduled_messages_body_len)
   body      String
   lessonId  String?       @map("lesson_id") @db.Uuid
   mode      MessageMode
@@ -482,9 +487,10 @@ model ScheduledMessage {
 model ScheduledMessageRecipient {
   messageId   String    @map("message_id") @db.Uuid
   studentId   String    @map("student_id") @db.Uuid
+  /// the planned moment (spec 006 R11)
   deliverAt   DateTime  @map("deliver_at") @db.Timestamptz(6)
+  /// handed over to a notifications row; read status lives there (spec 006 R11)
   deliveredAt DateTime? @map("delivered_at") @db.Timestamptz(6)
-  readAt      DateTime? @map("read_at") @db.Timestamptz(6)
 
   message ScheduledMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   student Profile          @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -508,7 +514,7 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
-/// In-app inbox and the de-duplication log for every push sent.
+/// In-app inbox, the de-duplication log and the delivery queue (spec 006 R1).
 model Notification {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId        String    @map("user_id") @db.Uuid
@@ -520,13 +526,26 @@ model Notification {
   title         String
   body          String
   url           String?
+  /// when the row was recorded
   sentAt        DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
+  /// earliest delivery; moved later while the recipient is busy (spec 006 FR-003)
+  deliverAt     DateTime  @default(now()) @map("deliver_at") @db.Timestamptz(6)
+  /// null = pending; the inbox lists delivered rows only
+  deliveredAt   DateTime? @map("delivered_at") @db.Timestamptz(6)
+  /// a rule reminder lapses here (spec 006 FR-017); null = never
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(6)
+  /// false = inbox only ("Copy me" copies, rules without push)
+  push          Boolean   @default(true)
+  /// skips the availability check (urgent one-off messages only)
+  urgent        Boolean   @default(false)
   readAt        DateTime? @map("read_at") @db.Timestamptz(6)
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([sourceType, sourceId, userId, occurrenceKey])
   @@index([userId, sentAt(sort: Desc)], map: "notifications_user")
+  // + partial indexes notifications_pending (deliver_at) WHERE delivered_at IS NULL and
+  //   notifications_inbox (user_id, delivered_at DESC) WHERE delivered_at IS NOT NULL — in SQL
   @@map("notifications")
 }
 

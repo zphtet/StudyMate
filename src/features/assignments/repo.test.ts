@@ -180,7 +180,7 @@ describe('saveAssignments', () => {
     await Promise.all([save(), save()])
     await save()
     const rules = await prisma.notificationRule.findMany({
-      where: { adminId: admin.id, studentId: aki },
+      where: { ownerId: admin.id, studentId: aki },
       orderBy: { trigger: 'asc' },
     })
     expect(rules.map((r) => r.trigger).sort()).toEqual(
@@ -188,8 +188,19 @@ describe('saveAssignments', () => {
     )
     expect(rules.find((r) => r.trigger === 'due_soon')).toMatchObject({
       config: { preset: 'default', offsets_h: [24, 2] },
-      channels: ['push', 'inapp'],
+      channels: ['push'],
       enabled: true,
+    })
+    // 006 FR-008: Daily Mon–Fri; Overdue repeats at `repeat_time`.
+    expect(rules.find((r) => r.trigger === 'daily')?.config).toEqual({
+      preset: 'default',
+      time: '20:00',
+      days: [1, 2, 3, 4, 5],
+    })
+    expect(rules.find((r) => r.trigger === 'overdue')?.config).toEqual({
+      preset: 'default',
+      repeat_time: '19:00',
+      max: 3,
     })
     // Aki's language is Japanese.
     expect(rules.every((r) => /[぀-ヿ一-鿿]/.test(r.message))).toBe(true)

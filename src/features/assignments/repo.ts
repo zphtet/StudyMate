@@ -3,6 +3,7 @@ import { flatten, groupCourse } from '@/features/courses/order'
 import { applyUnlockInOrder } from '@/features/courses/repo'
 import { fail } from '@/lib/action'
 import { NotFound } from '@/lib/http'
+import { DEFAULT_RULE_SET, storedRule } from '@/lib/notifications/rule-config'
 import { prisma } from '@/lib/prisma'
 import { assignedNotice, deadlineNotice, defaultReminderMessages } from './notices'
 import type {
@@ -20,14 +21,6 @@ type Admin = { id: string; displayName: string }
 
 const sameInstant = (a: Date | null, b: Date | null) =>
   (a?.getTime() ?? null) === (b?.getTime() ?? null)
-
-/** The 006 FR-008 default set (data-model.md › Default reminder set). */
-const DEFAULT_RULES = [
-  { trigger: 'daily', config: { preset: 'default', time: '20:00', days: [1, 2, 3, 4, 5, 6, 7] } },
-  { trigger: 'due_soon', config: { preset: 'default', offsets_h: [24, 2] } },
-  { trigger: 'overdue', config: { preset: 'default', time: '19:00', max: 3 } },
-  { trigger: 'streak_risk', config: { preset: 'default', time: '21:30' } },
-] as const
 
 export async function getAssignSheet(adminId: string, courseId: string): Promise<AssignSheet> {
   const [course, links] = await Promise.all([
@@ -130,11 +123,11 @@ export async function saveAssignments(admin: Admin, input: SaveAssignmentsInput)
       const data = await Promise.all(
         students.map(async (student) => {
           const messages = await defaultReminderMessages(student)
-          return DEFAULT_RULES.map((rule) => ({
-            adminId: admin.id,
+          // The 006 FR-008 set, defined once in lib/notifications/rule-config.ts.
+          return DEFAULT_RULE_SET.map((rule) => ({
+            ownerId: admin.id,
             studentId: student.id,
-            trigger: rule.trigger,
-            config: rule.config,
+            ...storedRule(rule),
             message: messages[rule.trigger],
           }))
         }),
