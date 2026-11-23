@@ -112,25 +112,29 @@ enum MessageStatus {
 
 /// One row per Supabase auth user (id = auth.users.id). Created by the handle_new_user trigger.
 model Profile {
-  id               String    @id @db.Uuid
-  role             UserRole
-  displayName      String    @map("display_name")
-  avatarUrl        String?   @map("avatar_url")
-  timezone         String    @default("UTC")
-  locale           String    @default("en")
-  colorMode        String    @default("system") @map("color_mode")
-  themeId          String    @default("indigo") @map("theme_id")
-  fontId           String    @default("inter") @map("font_id")
-  fontScale        Decimal   @default(1.00) @map("font_scale") @db.Decimal(3, 2)
-  weeklyGoalDays   Int       @default(5) @map("weekly_goal_days") @db.SmallInt
-  sleepMinutes     Int       @default(480) @map("sleep_minutes") @db.SmallInt
-  afterShiftBuffer Int       @default(30) @map("after_shift_buffer") @db.SmallInt
-  wakingStart      DateTime  @default(dbgenerated("'08:00:00'::time without time zone")) @map("waking_start") @db.Time(6)
-  wakingEnd        DateTime  @default(dbgenerated("'23:00:00'::time without time zone")) @map("waking_end") @db.Time(6)
-  quietStart       DateTime? @map("quiet_start") @db.Time(6)
-  quietEnd         DateTime? @map("quiet_end") @db.Time(6)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                  String    @id @db.Uuid
+  role                UserRole
+  displayName         String    @map("display_name")
+  avatarUrl           String?   @map("avatar_url")
+  timezone            String    @default("UTC")
+  locale              String    @default("en")
+  colorMode           String    @default("system") @map("color_mode")
+  themeId             String    @default("indigo") @map("theme_id")
+  fontId              String    @default("inter") @map("font_id")
+  fontScale           Decimal   @default(1.00) @map("font_scale") @db.Decimal(3, 2)
+  weeklyGoalDays      Int       @default(5) @map("weekly_goal_days") @db.SmallInt
+  sleepMinutes        Int       @default(480) @map("sleep_minutes") @db.SmallInt
+  afterShiftBuffer    Int       @default(30) @map("after_shift_buffer") @db.SmallInt
+  wakingStart         DateTime  @default(dbgenerated("'08:00:00'::time without time zone")) @map("waking_start") @db.Time(6)
+  wakingEnd           DateTime  @default(dbgenerated("'23:00:00'::time without time zone")) @map("waking_end") @db.Time(6)
+  quietStart          DateTime? @map("quiet_start") @db.Time(6)
+  quietEnd            DateTime? @map("quiet_end") @db.Time(6)
+  /// Preset times for Add shift and rotations (spec 005 FR-002): { "D": ["09:00","18:00"], "E": [...], "N": ["22:00","07:00"] }
+  shiftPresets        Json      @default("{\"D\": [\"09:00\", \"18:00\"], \"E\": [\"14:00\", \"23:00\"], \"N\": [\"22:00\", \"07:00\"]}") @map("shift_presets")
+  /// Monday of the last week the student answered the Sunday check (spec 005 FR-009)
+  shiftsConfirmedWeek DateTime? @map("shifts_confirmed_week") @db.Date
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   adminInvites          AdminInvite[]
   linksAsStudent        StudentLink[]               @relation("LinkStudent")
@@ -395,15 +399,16 @@ model StudySession {
 // ───────────────────────────── Shifts (spec 005) ─────────────────────────────
 
 model ShiftPattern {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId String   @map("student_id") @db.Uuid
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String    @map("student_id") @db.Uuid
   /// e.g. "DDDONNOO" — D day, E evening, N night, O off, C custom
-  sequence  String
-  startDate DateTime @map("start_date") @db.Date
-  /// { "D": ["09:00","18:00"], "E": [...], "N": ["22:00","07:00"] }
-  presets   Json     @default("{\"D\": [\"09:00\", \"18:00\"], \"E\": [\"14:00\", \"23:00\"], \"N\": [\"22:00\", \"07:00\"]}")
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  sequence       String
+  startDate      DateTime  @map("start_date") @db.Date
+  /// At most one active rotation per student: partial unique index shift_patterns_one_active (SQL)
+  active         Boolean   @default(true)
+  /// Last local date generated; the daily top-up continues from the day after (spec 005 research R4)
+  generatedUntil DateTime? @map("generated_until") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
   shifts  Shift[]
