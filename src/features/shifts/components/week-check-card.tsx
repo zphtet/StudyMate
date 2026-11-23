@@ -44,7 +44,12 @@ export function WeekCheckCard() {
       queryClient.setQueryData(shiftKeys.today, context?.before)
       toast.error(errorMessage(e))
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: shiftKeys.today }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: shiftKeys.today }),
+        // 006 FR-010: answering also answers the check's notification (the bell's count).
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+      ]),
   })
 
   if (!data || !now) return null

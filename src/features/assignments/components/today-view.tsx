@@ -18,7 +18,7 @@ import { DueChip } from './due-chip'
 // Student Today (screen 04-Today, partial per contracts/ui-routes.md): date line, greeting, then
 // "Overdue · N" (oldest first) and "Due today" (earliest first), 5 rows each, then "Show all (N)".
 // Spec 005's shift banner and Sunday check, then 004's streak and goal cards, go in `top`; Continue
-// in `bottom`. The bell (006) comes later.
+// in `bottom`; 006's bell in `actions`.
 
 const PAGE = 5
 
@@ -32,10 +32,13 @@ function useDayPeriod() {
 
 export function TodayView({
   name,
+  actions,
   top,
   bottom,
 }: {
   name: string
+  /** Beside the greeting (spec 006's bell). */
+  actions?: ReactNode
   /** Above the sections (spec 004 streak and goal cards). */
   top?: ReactNode
   /** Below them (spec 004 Continue). */
@@ -51,6 +54,7 @@ export function TodayView({
       <PageHeader
         eyebrow={t.rich('dateLine', { date: () => <TodayLabel />, city: cityOf(f.viewerZone) })}
         title={t('greeting', { period, name })}
+        actions={actions}
       />
       {top}
       {data.overdue.length === 0 && data.dueToday.length === 0 ? (

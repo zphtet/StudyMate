@@ -40,3 +40,22 @@ export async function recordNotice(
     update: { ...text, sentAt, readAt: null, ...pending },
   })
 }
+
+export type SettledNotice = Pick<NoticeInput, 'userId' | 'sourceId' | 'occurrenceKey'>
+
+/**
+ * The recipient answered what the notice asked (006 FR-010: Confirm or Edit on the Sunday check):
+ * a delivered notice is marked read, and one still waiting is dropped, so it is never sent
+ * (data-model.md Notification.read_at, Notification.delivered_at, Notification.occurrence_key).
+ */
+export async function settleNotice(
+  { userId, sourceId, occurrenceKey }: SettledNotice,
+  db: Prisma.TransactionClient = prisma,
+) {
+  const where = { userId, sourceType: 'system', sourceId, occurrenceKey }
+  await db.notification.updateMany({
+    where: { ...where, deliveredAt: { not: null }, readAt: null },
+    data: { readAt: new Date() },
+  })
+  await db.notification.deleteMany({ where: { ...where, deliveredAt: null } })
+}

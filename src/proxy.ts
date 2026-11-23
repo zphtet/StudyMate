@@ -88,8 +88,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except static files and images.
+  // Everything except static files, images and the service worker (spec 006 R7: fetched without a
+  // session too).
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)',
   ],
 }

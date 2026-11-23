@@ -1,7 +1,8 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { ThemeSync } from '@/components/shared/theme-sync'
+import { MarkReadOnOpen } from '@/features/notifications/components/mark-read-on-open'
 import { hasActiveLink } from '@/features/links/repo'
 import { requirePageUser } from '@/server/auth/page-guard'
 
@@ -18,6 +19,10 @@ export default async function StudentLayout({ children }: { children: ReactNode 
     <>
       {children}
       <ThemeSync mode={me.colorMode} />
+      {/* Spec 006: a tapped notification's ?n=<id>, and the bell after a push. */}
+      <Suspense fallback={null}>
+        <MarkReadOnOpen />
+      </Suspense>
     </>
   )
 }

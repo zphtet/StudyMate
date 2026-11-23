@@ -288,4 +288,32 @@ describe('confirmShiftWeek (FR-009)', () => {
     const profile = await prisma.profile.findUniqueOrThrow({ where: { id: ivy.id } })
     expect(profile.shiftsConfirmedWeek?.toISOString().slice(0, 10)).toBe('2027-03-08')
   })
+
+  test('answers the Sunday check notification: read if delivered, gone if still held (006 FR-010)', async () => {
+    const [ivy, jo] = [await newStudent(), await newStudent()]
+    const check = (userId: string, delivered: boolean) =>
+      prisma.notification.create({
+        data: {
+          userId,
+          sourceType: 'system',
+          sourceId: userId,
+          occurrenceKey: 'week-check@2027-03-08',
+          title: 'Next week',
+          body: 'Correct?',
+          deliverAt: zonedToUtc('2027-03-07', '18:05', TOKYO),
+          deliveredAt: delivered ? zonedToUtc('2027-03-07', '18:05', TOKYO) : null,
+        },
+      })
+    const delivered = await check(ivy.id, true)
+    const joHeld = await check(jo.id, false)
+
+    await confirmShiftWeek(ivy, zonedToUtc('2027-03-07', '19:00', TOKYO))
+    const after = await prisma.notification.findUniqueOrThrow({ where: { id: delivered.id } })
+    expect(after.readAt).not.toBeNull()
+    // Jo hasn't answered yet: Jo's row is untouched.
+    expect(await prisma.notification.findUnique({ where: { id: joHeld.id } })).not.toBeNull()
+
+    await confirmShiftWeek(jo, zonedToUtc('2027-03-07', '19:00', TOKYO))
+    expect(await prisma.notification.findUnique({ where: { id: joHeld.id } })).toBeNull()
+  })
 })

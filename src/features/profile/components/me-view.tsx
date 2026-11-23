@@ -8,21 +8,33 @@ import { LanguageButtons } from '@/components/shared/language-buttons'
 import { SettingsGroup, SettingsRow, SettingsSection } from '@/components/shared/settings'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/features/auth/actions'
+import { unsubscribeThisDevice } from '@/lib/push-device'
 import { unwrap } from '@/lib/result'
 import { meQuery } from '../queries'
 import { EditProfileSheet } from './edit-profile-sheet'
 import { WeeklyGoalSheet } from './weekly-goal-sheet'
 
 // Me (screen 11-Profile). Students set their weekly goal here (spec 004 FR-008); the page puts
-// 005's Shift calendar row above it (`studyRows`). Quiet hours and reminders arrive with 006; colour
-// themes, fonts and text size with 007.
-export function MeView({ studyRows }: { studyRows?: ReactNode }) {
+// 005's Shift calendar row above it and 006's reminder rows below (`studyRows`). The Admin's page
+// passes 006's rows as `reminderRows`. Colour themes, fonts and text size arrive with 007.
+export function MeView({
+  studyRows,
+  reminderRows,
+}: {
+  studyRows?: ReactNode
+  /** Admin only: there is no Study section (spec 006 contracts/ui-routes.md › Me). */
+  reminderRows?: ReactNode
+}) {
   const t = useTranslations()
   const { data: me } = useSuspenseQuery(meQuery)
   const base = me.role === 'admin' ? '/a/me' : '/s/me'
 
   const out = useMutation({
-    mutationFn: async () => unwrap(await signOut(undefined)),
+    // Spec 006 FR-014: this device stops getting the user's notifications.
+    mutationFn: async () => {
+      const endpoint = await unsubscribeThisDevice().catch(() => null)
+      return unwrap(await signOut({ endpoint: endpoint ?? undefined }))
+    },
     // Full reload: drops every cached query at once, so nothing refetches as a signed-out user.
     onSettled: () => window.location.replace('/sign-in'),
   })
@@ -51,6 +63,12 @@ export function MeView({ studyRows }: { studyRows?: ReactNode }) {
             {studyRows}
             <WeeklyGoalSheet days={me.weeklyGoalDays} />
           </SettingsGroup>
+        </SettingsSection>
+      )}
+
+      {reminderRows && (
+        <SettingsSection title={t('me.reminders')}>
+          <SettingsGroup>{reminderRows}</SettingsGroup>
         </SettingsSection>
       )}
 

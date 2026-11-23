@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/layout/page-header'
+import { DeviceRemindersRow } from '@/features/notifications/components/device-reminders-row'
 import { MeView } from '@/features/profile/components/me-view'
 import { WithMe } from '@/features/profile/components/with-me'
 import { ShiftCalendarRow } from '@/features/shifts/components/shift-calendar-row'
@@ -13,9 +14,12 @@ export default async function StudentMePage() {
       <WithMe>
         <MeView
           studyRows={
-            <WithShiftsToday>
-              <ShiftCalendarRow />
-            </WithShiftsToday>
+            <>
+              <WithShiftsToday>
+                <ShiftCalendarRow />
+              </WithShiftsToday>
+              <DeviceRemindersRow />
+            </>
           }
         />
       </WithMe>

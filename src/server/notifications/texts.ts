@@ -22,5 +22,8 @@ export async function textsFor(recipient: NoticeRecipient) {
       minute: '2-digit',
       hourCycle: 'h23',
     })
-  return { t, when }
+  /** A calendar day, e.g. "Mon 8 Mar" (the Sunday check's week). */
+  const day = (at: Date) =>
+    format.dateTime(at, { weekday: 'short', day: 'numeric', month: 'short' })
+  return { t, when, day }
 }

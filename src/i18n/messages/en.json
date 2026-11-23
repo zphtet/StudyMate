@@ -142,7 +142,8 @@
     "appearanceValue": "Indigo · Inter · {mode, select, light {Light} dark {Dark} other {Auto}}",
     "account": "Account and password",
     "export": "Export my data",
-    "study": "Study"
+    "study": "Study",
+    "reminders": "Reminders"
   },
   "errors": {
     "invalid_input": "Please check the highlighted fields.",
@@ -197,7 +198,8 @@
     "shift_overlap": "Overlaps your shift {time}",
     "shift_too_long": "A shift can be at most 24 h",
     "shift_not_found": "That shift no longer exists.",
-    "rotation_not_found": "You don't have a rotation."
+    "rotation_not_found": "You don't have a rotation.",
+    "notification_not_found": "This notification no longer exists."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -567,7 +569,9 @@
     "reviewedTitle": "{lesson}: reviewed",
     "reviewedBody": "{admin} reviewed your assignment.",
     "needsRedoTitle": "{lesson}: needs redo",
-    "needsRedoBody": "{admin} asked you to redo your assignment."
+    "needsRedoBody": "{admin} asked you to redo your assignment.",
+    "weekCheckTitle": "Next week's shifts — correct?",
+    "weekCheckBody": "Week of {date}. Confirm them, or edit what changed."
   },
   "reminders": {
     "default": {
@@ -931,5 +935,45 @@
     "freeNow": "Good window to study now: about {minutes} min free",
     "freeNowHours": "Good window to study now: about {hours} h free",
     "freeAt": "Free again at {time}"
+  },
+  "bell": {
+    "label": "{count, plural, =0 {Notifications} other {Notifications, # unread}}"
+  },
+  "inbox": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "Nothing here yet",
+    "emptyBody": "Reminders, deadlines and messages show up here.",
+    "yesterday": "Yesterday {time}",
+    "unread": "Unread",
+    "loadingMore": "Loading more…"
+  },
+  "deviceReminders": {
+    "row": "Reminders on this device",
+    "on": "On",
+    "off": "Off",
+    "blockedShort": "Blocked",
+    "unavailable": "Not available",
+    "cardTitle": "Get reminders on this phone",
+    "cardBody": "Deadlines, reminders and messages arrive even when the app is closed, never during work or sleep.",
+    "needsInstall": "On iPhone, add StudyMate to your Home Screen first.",
+    "blocked": "Reminders are blocked in your browser settings. They still appear in Notifications.",
+    "unsupported": "This browser can't show reminders. They still appear in Notifications.",
+    "turnOn": "Turn on",
+    "howTo": "Show me how",
+    "notNow": "Not now",
+    "turnedOn": "Reminders are on for this device",
+    "turnOffTitle": "Turn off reminders on this device?",
+    "turnOffBody": "Everything still appears in Notifications.",
+    "turnOff": "Turn off",
+    "cancel": "Cancel"
+  },
+  "installGuide": {
+    "title": "Add StudyMate to your Home Screen",
+    "description": "iPhone shows reminders only for apps on the Home Screen.",
+    "step1": "Tap Share in Safari's toolbar.",
+    "step2": "Choose Add to Home Screen, then Add.",
+    "step3": "Open StudyMate from your Home Screen and turn on reminders.",
+    "done": "Got it"
   }
 }

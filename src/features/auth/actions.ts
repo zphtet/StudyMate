@@ -151,9 +151,16 @@ export const signIn = publicAction(signInSchema, async ({ role, email, password 
   }
 })
 
-export const signOut = action(z.undefined(), async () => {
-  // Ends only the caller's own session; works even if their profile is already gone.
-  await requireUser().catch(() => null)
+/**
+ * Ends only the caller's own session; works even if their profile is already gone. With this
+ * device's push endpoint, the device stops getting the caller's notifications first (spec 006 FR-014;
+ * research R8).
+ */
+export const signOut = action(z.object({ endpoint: z.url().optional() }), async ({ endpoint }) => {
+  const me = await requireUser().catch(() => null)
+  if (me && endpoint) {
+    await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: me.id } })
+  }
   const supabase = await createServerClient()
   await supabase.auth.signOut()
   return {}

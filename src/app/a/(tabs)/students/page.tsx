@@ -1,4 +1,3 @@
-import { Bell } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Suspense } from 'react'
@@ -6,16 +5,17 @@ import { PageHeader } from '@/components/layout/page-header'
 import { PageSkeleton } from '@/components/layout/page-skeleton'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { TodayLabel } from '@/components/shared/today-label'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InviteCard } from '@/features/invites/components/invite-card'
+import { Bell } from '@/features/notifications/components/bell'
+import { TurnOnRemindersCard } from '@/features/notifications/components/turn-on-reminders-card'
 import { StudentCardList } from '@/features/progress/components/student-progress-card'
 import { WithStudentCards } from '@/features/progress/components/with-admin-progress'
 import { getMe } from '@/features/profile/repo'
 import { requirePageUser } from '@/server/auth/page-guard'
 
 // Screen 16-AdminStudents: the invite card (001) and one progress card per linked student (spec 004).
-// Join requests arrive with 001 User Story 2.
+// Join requests arrive with 001 User Story 2. Spec 006: the bell, and "Turn on reminders" until it's on.
 export default async function AdminStudentsPage() {
   const [t, tc, nav] = await Promise.all([
     getTranslations('students'),
@@ -34,15 +34,7 @@ export default async function AdminStudentsPage() {
         title={t('title')}
         actions={
           <>
-            <Button
-              variant="outline"
-              size="icon-touch"
-              className="size-12 rounded-full"
-              aria-label={nav('notifications')}
-              disabled
-            >
-              <Bell aria-hidden />
-            </Button>
+            <Bell href="/a/inbox" />
             <Suspense fallback={<Skeleton className="size-12 rounded-full" />}>
               <ProfileButton label={nav('profile')} />
             </Suspense>
@@ -50,6 +42,7 @@ export default async function AdminStudentsPage() {
         }
       />
       <div className="flex flex-col gap-4">
+        <TurnOnRemindersCard />
         <Suspense fallback={<PageSkeleton header={false} />}>
           <Invite />
         </Suspense>

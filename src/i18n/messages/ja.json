@@ -142,7 +142,8 @@
     "appearanceValue": "インディゴ · Inter · {mode, select, light {ライト} dark {ダーク} other {自動}}",
     "account": "アカウントとパスワード",
     "export": "データをエクスポート",
-    "study": "学習"
+    "study": "学習",
+    "reminders": "リマインダー"
   },
   "errors": {
     "invalid_input": "入力内容を確認してください。",
@@ -197,7 +198,8 @@
     "shift_overlap": "{time}のシフトと重なっています",
     "shift_too_long": "シフトは最長24時間です",
     "shift_not_found": "そのシフトはもうありません。",
-    "rotation_not_found": "ローテーションがありません。"
+    "rotation_not_found": "ローテーションがありません。",
+    "notification_not_found": "このお知らせはもうありません。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -567,7 +569,9 @@
     "reviewedTitle": "{lesson}: 確認済み",
     "reviewedBody": "{admin} さんが課題を確認しました。",
     "needsRedoTitle": "{lesson}: やり直し",
-    "needsRedoBody": "{admin} さんが課題のやり直しを依頼しました。"
+    "needsRedoBody": "{admin} さんが課題のやり直しを依頼しました。",
+    "weekCheckTitle": "来週のシフトはこれで合っていますか？",
+    "weekCheckBody": "{date}の週です。確認するか、変更があれば編集してください。"
   },
   "reminders": {
     "default": {
@@ -931,5 +935,45 @@
     "freeNow": "今が学習のチャンス：約{minutes}分空いています",
     "freeNowHours": "今が学習のチャンス：約{hours}時間空いています",
     "freeAt": "次の空き時間は{time}から"
+  },
+  "bell": {
+    "label": "{count, plural, =0 {お知らせ} other {お知らせ、未読 # 件}}"
+  },
+  "inbox": {
+    "title": "お知らせ",
+    "markAllRead": "すべて既読にする",
+    "empty": "まだ何もありません",
+    "emptyBody": "リマインダー、締め切り、メッセージがここに届きます。",
+    "yesterday": "昨日 {time}",
+    "unread": "未読",
+    "loadingMore": "読み込み中…"
+  },
+  "deviceReminders": {
+    "row": "この端末のリマインダー",
+    "on": "オン",
+    "off": "オフ",
+    "blockedShort": "ブロック中",
+    "unavailable": "利用不可",
+    "cardTitle": "このスマホでリマインダーを受け取る",
+    "cardBody": "締め切り、リマインダー、メッセージがアプリを閉じていても届きます。仕事中や睡眠中には届きません。",
+    "needsInstall": "iPhoneでは、まずStudyMateをホーム画面に追加してください。",
+    "blocked": "ブラウザの設定でリマインダーがブロックされています。お知らせには引き続き表示されます。",
+    "unsupported": "このブラウザではリマインダーを表示できません。お知らせには引き続き表示されます。",
+    "turnOn": "オンにする",
+    "howTo": "方法を見る",
+    "notNow": "後で",
+    "turnedOn": "この端末のリマインダーをオンにしました",
+    "turnOffTitle": "この端末のリマインダーをオフにしますか？",
+    "turnOffBody": "お知らせには引き続きすべて表示されます。",
+    "turnOff": "オフにする",
+    "cancel": "キャンセル"
+  },
+  "installGuide": {
+    "title": "StudyMateをホーム画面に追加",
+    "description": "iPhoneでは、ホーム画面に追加したアプリだけがリマインダーを表示できます。",
+    "step1": "Safariのツールバーで共有をタップします。",
+    "step2": "「ホーム画面に追加」を選び、「追加」をタップします。",
+    "step3": "ホーム画面からStudyMateを開き、リマインダーをオンにします。",
+    "done": "わかりました"
   }
 }

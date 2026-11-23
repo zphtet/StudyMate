@@ -3,6 +3,7 @@ import type { Prisma } from '@/generated/prisma/client'
 import { fail } from '@/lib/action'
 import { prisma } from '@/lib/prisma'
 import { addCalendarDays, mondayOf, startOfLocalDay, todayIn, utcToZoned } from '@/lib/time'
+import { settleNotice } from '@/server/notifications/record'
 import { rotationDays, type GeneratedShift, type RotationDay } from './rotation'
 import { shiftPresetsSchema, type ShiftPresets } from './schemas'
 
@@ -256,7 +257,8 @@ export async function topUpRotations(now = new Date()) {
 
 /**
  * The Sunday check's Confirm and Edit (FR-009; research R9): the coming Monday in the student's zone
- * (data-model.md Profile.shifts_confirmed_week). Idempotent.
+ * (data-model.md Profile.shifts_confirmed_week), and the check's notification answered (006 FR-010).
+ * Idempotent.
  */
 export async function confirmShiftWeek(student: { id: string }, now = new Date()) {
   const { timezone } = await prisma.profile.findUniqueOrThrow({
@@ -264,9 +266,16 @@ export async function confirmShiftWeek(student: { id: string }, now = new Date()
     select: { timezone: true },
   })
   const week = addCalendarDays(mondayOf(todayIn(timezone, now)), 7)
-  await prisma.profile.update({
-    where: { id: student.id },
-    data: { shiftsConfirmedWeek: asDate(week) },
+  await prisma.$transaction(async (tx) => {
+    await tx.profile.update({
+      where: { id: student.id },
+      data: { shiftsConfirmedWeek: asDate(week) },
+    })
+    // 006 FR-010: answering the check also answers its notification.
+    await settleNotice(
+      { userId: student.id, sourceId: student.id, occurrenceKey: `week-check@${week}` },
+      tx,
+    )
   })
   return { week }
 }
