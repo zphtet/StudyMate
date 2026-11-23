@@ -4,8 +4,9 @@ import { useFormatter, useTranslations } from 'next-intl'
 import { ruleSummary, type DaysLabel } from '@/lib/notifications/rule-summary'
 import type { RuleView } from '@/lib/notifications/rule-config'
 
-// A rule row's badge, title and summary in the viewer's language (contracts/ui-routes.md › Alerts;
-// "20:00 · Mon–Fri", "Nudge May · alert me"). The student is named, never "she/he" (FR-012).
+// A rule row's badge, title and summary in the viewer's language (spec 006 contracts/ui-routes.md ›
+// Alerts and Me; "20:00 · Mon–Fri", "Nudge May · alert me"). Alerts and My reminders both use it.
+// The student is named, never "she/he" (FR-012).
 
 export function useRuleText() {
   const t = useTranslations('ruleSummary')

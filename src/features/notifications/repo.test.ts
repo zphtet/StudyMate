@@ -1,6 +1,7 @@
 // @vitest-environment node
 // Spec 006 against the dev database. US1 (T019): devices and the inbox (research R8, R9;
-// data-model.md PushSubscription.endpoint, Notification.delivered_at, Notification.read_at). The
+// data-model.md PushSubscription.endpoint, Notification.delivered_at, Notification.read_at). US5
+// (T072): quiet hours, personal reminders and My reminders (research R10, R14; FR-013, FR-016). The
 // guards run in the actions; here every function takes the caller's id. Fixtures are deleted
 // afterwards (rows cascade with their users).
 import { randomUUID } from 'node:crypto'
@@ -8,11 +9,15 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 import { ActionFailure } from '@/lib/action'
 import { prisma } from '@/lib/prisma'
 import {
+  deletePersonalReminder,
   deletePushSubscription,
+  getMyReminders,
   listInbox,
   markAllRead,
   markRead,
+  savePersonalReminder,
   savePushSubscription,
+  saveQuietHours,
   unreadCount,
 } from './repo'
 
@@ -175,5 +180,178 @@ describe('inbox', () => {
       where: { userId: may.id, deliveredAt: null },
     })
     expect(pendingRow.readAt).toBeNull()
+  })
+})
+
+// US5 (T072): quiet hours for both roles, a student's own reminders, and the Admin's rules listed
+// read-only (contracts/server-actions.md; data-model.md Profile.quiet_start, Profile.quiet_end,
+// NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.trigger). An Admin calling
+// savePersonalReminder is refused by requireRole('student') before the repo runs: covered by
+// src/server/auth/guards.test.ts › requireRole.
+describe('My reminders (US5)', () => {
+  async function newUser(role: 'student' | 'admin', name: string) {
+    const id = randomUUID()
+    users.push(id)
+    const meta = JSON.stringify({ role, display_name: name })
+    await prisma.$executeRaw`insert into auth.users (id, email, raw_user_meta_data)
+      values (${id}::uuid, ${`notifications-repo-${run}-${id}@example.test`}, ${meta}::jsonb)`
+    return { id, role }
+  }
+
+  const link = (adminId: string, studentId: string, status: 'active' | 'removed' = 'active') =>
+    prisma.studentLink.create({ data: { adminId, studentId, status } })
+
+  const adminRule = (
+    ownerId: string,
+    studentId: string | null,
+    config: { trigger: 'daily' | 'inactive'; [key: string]: unknown },
+    enabled = true,
+  ) => {
+    const { trigger, ...rest } = config
+    return prisma.notificationRule.create({
+      data: {
+        ownerId,
+        studentId,
+        trigger,
+        config: rest as never,
+        message: 'Time for today’s lesson.',
+        channels: ['push'],
+        enabled,
+      },
+    })
+  }
+
+  const kanji = {
+    message: 'Kanji 10 min',
+    time: '12:30',
+    days: [1, 2, 3, 4, 5, 6, 7],
+    enabled: true,
+  }
+
+  describe('saveQuietHours', () => {
+    test('sets a window for a student and for an Admin, and None clears both', async () => {
+      const sue = await newUser('student', 'Sue')
+      const zin = await newUser('admin', 'Zin')
+      expect(await saveQuietHours(sue.id, { start: '22:00', end: '07:00' })).toEqual({
+        quietStart: '22:00',
+        quietEnd: '07:00',
+      })
+      await saveQuietHours(zin.id, { start: '12:00', end: '13:00' })
+      expect((await getMyReminders(zin)).quietHours).toEqual({ start: '12:00', end: '13:00' })
+
+      expect(await saveQuietHours(sue.id, { start: null, end: null })).toEqual({
+        quietStart: null,
+        quietEnd: null,
+      })
+      expect((await getMyReminders(sue)).quietHours).toBeNull()
+    })
+  })
+
+  describe('savePersonalReminder', () => {
+    test('a daily push reminder owned by and for the student', async () => {
+      const sue = await newUser('student', 'Sue')
+      const { rule } = await savePersonalReminder(sue.id, kanji)
+      expect(rule).toMatchObject({
+        studentId: sue.id,
+        trigger: 'daily',
+        config: { trigger: 'daily', time: '12:30', days: [1, 2, 3, 4, 5, 6, 7] },
+        message: 'Kanji 10 min',
+        push: true,
+        copyMe: false,
+        enabled: true,
+        owner: { id: sue.id },
+      })
+      const stored = await prisma.notificationRule.findUniqueOrThrow({ where: { id: rule.id } })
+      expect(stored).toMatchObject({ ownerId: sue.id, studentId: sue.id, channels: ['push'] })
+    })
+
+    test('editing changes it; turning it off drops what it still has waiting', async () => {
+      const sue = await newUser('student', 'Sue')
+      const { rule } = await savePersonalReminder(sue.id, kanji)
+      const waiting = await prisma.notification.create({
+        data: {
+          userId: sue.id,
+          sourceType: 'rule',
+          sourceId: rule.id,
+          occurrenceKey: '2027-03-03',
+          title: 'Daily study reminder',
+          body: 'Kanji 10 min',
+          deliverAt: new Date(),
+        },
+      })
+      const { rule: edited } = await savePersonalReminder(sue.id, {
+        ...kanji,
+        id: rule.id,
+        time: '07:15',
+        enabled: false,
+      })
+      expect(edited).toMatchObject({ id: rule.id, enabled: false, config: { time: '07:15' } })
+      expect(await prisma.notification.findUnique({ where: { id: waiting.id } })).toBeNull()
+    })
+
+    test('another student’s reminder, or an Admin rule, is rule_not_found', async () => {
+      const sue = await newUser('student', 'Sue')
+      const ken2 = await newUser('student', 'Ken')
+      const zin = await newUser('admin', 'Zin')
+      await link(zin.id, sue.id)
+      const kens = await savePersonalReminder(ken2.id, kanji)
+      const zins = await adminRule(zin.id, sue.id, { trigger: 'daily', time: '20:00', days: [1] })
+      await expectCode(
+        savePersonalReminder(sue.id, { ...kanji, id: kens.rule.id }),
+        'rule_not_found',
+      )
+      await expectCode(savePersonalReminder(sue.id, { ...kanji, id: zins.id }), 'rule_not_found')
+    })
+  })
+
+  describe('deletePersonalReminder', () => {
+    test('deletes the student’s own reminder only', async () => {
+      const sue = await newUser('student', 'Sue')
+      const ken2 = await newUser('student', 'Ken')
+      const zin = await newUser('admin', 'Zin')
+      await link(zin.id, sue.id)
+      const own = await savePersonalReminder(sue.id, kanji)
+      const kens = await savePersonalReminder(ken2.id, kanji)
+      const zins = await adminRule(zin.id, sue.id, { trigger: 'daily', time: '20:00', days: [1] })
+
+      expect(await deletePersonalReminder(sue.id, { id: own.rule.id })).toEqual({ id: own.rule.id })
+      expect(await prisma.notificationRule.count({ where: { id: own.rule.id } })).toBe(0)
+      await expectCode(deletePersonalReminder(sue.id, { id: kens.rule.id }), 'rule_not_found')
+      await expectCode(deletePersonalReminder(sue.id, { id: zins.id }), 'rule_not_found')
+      await expectCode(deletePersonalReminder(sue.id, { id: own.rule.id }), 'rule_not_found')
+    })
+  })
+
+  describe('getMyReminders', () => {
+    test('own reminders, and the active Admin’s rules for the student and for All students', async () => {
+      const sue = await newUser('student', 'Sue')
+      const zin = await newUser('admin', 'Zin')
+      const ann = await newUser('admin', 'Ann')
+      const old = await newUser('admin', 'Old')
+      await link(zin.id, sue.id)
+      await link(old.id, sue.id, 'removed')
+      const own = await savePersonalReminder(sue.id, kanji)
+      const forSue = await adminRule(zin.id, sue.id, { trigger: 'daily', time: '20:00', days: [1] })
+      const forAll = await adminRule(zin.id, null, { trigger: 'daily', time: '19:00', days: [2] })
+      // Not reminders Sue gets: turned off, or alerts for Zin only.
+      await adminRule(zin.id, sue.id, { trigger: 'daily', time: '08:00', days: [3] }, false)
+      await adminRule(zin.id, sue.id, { trigger: 'inactive', days: 2, to: ['admin'] })
+      // Not Sue's Admin: another Admin's rule for All students, and an unlinked Admin's rule.
+      await adminRule(ann.id, null, { trigger: 'daily', time: '20:00', days: [1] })
+      await adminRule(old.id, sue.id, { trigger: 'daily', time: '20:00', days: [1] })
+
+      const mine = await getMyReminders(sue)
+      expect(mine.personal.map((r) => r.id)).toEqual([own.rule.id])
+      expect(mine.fromAdmin.map((r) => r.id).sort()).toEqual([forSue.id, forAll.id].sort())
+      expect(mine.fromAdmin[0].owner).toEqual({ id: zin.id, displayName: 'Zin' })
+    })
+
+    test('an Admin has no personal reminders and no rules from an Admin', async () => {
+      const zin = await newUser('admin', 'Zin')
+      const sue = await newUser('student', 'Sue')
+      await link(zin.id, sue.id)
+      await adminRule(zin.id, null, { trigger: 'daily', time: '20:00', days: [1] })
+      expect(await getMyReminders(zin)).toEqual({ quietHours: null, personal: [], fromAdmin: [] })
+    })
   })
 })

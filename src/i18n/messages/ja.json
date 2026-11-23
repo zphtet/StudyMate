@@ -238,7 +238,8 @@
     "messageTooLong": "メッセージが長すぎます",
     "daysEmpty": "曜日を1つ以上選んでください",
     "offsetsInvalid": "1〜72時間で、それぞれ違う値にしてください",
-    "recipientsEmpty": "学生を1人以上選んでください"
+    "recipientsEmpty": "学生を1人以上選んでください",
+    "quietSameTimes": "開始と終了を同じ時刻にはできません"
   },
   "students": {
     "title": "学生",
@@ -1109,6 +1110,46 @@
     "inactiveAdminBody": "最後の学習: {date}",
     "messageTitle": "{admin}さんからのメッセージ",
     "bundleTitle": "{n, plural, other {# 件のリマインダー}}"
+  },
+  "quietHours": {
+    "row": "おやすみ時間",
+    "title": "おやすみ時間",
+    "descriptionStudent": "この時間帯には何も送りません。シフト中と睡眠中も常におやすみ時間として扱います。",
+    "descriptionAdmin": "この時間帯にはあなたに何も送りません。",
+    "none": "なし",
+    "set": "時間を設定",
+    "from": "開始",
+    "to": "終了",
+    "save": "保存",
+    "shiftSleep": "シフト中 + 睡眠中",
+    "windowShiftSleep": "{window} + シフト中と睡眠中",
+    "off": "オフ",
+    "window": "{window}"
+  },
+  "myReminders": {
+    "row": "マイリマインダー",
+    "on": "{count} 件オン",
+    "title": "マイリマインダー",
+    "yours": "自分のリマインダー",
+    "add": "リマインダー",
+    "empty": "自分のリマインダーはまだありません。続けたいことのために追加しましょう。",
+    "fromAdmin": "{admin}さんから",
+    "setBy": "{admin}さんが設定",
+    "note": "シフト中、睡眠中、おやすみ時間には何も送りません。空いた時間まで待ちます。",
+    "newTitle": "新しいリマインダー",
+    "editTitle": "リマインダーを編集",
+    "sheetDescription": "時刻はあなたのタイムゾーンです。",
+    "message": "メッセージ",
+    "messagePlaceholder": "漢字 10分",
+    "time": "時刻",
+    "days": "曜日",
+    "save": "保存",
+    "saved": "リマインダーを保存しました",
+    "delete": "削除",
+    "deleteTitle": "このリマインダーを削除しますか？",
+    "deleteBody": "すぐに止まります。",
+    "deleted": "リマインダーを削除しました",
+    "cancel": "キャンセル"
   },
   "composer": {
     "newTitle": "新しいメッセージ",

@@ -1210,3 +1210,46 @@ describe('held, bundled and on time (US4)', { timeout: 240_000 }, () => {
     await expectNoBusyDelivery([zin.id])
   })
 })
+
+// US5 (T072): a student's own reminder goes through the same pipeline and quiet hours as any rule
+// (FR-013; research R10). It belongs to the student, so it needs no link (data-model.md
+// NotificationRule.owner_id).
+describe('personal reminders (US5)', () => {
+  const kanji = (studentId: string) =>
+    prisma.notificationRule.create({
+      data: {
+        ownerId: studentId,
+        studentId,
+        trigger: 'daily',
+        config: { time: '12:30', days: [1, 2, 3, 4, 5, 6, 7] },
+        message: 'Kanji 10 min',
+        channels: ['push'],
+      },
+    })
+
+  test('independent test: with quiet hours 12:00–13:00, a 12:30 reminder arrives at 13:00', async () => {
+    const may = await newUser()
+    await device(may.id)
+    await prisma.$executeRaw`update profiles set quiet_start = '12:00', quiet_end = '13:00' where id = ${may.id}::uuid`
+    await kanji(may.id)
+
+    for (const time of ['12:20', '12:30', '12:55']) {
+      expect((await runFor([may.id], at('2027-03-03', time))).pushes).toHaveLength(0)
+    }
+    const { pushes } = await runFor([may.id], at('2027-03-03', '13:00'))
+    expect(pushes.map((p) => p.payload.body)).toEqual(['Kanji 10 min'])
+  })
+
+  test('keeps running after the student is unlinked', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    await kanji(may.id)
+    await prisma.studentLink.updateMany({
+      where: { studentId: may.id },
+      data: { status: 'removed' },
+    })
+
+    const { pushes } = await runFor([zin.id, may.id], at('2027-03-03', '12:30'))
+    expect(pushes.map((p) => p.payload.body)).toEqual(['Kanji 10 min'])
+  })
+})

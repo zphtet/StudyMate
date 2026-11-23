@@ -513,7 +513,7 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 - [X] T069 [US4] Add `pushTexts.bundleTitle` (ICU plural `{n}`: "{n} reminders") to src/i18n/messages/en.json, my.json and ja.json. The body is the rows' own titles, so it needs no string.
 - [X] T070 [US4] Run T064, T065 and all of dispatch.test.ts until they pass, then messages-repo.test.ts, then T066 on the :3100 build.
 
-  (2026-11-23: T064 6/6; the US3 and US4 cases of dispatch.test.ts pass (17/17); messages-repo.test.ts, alerts repo.test.ts and the rest of src/server/notifications pass; T066 passes on mobile and desktop on the :3100 build; typecheck, lint and format are clean. One full-file run of dispatch.test.ts, made while the build and e2e ran against the same database, failed 6 US4 cases, which pass on their own. A full-file run on a quiet database was still in progress at commit time.)
+  (2026-11-23: T064 6/6; the US3 and US4 cases of dispatch.test.ts pass (17/17); messages-repo.test.ts, alerts repo.test.ts and the rest of src/server/notifications pass; T066 passes on mobile and desktop on the :3100 build; typecheck, lint and format are clean. One full-file run of dispatch.test.ts, made while the build and e2e ran against the same database, failed 6 US4 cases, which pass on their own. A full-file run on a quiet database then passed 48/48, so the failures came from the overlap.)
 
 **Checkpoint**: the P1 stories are complete. Delivery meets SC-001–SC-003 for every source.
 
@@ -527,8 +527,8 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 
 ### Tests for User Story 5 (write first, see them fail)
 
-- [ ] T071 [P] [US5] Write unit tests in src/features/notifications/quiet-hours.test.ts for `quietHoursText({ role, start, end })` (research R14). Students: "While on shift + sleep" with no window, or "22:00–07:00 + shift and sleep". Admins: "Off" or the window. Include a window that crosses midnight.
-- [ ] T072 [P] [US5] Add tests to src/features/notifications/repo.test.ts (contracts/server-actions.md; data-model.md Profile.quiet_start, Profile.quiet_end, NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.trigger). Cases:
+- [X] T071 [P] [US5] Write unit tests in src/features/notifications/quiet-hours.test.ts for `quietHoursText({ role, start, end })` (research R14). Students: "While on shift + sleep" with no window, or "22:00–07:00 + shift and sleep". Admins: "Off" or the window. Include a window that crosses midnight.
+- [X] T072 [P] [US5] Add tests to src/features/notifications/repo.test.ts (contracts/server-actions.md; data-model.md Profile.quiet_start, Profile.quiet_end, NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.trigger). Cases:
   - **saveQuietHours**: works for both roles; same start and end → `quietSameTimes`; none clears both.
   - **savePersonalReminder**:
     - writes `owner_id = student_id = me`, `daily`, `channels ['push']`;
@@ -540,7 +540,7 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
     - leaves out another Admin's rules and rules from an unlinked Admin;
     - returns `[]` for both lists for Admins.
   - **dispatch.test.ts**: the US5 independent test (a 12:30 reminder arrives at 13:00 with quiet hours 12:00–13:00). A student's own reminders keep running after unlinking.
-- [ ] T073 [P] [US5] Write Playwright tests in tests/e2e/us5-my-reminders.spec.ts (390×844 and 1280×800, axe). Cases:
+- [X] T073 [P] [US5] Write Playwright tests in tests/e2e/us5-my-reminders.spec.ts (390×844 and 1280×800, axe). Cases:
   - **Scenario 1**: the quiet hours sheet sets 12:00–13:00, and the Me row reads "12:00–13:00 + shift and sleep"; None brings back "While on shift + sleep".
   - **Scenario 3**: + Reminder adds "Kanji 10 min" at 12:30 every day; its switch turns it off.
   - **Scenario 2**: the Me row reads "n on".
@@ -550,20 +550,34 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 
 ### Implementation for User Story 5
 
-- [ ] T074 [P] [US5] Implement `quietHoursText` in src/features/notifications/quiet-hours.ts. T071 passes.
-- [ ] T075 [US5] Add the following (T072 passes):
+- [X] T074 [P] [US5] Implement `quietHoursText` in src/features/notifications/quiet-hours.ts. T071 passes.
+- [X] T075 [US5] Add the following (T072 passes):
   - **Repo** (src/features/notifications/repo.ts): `saveQuietHours` (data-model.md Profile.quiet_start, Profile.quiet_end; both set or both null), `getMyReminders` (using `toRuleView`), `savePersonalReminder`, `deletePersonalReminder`. Personal-reminder `where`s use `ownerId: me.id, studentId: me.id, trigger: 'daily'` (data-model.md NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.trigger: `daily` only), and the switch sets data-model.md NotificationRule.enabled.
   - **Actions** (src/features/notifications/actions.ts): `saveQuietHours` (`requireUser()`), `savePersonalReminder` and `deletePersonalReminder` (`requireRole('student')`).
   - **Schemas** (src/features/notifications/schemas.ts): built from `clockTime`, `weekday` and `ruleMessage`.
   - **Route Handler**: GET src/app/api/me/reminders/route.ts, with its `queryOptions` in src/features/notifications/queries.ts.
-- [ ] T076 [US5] Build the components in src/features/notifications/components/ (contracts/ui-routes.md › Me; 11-Profile.png):
+
+  (Done. As built:
+  - `fromAdmin` lists the active Admin's **enabled** rules that reach the student. Rules that only alert the Admin (Inactive or Weekly summary sent to the Admin alone) are left out, because the student never gets them.
+  - Turning a personal reminder off, or deleting it, drops its pending rows, as `setRuleEnabled` and `deleteRule` do for the Admin's rules.
+  - `toClock`/`fromClock` moved from src/features/shifts/repo.ts to src/lib/time.ts (second use).
+  - The days schema is exported from src/lib/notifications/rule-config.ts as `ruleDays`.)
+- [X] T076 [US5] Build the components in src/features/notifications/components/ (contracts/ui-routes.md › Me; 11-Profile.png):
   - `QuietHoursSheet`: None, or From and To;
   - `MyReminders`: "Your reminders", each with a `Switch`, and + Reminder in a sheet (message, time, day toggles); "From {admin}", read-only with `ruleSummary` and "Set by {admin}".
-- [ ] T077 [US5] Create the page and rows:
+
+  (Done: `QuietHoursRow`, `MyRemindersRow`, `MyReminders` and `PersonalReminderSheet`. Tapping a personal reminder opens the sheet with Delete. Alerts' `useRuleText`, the rule badge and the chip moved to src/components/shared/ (`use-rule-text.ts`, `rule-badge.tsx`, `choice-chip.tsx`), so both features use them without importing each other.)
+- [X] T077 [US5] Create the page and rows:
   - src/app/s/(tabs)/me/reminders/page.tsx;
   - in src/features/profile/components/me-view.tsx: the "Quiet hours" row (both roles) and the "My reminders" row ("n on"; students only), in the Study section.
-- [ ] T078 [US5] Add the `quietHours` and `myReminders` strings and `validation.quietSameTimes` to src/i18n/messages/en.json, my.json and ja.json.
-- [ ] T079 [US5] Run T071–T072 until they pass, and the independent test from T073 with `--grep` on the :3100 build.
+
+  (Done. The rows stay in features/notifications; the pages pass them to `MeView`:
+  - **Students**: `reminderRows` now render below Weekly goal in Study, in 11-Profile.png's order: Shift calendar, Weekly goal, Quiet hours, My reminders, then Reminders on this device, which was above Weekly goal before.
+  - **Admins**: Quiet hours joins Reminders on this device in their own Reminders section.)
+- [X] T078 [US5] Add the `quietHours` and `myReminders` strings and `validation.quietSameTimes` to src/i18n/messages/en.json, my.json and ja.json.
+- [X] T079 [US5] Run T071–T072 until they pass, and the independent test from T073 with `--grep` on the :3100 build.
+
+  (2026-11-23: T071 5/5; repo.test.ts 15/15; the two US5 dispatch cases pass (the dispatcher already handled personal reminders, so they passed from the start); scenario 3 of T073 passes on mobile and desktop on the :3100 build. The other T073 cases run with the gates in T082.)
 
 **Checkpoint**: all five stories work.
 
@@ -586,6 +600,8 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
   - theme tokens only.
 
   Fix findings in src/features/notifications/components/ and src/features/alerts/components/.
+
+  Known (2026-11-23): at 390 px, `SettingsRow` (src/components/shared/settings.tsx) cuts off "Quiet hours" and "Shift calendar" ("Quiet ho…"). The label is `flex-1` with a zero basis, so the value takes the room. Make the value give way first.
 - [ ] T084 Compare each changed screen at 390×844 with screenshots/24-AdminNotify.png, 25-AdminMessage.png, 26-AdminRule.png, 04-Today.png, 11-Profile.png and 16-AdminStudents.png. Fix layout, hierarchy and copy, keeping only the differences listed in contracts/ui-routes.md › Intentional differences.
 - [ ] T085 Performance (plan.md › Performance Goals):
   - Lighthouse (mobile) ≥ 90 on `/a/alerts` and `/s/inbox`;

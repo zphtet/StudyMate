@@ -15,14 +15,16 @@ import { EditProfileSheet } from './edit-profile-sheet'
 import { WeeklyGoalSheet } from './weekly-goal-sheet'
 
 // Me (screen 11-Profile). Students set their weekly goal here (spec 004 FR-008); the page puts
-// 005's Shift calendar row above it and 006's reminder rows below (`studyRows`). The Admin's page
-// passes 006's rows as `reminderRows`. Colour themes, fonts and text size arrive with 007.
+// 005's Shift calendar row above it (`studyRows`) and 006's reminder rows below it (`reminderRows`),
+// all in the Study section. An Admin has no Study section, so their reminder rows get their own
+// (spec 006 contracts/ui-routes.md › Me). Colour themes, fonts and text size arrive with 007.
 export function MeView({
   studyRows,
   reminderRows,
 }: {
+  /** Students: rows above Weekly goal. */
   studyRows?: ReactNode
-  /** Admin only: there is no Study section (spec 006 contracts/ui-routes.md › Me). */
+  /** Students: rows below Weekly goal; Admins: the Reminders section. */
   reminderRows?: ReactNode
 }) {
   const t = useTranslations()
@@ -62,11 +64,12 @@ export function MeView({
           <SettingsGroup>
             {studyRows}
             <WeeklyGoalSheet days={me.weeklyGoalDays} />
+            {reminderRows}
           </SettingsGroup>
         </SettingsSection>
       )}
 
-      {reminderRows && (
+      {me.role === 'admin' && reminderRows && (
         <SettingsSection title={t('me.reminders')}>
           <SettingsGroup>{reminderRows}</SettingsGroup>
         </SettingsSection>

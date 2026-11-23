@@ -238,7 +238,8 @@
     "messageTooLong": "This message is too long",
     "daysEmpty": "Choose at least one day",
     "offsetsInvalid": "Use 1 to 72 hours, each one different",
-    "recipientsEmpty": "Choose at least one student"
+    "recipientsEmpty": "Choose at least one student",
+    "quietSameTimes": "Start and end can't be the same time"
   },
   "students": {
     "title": "Students",
@@ -1109,6 +1110,46 @@
     "inactiveAdminBody": "Last studied {date}.",
     "messageTitle": "Message from {admin}",
     "bundleTitle": "{n, plural, one {# reminder} other {# reminders}}"
+  },
+  "quietHours": {
+    "row": "Quiet hours",
+    "title": "Quiet hours",
+    "descriptionStudent": "Nothing is sent in this window. Shifts and sleep always count as quiet.",
+    "descriptionAdmin": "Nothing is sent to you in this window.",
+    "none": "None",
+    "set": "Set times",
+    "from": "From",
+    "to": "To",
+    "save": "Save",
+    "shiftSleep": "While on shift + sleep",
+    "windowShiftSleep": "{window} + shift and sleep",
+    "off": "Off",
+    "window": "{window}"
+  },
+  "myReminders": {
+    "row": "My reminders",
+    "on": "{count} on",
+    "title": "My reminders",
+    "yours": "Your reminders",
+    "add": "Reminder",
+    "empty": "No reminders of your own yet. Add one for anything you want to keep up.",
+    "fromAdmin": "From {admin}",
+    "setBy": "Set by {admin}",
+    "note": "Nothing is sent while you're on shift, asleep or in quiet hours. It waits until you're free.",
+    "newTitle": "New reminder",
+    "editTitle": "Edit reminder",
+    "sheetDescription": "Times are in your time zone.",
+    "message": "Message",
+    "messagePlaceholder": "Kanji 10 min",
+    "time": "Time",
+    "days": "Days",
+    "save": "Save",
+    "saved": "Reminder saved",
+    "delete": "Delete",
+    "deleteTitle": "Delete this reminder?",
+    "deleteBody": "It stops right away.",
+    "deleted": "Reminder deleted",
+    "cancel": "Cancel"
   },
   "composer": {
     "newTitle": "New message",

@@ -1,11 +1,19 @@
 import 'server-only'
 import { fail } from '@/lib/action'
+import { storedRule, type RuleView } from '@/lib/notifications/rule-config'
 import { prisma } from '@/lib/prisma'
-import type { SavePushSubscriptionInput } from './schemas'
-import type { InboxItem, InboxPage } from './types'
+import { fromClock, toClock } from '@/lib/time'
+import { ruleViewSelect, toRuleView } from '@/server/notifications/rule-view'
+import type {
+  SavePersonalReminderInput,
+  SavePushSubscriptionInput,
+  SaveQuietHoursInput,
+} from './schemas'
+import type { InboxItem, InboxPage, MyReminders } from './types'
 
-// Devices and the inbox for every user (spec 006 US1; research R8, R9). Callers MUST have run
-// `requireUser()`; every function takes the caller's id from the guard and every `where` has it.
+// Devices, the inbox, quiet hours and personal reminders (spec 006 US1, US5; research R8–R10, R14).
+// Callers MUST have run their guard (`requireUser()`, or `requireRole('student')` for personal
+// reminders); every function takes the caller's id from the guard and every `where` has it.
 
 /** The inbox shows this many items per page (R9). */
 const PAGE_SIZE = 30
@@ -88,4 +96,132 @@ export async function markAllRead(userId: string) {
     data: { readAt: new Date() },
   })
   return { unread: 0 as const }
+}
+
+/**
+ * Quiet hours (FR-013; data-model.md Profile.quiet_start, Profile.quiet_end): a daily window, which
+ * may cross midnight, or none. The schema keeps both set or both null.
+ */
+export async function saveQuietHours(userId: string, { start, end }: SaveQuietHoursInput) {
+  await prisma.profile.update({
+    where: { id: userId },
+    data: {
+      quietStart: start === null ? null : fromClock(start),
+      quietEnd: end === null ? null : fromClock(end),
+    },
+  })
+  return { quietStart: start, quietEnd: end }
+}
+
+/**
+ * A personal reminder: the student's own daily-time rule (research R10; data-model.md
+ * NotificationRule.owner_id = NotificationRule.student_id = the student, NotificationRule.trigger
+ * `daily` only). Another student's reminder or an Admin's rule never matches.
+ */
+const personalOf = (studentId: string) =>
+  ({ ownerId: studentId, studentId, trigger: 'daily' }) as const
+
+/** Reminders made by the rule that are still waiting for their recipient. */
+const pendingOf = (ruleId: string) => ({ sourceType: 'rule', sourceId: ruleId, deliveredAt: null })
+
+/**
+ * Add or change the caller's own reminder. Push only (data-model.md NotificationRule.channels): there
+ * is no Admin to copy. Turning it off drops what it still has waiting, as for an Admin's rule
+ * (US2 scenario 4; data-model.md NotificationRule.enabled).
+ */
+export async function savePersonalReminder(
+  studentId: string,
+  { id, message, time, days, enabled }: SavePersonalReminderInput,
+): Promise<{ rule: RuleView }> {
+  const data = {
+    message,
+    enabled,
+    channels: ['push'],
+    ...storedRule({ trigger: 'daily', time, days }),
+  }
+  if (!id) {
+    const rule = await prisma.notificationRule.create({
+      data: { ownerId: studentId, studentId, ...data },
+      select: ruleViewSelect,
+    })
+    return { rule: toRuleView(rule) }
+  }
+
+  const { count } = await prisma.notificationRule.updateMany({
+    where: { id, ...personalOf(studentId) },
+    data,
+  })
+  if (count === 0) fail('rule_not_found')
+  if (!enabled) await prisma.notification.deleteMany({ where: pendingOf(id) })
+  const rule = await prisma.notificationRule.findUniqueOrThrow({
+    where: { id },
+    select: ruleViewSelect,
+  })
+  return { rule: toRuleView(rule) }
+}
+
+/** Delete the caller's own reminder and what it still has waiting. */
+export async function deletePersonalReminder(studentId: string, { id }: { id: string }) {
+  const { count } = await prisma.notificationRule.deleteMany({
+    where: { id, ...personalOf(studentId) },
+  })
+  if (count === 0) fail('rule_not_found')
+  await prisma.notification.deleteMany({ where: pendingOf(id) })
+  return { id }
+}
+
+/**
+ * An Admin's rule reaches the student unless it only alerts the Admin (Inactive or Weekly summary
+ * sent to the Admin alone).
+ */
+function reachesStudent({ config }: RuleView) {
+  return !('to' in config) || config.to.includes('student')
+}
+
+/**
+ * My reminders (US5; contracts/route-handlers.md › GET /api/me/reminders). Students: their own
+ * reminders, and the enabled rules of their active Admin for them or for All students (FR-016,
+ * FR-020), read-only. Admins: quiet hours only.
+ */
+export async function getMyReminders(me: {
+  id: string
+  role: 'student' | 'admin'
+}): Promise<MyReminders> {
+  const profile = await prisma.profile.findUniqueOrThrow({
+    where: { id: me.id },
+    select: { quietStart: true, quietEnd: true },
+  })
+  const quietHours =
+    profile.quietStart && profile.quietEnd
+      ? { start: toClock(profile.quietStart), end: toClock(profile.quietEnd) }
+      : null
+  if (me.role !== 'student') return { quietHours, personal: [], fromAdmin: [] }
+
+  const link = await prisma.studentLink.findFirst({
+    where: { studentId: me.id, status: 'active' },
+    select: { adminId: true },
+  })
+  const [personal, fromAdmin] = await Promise.all([
+    prisma.notificationRule.findMany({
+      where: personalOf(me.id),
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: ruleViewSelect,
+    }),
+    link
+      ? prisma.notificationRule.findMany({
+          where: {
+            ownerId: link.adminId,
+            enabled: true,
+            OR: [{ studentId: me.id }, { studentId: null }],
+          },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: ruleViewSelect,
+        })
+      : [],
+  ])
+  return {
+    quietHours,
+    personal: personal.map(toRuleView),
+    fromAdmin: fromAdmin.map(toRuleView).filter(reachesStudent),
+  }
 }

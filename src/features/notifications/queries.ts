@@ -1,6 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { InboxPage, UnreadCount } from './types'
+import type { InboxPage, MyReminders, UnreadCount } from './types'
 
 // TanStack Query keys for the 006 Route Handlers for everyone (contracts/route-handlers.md). Every key
 // starts with 'notifications', so invalidating ['notifications'] refreshes the bell and the inbox
@@ -12,6 +12,8 @@ export const notificationKeys = {
   inbox: ['notifications', 'inbox'] as const,
   /** GET /api/notifications/unread */
   unread: ['notifications', 'unread'] as const,
+  /** GET /api/me/reminders */
+  myReminders: ['notifications', 'my-reminders'] as const,
 }
 
 export const inboxQuery = infiniteQueryOptions({
@@ -27,4 +29,10 @@ export const unreadQuery = queryOptions({
   queryKey: notificationKeys.unread,
   queryFn: () => api<UnreadCount>('/api/notifications/unread'),
   refetchOnWindowFocus: true,
+})
+
+/** Quiet hours and My reminders (US5): the Me rows and /s/me/reminders. */
+export const myRemindersQuery = queryOptions({
+  queryKey: notificationKeys.myReminders,
+  queryFn: () => api<MyReminders>('/api/me/reminders'),
 })

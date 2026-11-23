@@ -15,7 +15,8 @@ export const weekday = z.int().min(1).max(7)
 
 const distinct = (values: readonly unknown[]) => new Set(values).size === values.length
 
-const days = z
+/** A daily rule's or personal reminder's days: at least one, each once. */
+export const ruleDays = z
   .array(weekday)
   .min(1, { error: 'daysEmpty' })
   .max(7)
@@ -44,7 +45,7 @@ const preset = { preset: z.literal('default').optional() }
 
 /** data-model.md › Config by trigger. `max` counts every overdue reminder, the one at the deadline included. */
 export const ruleConfig = z.discriminatedUnion('trigger', [
-  z.object({ trigger: z.literal(RuleTrigger.daily), ...preset, time: clockTime, days }),
+  z.object({ trigger: z.literal(RuleTrigger.daily), ...preset, time: clockTime, days: ruleDays }),
   z.object({
     trigger: z.literal(RuleTrigger.after_shift),
     ...preset,

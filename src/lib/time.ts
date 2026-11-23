@@ -145,3 +145,10 @@ export function roundUpToLocalHour(instant: Date, timeZone: string): Date {
 export function cityOf(timeZone: string): string {
   return (timeZone.split('/').pop() ?? timeZone).replaceAll('_', ' ')
 }
+
+/**
+ * Prisma reads and writes `time` columns (waking hours, quiet hours) as 1970-01-01 instants in UTC;
+ * the app uses the clock `HH:mm`.
+ */
+export const toClock = (time: Date) => time.toISOString().slice(11, 16)
+export const fromClock = (clock: string) => new Date(`1970-01-01T${clock}:00Z`)

@@ -3,30 +3,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { RuleBadge } from '@/components/shared/rule-badge'
+import { useRuleText } from '@/components/shared/use-rule-text'
 import { Switch } from '@/components/ui/switch'
-import type { RuleBadge } from '@/lib/notifications/rule-summary'
 import type { RuleView } from '@/lib/notifications/rule-config'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
-import { cn } from '@/lib/utils'
 import { setRuleEnabled } from '../actions'
 import { alertKeys, type AlertsScope } from '../queries'
 import type { AlertsData } from '../types'
-import { useRuleText } from './use-rule-text'
 
 // One automatic rule on Alerts (24-AdminNotify.png): type badge, title and summary (opening the
 // editor), and an on/off switch that updates at once and rolls back if the server refuses.
-
-/** Theme tokens only (constitution V), one tone per trigger as in the screenshot. */
-const BADGE_TONES: Record<RuleBadge, string> = {
-  DAY: 'bg-course-indigo-soft text-course-indigo',
-  SHIFT: 'bg-course-berry-soft text-course-berry',
-  DUE: 'bg-warning text-warning-foreground',
-  LATE: 'bg-destructive-soft text-destructive',
-  FIRE: 'bg-course-rust-soft text-course-rust',
-  IDLE: 'bg-muted text-muted-foreground',
-  WEEK: 'bg-success-soft text-success',
-}
 
 export function RuleRow({
   rule,
@@ -75,14 +63,7 @@ export function RuleRow({
         href={`/a/alerts/rules/${rule.id}`}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <span
-          className={cn(
-            'flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl px-1.5 text-xs font-bold',
-            BADGE_TONES[badge],
-          )}
-        >
-          {badgeLabel}
-        </span>
+        <RuleBadge badge={badge} label={badgeLabel} />
         <span className="min-w-0">
           <span className="block font-semibold">{title}</span>
           <span className="block text-sm text-muted-foreground">{summary}</span>

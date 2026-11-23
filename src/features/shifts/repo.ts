@@ -7,10 +7,12 @@ import { prisma } from '@/lib/prisma'
 import {
   addCalendarDays,
   datesOfMonth,
+  fromClock,
   localDayRange,
   mondayOf,
   shiftInstants,
   startOfLocalDay,
+  toClock,
   todayIn,
   utcToZoned,
 } from '@/lib/time'
@@ -59,10 +61,6 @@ function toView(row: ShiftRow): ShiftView {
     overridden: row.overridden,
   }
 }
-
-/** Prisma returns `time` columns as 1970-01-01 instants in UTC. */
-const toClock = (time: Date) => time.toISOString().slice(11, 16)
-const fromClock = (clock: string) => new Date(`1970-01-01T${clock}:00Z`)
 
 /** Instants of the form's local date and times (research R2); Off is the whole local day. */
 function instantsOf(input: SaveShiftInput, timeZone: string) {

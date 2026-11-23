@@ -1,6 +1,8 @@
 import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/layout/page-header'
 import { DeviceRemindersRow } from '@/features/notifications/components/device-reminders-row'
+import { MyRemindersRow } from '@/features/notifications/components/my-reminders-row'
+import { QuietHoursRow } from '@/features/notifications/components/quiet-hours-row'
 import { MeView } from '@/features/profile/components/me-view'
 import { WithMe } from '@/features/profile/components/with-me'
 import { ShiftCalendarRow } from '@/features/shifts/components/shift-calendar-row'
@@ -14,10 +16,14 @@ export default async function StudentMePage() {
       <WithMe>
         <MeView
           studyRows={
+            <WithShiftsToday>
+              <ShiftCalendarRow />
+            </WithShiftsToday>
+          }
+          reminderRows={
             <>
-              <WithShiftsToday>
-                <ShiftCalendarRow />
-              </WithShiftsToday>
+              <QuietHoursRow role="student" />
+              <MyRemindersRow />
               <DeviceRemindersRow />
             </>
           }
