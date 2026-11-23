@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 // Notices recorded by the app (spec 003 FR-012, research.md R8). 006 delivers new rows by push and
 // shows them in the inbox; 003 only writes them. One row per (source, user, occurrence): a newer
 // notice about the same item replaces the earlier one, read or not, and shows as unread again.
+// A row is pending until 006's dispatcher delivers it; a replaced notice is pending again, so it goes
+// out once more (006 research R1, FR-009).
 // Callers MUST have run a guard and render the text in the recipient's own language.
 
 export type NoticeInput = {
@@ -24,6 +26,7 @@ export async function recordNotice(
   db: Prisma.TransactionClient = prisma,
 ) {
   const sentAt = new Date()
+  const pending = { deliverAt: sentAt, deliveredAt: null }
   await db.notification.upsert({
     where: {
       sourceType_sourceId_userId_occurrenceKey: {
@@ -33,7 +36,7 @@ export async function recordNotice(
         occurrenceKey,
       },
     },
-    create: { userId, sourceType: 'system', sourceId, occurrenceKey, ...text, sentAt },
-    update: { ...text, sentAt, readAt: null },
+    create: { userId, sourceType: 'system', sourceId, occurrenceKey, ...text, sentAt, ...pending },
+    update: { ...text, sentAt, readAt: null, ...pending },
   })
 }
