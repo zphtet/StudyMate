@@ -117,25 +117,27 @@ all recipients handed over ─► sent
 off ─turn on (permission granted)─► on ─turn off / sign out / 404·410 / another user saves it─► off (row deleted or moved)
 ```
 
-## Migration (`<UTC timestamp>_notifications`)
+## Migration (`20261123035803_notifications`)
 
-- `notification_rules`: rename `admin_id` → `owner_id` (the RLS policies and `notification_rules_default_once` follow the column). Add policies:
-  - `rules_student_own`: for all, using / with check `owner_id = auth.uid() and student_id = auth.uid() and trigger = 'daily'`;
-  - replace `rules_student_read`: select where `student_id = auth.uid()`, or `student_id is null` and the owner is the student's active Admin.
-
-  `rules_admin` keeps its check (`student_id is null or is_admin_of(student_id)`), which a student never passes for themselves.
+- `notification_rules`: rename `admin_id` → `owner_id` (the FK, the RLS policies and `notification_rules_default_once` follow the column). Policies:
+  - `rules_admin` (replaced): using `owner_id = auth.uid()` and the Admin role; with check also `student_id is null or is_admin_of(student_id)`. Found while writing the pgTAP tests: before, any user could create an "All students" rule they owned, because a null `student_id` passed the check.
+  - `rules_student_own` (new): for all, using / with check `owner_id = auth.uid() and student_id = auth.uid() and trigger = 'daily'` and the Student role;
+  - `rules_student_read` (replaced): select where `(student_id = auth.uid() or student_id is null) and owner_id = my_admin_id()`: the active Admin's rules for the student and for all students. Rules from an Admin the student is no longer linked to aren't readable (constitution I).
+- `notification_rules.channels`: default `{push}`; `inapp` is removed from existing rows, because the inbox always gets every item (FR-001).
+- 003's default rows follow FR-008 (they were written before 006 fixed the shape, and nobody could edit them yet): Daily `days` becomes `[1,2,3,4,5]`, and Overdue's `time` becomes `repeat_time`. `DEFAULT_RULE_SET` in `src/lib/notifications/rule-config.ts` is now the one definition 003's `assignCourse` uses.
 - `notifications`: add `deliver_at timestamptz not null default now()`, `delivered_at timestamptz`, `expires_at timestamptz`, `push boolean not null default true`, `urgent boolean not null default false`.
   - Backfill `delivered_at = sent_at` and `deliver_at = sent_at` for existing rows.
   - Indexes: `notifications_pending (deliver_at) where delivered_at is null`, and `notifications_inbox (user_id, delivered_at desc) where delivered_at is not null`. `notifications_user` stays (SQL-only object).
 - `scheduled_message_recipients`: drop `read_at` (empty on dev; checked at migration time).
 - CHECKs:
   - `notification_rules_message_len`: 1–500;
-  - `scheduled_messages_body_len`: 1–1000;
+  - `scheduled_messages_body_len`: 1–1000 (replaces 0_init's `scheduled_messages_body_check`, 1–500);
   - `notification_rules_personal_daily`: `owner_id <> student_id or trigger = 'daily'`.
 - pgTAP `supabase/tests/006_notification_policies.test.sql` covers:
   - the rename;
   - personal rules (own daily only; not another trigger; not for someone else);
-  - a student reading the Admin's "All students" rules and not another Admin's;
+  - a student reading the Admin's "All students" rules and not another Admin's, nor any rule after unlinking;
+  - a student can't create an "All students" rule; an Admin can't create one for an unlinked student;
   - no client insert into `notifications`;
   - the backfill;
   - recipients' policies unchanged.

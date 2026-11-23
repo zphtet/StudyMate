@@ -51,7 +51,7 @@ Phase 0 decisions for [plan.md](plan.md). Each one records what was chosen, why,
   | `inactive` | `days` full local days without study, once per gap | the last active date | when the student studies again | last active date (004) |
   | `weekly_summary` | `weekday` + `time` | the Monday of the week | never | the week's activity, overdue work and next deadlines |
 
-  Config shapes are Zod schemas in `features/notifications/schemas.ts`. 003's default rules (`{"time":"20:00","days":[1..5]}` …) already fit; the defaults table is in data-model.md.
+  Config shapes are Zod schemas in `src/lib/notifications/rule-config.ts` (moved there by tasks.md, because the dispatcher and both features use them). 003's default rules didn't fit: they had Daily on all 7 days and Overdue's time as `time`. The 006 migration fixes the stored rows, and 003 now takes the set from `DEFAULT_RULE_SET` (data-model.md › Migration). The defaults table is in data-model.md.
 - **The data each run needs is loaded in batches**: active rules with their students, effective deadlines with completion, activity, and shifts ending in the window. About 5 statements.
 - **Rationale**: the time rules are where bugs hide (constitution III), so they get table tests (Tokyo, Yangon +06:30, New York daylight saving).
 - **Alternatives**: SQL for every trigger (hard to test, and it would hold a second copy of 004's activity rules).
@@ -111,7 +111,7 @@ Phase 0 decisions for [plan.md](plan.md). Each one records what was chosen, why,
 ## R10. Rules: personal reminders and read-only Admin rules
 
 - **Decision**: `notification_rules.admin_id` is renamed to `owner_id`, so a rule belongs to the Admin who made it, or to the student for a personal reminder (`owner_id = student_id`, trigger `daily` only). RLS:
-  - `rules_admin` stays (now on `owner_id`);
+  - `rules_admin` stays (now on `owner_id`), and also checks the Admin role (data-model.md › Migration);
   - `rules_student_own`: a student manages rules they own for themselves, `daily` only;
   - `rules_student_read`: also covers the student's Admin's "All students" rules.
 

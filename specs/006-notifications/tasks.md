@@ -84,7 +84,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Tests first (write, run, see them fail where the code doesn't exist yet)
 
-- [ ] T006 [P] Write pgTAP tests in supabase/tests/006_notification_policies.test.sql (data-model.md › Migration). Wrap them in `begin … rollback` and switch users with `set local role authenticated` and `request.jwt.claims`, as 005_shift_policies.test.sql does. Cases:
+- [X] T006 [P] Write pgTAP tests in supabase/tests/006_notification_policies.test.sql (data-model.md › Migration). Wrap them in `begin … rollback` and switch users with `set local role authenticated` and `request.jwt.claims`, as 005_shift_policies.test.sql does. Cases:
   - **Rename**: `notification_rules.owner_id` exists, `admin_id` doesn't, and `notification_rules_default_once` uses `owner_id` (data-model.md NotificationRule.owner_id).
   - **Personal rules** (`rules_student_own`): a student inserts, updates and deletes a `daily` rule with `owner_id = student_id = self`. A student can't insert one with another trigger, or one for another student (data-model.md NotificationRule.trigger, NotificationRule.student_id).
   - **Read** (`rules_student_read`): a student reads their active Admin's rules for them and the Admin's "All students" rules. They can't read another Admin's "All students" rules, or their Admin's rules after unlinking. They can't update or delete an Admin's rule (FR-016).
@@ -93,14 +93,14 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Columns**: a new `notifications` row gets `deliver_at` = now, null `delivered_at` and `expires_at`, `push` true and `urgent` false (data-model.md Notification.deliver_at, Notification.delivered_at, Notification.expires_at, Notification.push, Notification.urgent). `scheduled_message_recipients` has no `read_at` (data-model.md ScheduledMessageRecipient.read_at).
   - **Backfill**: no row has `delivered_at` null while its `sent_at` is before the migration.
   - **Writes**: an `authenticated` client can't insert into `notifications`. The recipients' policies are unchanged.
-- [ ] T007 [P] Write unit tests in src/lib/notifications/rule-config.test.ts for every schema in contracts/server-actions.md › Field schemas (data-model.md NotificationRule.trigger, NotificationRule.config, NotificationRule.message, NotificationRule.channels, ScheduledMessage.body). Cases:
+- [X] T007 [P] Write unit tests in src/lib/notifications/rule-config.test.ts for every schema in contracts/server-actions.md › Field schemas (data-model.md NotificationRule.trigger, NotificationRule.config, NotificationRule.message, NotificationRule.channels, ScheduledMessage.body). Cases:
   - each trigger at its bounds and just past them;
   - duplicate days or offsets → `daysEmpty` / `offsetsInvalid`;
   - `hours` in 0.5 steps;
   - `to` needs 1–2 values;
   - `message` and `body` are trimmed, empty → `messageEmpty`, too long → `messageTooLong`;
   - every config in 003's `DEFAULT_RULES` (src/features/assignments/) parses unchanged.
-- [ ] T008 [P] Write unit tests for `renderMessage(text, values)` in src/lib/notifications/render.test.ts (research R12; FR-005):
+- [X] T008 [P] Write unit tests for `renderMessage(text, values)` in src/lib/notifications/render.test.ts (research R12; FR-005):
   - each variable is filled;
   - a missing variable is left out together with its quotes: `"{lesson}"`, `“{lesson}”` and `「{lesson}」`, with no double spaces left behind;
   - unknown braces stay as written;
@@ -108,7 +108,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Implementation
 
-- [ ] T009 Edit prisma/schema.prisma:
+- [X] T009 Edit prisma/schema.prisma:
   - `NotificationRule.adminId` → `ownerId @map("owner_id")`, with the relation renamed to match (data-model.md NotificationRule.owner_id);
   - `Notification.deliverAt`, `deliveredAt`, `expiresAt`, `push`, `urgent` (data-model.md Notification.deliver_at, Notification.delivered_at, Notification.expires_at, Notification.push, Notification.urgent);
   - remove `ScheduledMessageRecipient.readAt` (data-model.md ScheduledMessageRecipient.read_at).
@@ -119,28 +119,36 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - Never drop SQL-only objects (`notifications_user` stays).
 
   In the same commit, update `adminId` → `ownerId` in src/features/assignments/repo.ts (the default rules) and its test, so typecheck passes.
-- [ ] T010 Apply and verify:
+
+  (Done 2026-11-23 as `20261123035803_notifications`. Found while doing it, and recorded in data-model.md › Migration:
+  - 003's default set didn't match FR-008 (Daily on all 7 days; Overdue's time as `time`). `DEFAULT_RULE_SET` in src/lib/notifications/rule-config.ts is now the one definition, 003's `assignCourse` uses it, and the migration fixes the 28 rows on dev.
+  - `inapp` is gone from `channels`.
+  - `rules_admin` now checks the Admin role, because any user could create an "All students" rule.
+  - `rules_student_read` hides an unlinked Admin's rules.
+  - The 0_init 500-character check on message bodies is replaced.
+  - 003's pgTAP and `us1-assign` e2e now use `owner_id`.)
+- [X] T010 Apply and verify:
   - `pnpm prisma migrate deploy`, `pnpm prisma generate`, `pnpm test:db`;
   - T006 passes, and the 001–005 pgTAP files still pass;
   - quickstart.md §2: `select count(*) from notifications where delivered_at is null` is 0.
-- [ ] T011 [P] Create src/lib/notifications/rule-config.ts (T007 passes). It holds:
+- [X] T011 [P] Create src/lib/notifications/rule-config.ts (T007 passes). It holds:
   - `clockTime`, `weekday`, the `ruleConfig` discriminated union, `ruleMessage` and `messageBody` (contracts/server-actions.md › Field schemas; data-model.md NotificationRule.config, NotificationRule.message, ScheduledMessage.body);
   - the `RuleView` type (contracts/route-handlers.md › Shared types), with the trigger from the Prisma enum and the config from `z.infer`.
-- [ ] T012 [P] Implement `renderMessage` in src/lib/notifications/render.ts (T008 passes). Pure and client-safe: the rule editor's preview uses it too.
-- [ ] T013 [P] Create `toRuleView(row)` in src/server/notifications/rule-view.ts: channels `push` / `copy` map to `push` / `copyMe`; `config.preset === 'default'` sets `isDefault`; the owner's id and display name are included (data-model.md NotificationRule.channels, NotificationRule.config). Both features' repos use it.
-- [ ] T014 Give `recordNotice` the delivery state (research R1; data-model.md Notification.deliver_at, Notification.delivered_at) in src/server/notifications/record.ts:
+- [X] T012 [P] Implement `renderMessage` in src/lib/notifications/render.ts (T008 passes). Pure and client-safe: the rule editor's preview uses it too.
+- [X] T013 [P] Create `toRuleView(row)` in src/server/notifications/rule-view.ts: channels `push` / `copy` map to `push` / `copyMe`; `config.preset === 'default'` sets `isDefault`; the owner's id and display name are included (data-model.md NotificationRule.channels, NotificationRule.config). Both features' repos use it.
+- [X] T014 Give `recordNotice` the delivery state (research R1; data-model.md Notification.deliver_at, Notification.delivered_at) in src/server/notifications/record.ts:
   - First add failing cases to src/server/notifications/record.test.ts: a new notice is pending (`deliver_at` ≈ now, `delivered_at` null); replacing a delivered and read notice makes it pending and unread again (FR-009).
   - Then set `deliverAt: now, deliveredAt: null` on create and update.
-- [ ] T015 [P] Create the push sender in src/server/notifications/push.ts (research R5, R6; data-model.md PushSubscription):
+- [X] T015 [P] Create the push sender in src/server/notifications/push.ts (research R5, R6; data-model.md PushSubscription):
   - a `PushSender` interface, `send(subscription, payload) → 'ok' | 'gone' | 'failed'`;
   - `webPushSender`, using `web-push` with `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT`, TTL 24 h, payload `{ title, body, url, tag }`; 404 or 410 → `gone`;
   - a recording sender for tests in tests/utils/push-recorder.ts.
-- [ ] T016 [P] Create the email sender in src/server/notifications/email.ts (research R13):
+- [X] T016 [P] Create the email sender in src/server/notifications/email.ts (research R13):
   - an `EmailSender` interface;
   - `resendSender`, using `RESEND_API_KEY` and `RESEND_FROM`; without a key it skips the send and logs why (no stray `console.log`; use the project's logger if there is one, otherwise `console.warn` with a comment citing R13);
   - `emailAddresses(userIds)`, one raw query on `auth.users`;
   - a recording sender in tests/utils/email-recorder.ts.
-- [ ] T017 [P] Create e2e fixtures in tests/e2e/fixtures/notifications.ts:
+- [X] T017 [P] Create e2e fixtures in tests/e2e/fixtures/notifications.ts:
   - `seedNotification({ userId, title, body, url, sourceType?, deliveredAt?, readAt? })`;
   - `seedRule({ ownerId, studentId, config, message, channels?, enabled? })` (data-model.md NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.config, NotificationRule.channels, NotificationRule.enabled);
   - `seedMessage({ adminId, studentIds, body, deliverAt, lessonId?, urgent? })`;
