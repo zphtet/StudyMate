@@ -12,15 +12,19 @@ import { cn } from '@/lib/utils'
 import { alertsQuery, type AlertsScope } from '../queries'
 import type { AlertStudent } from '../types'
 import { RuleRow } from './rule-row'
+import { ScheduledMessageCard } from './scheduled-message-card'
 
-// The Alerts tab, "Reminders" (24-AdminNotify.png; spec 006 US2; contracts/ui-routes.md › Alerts):
-// + Rule and Message, a chip per linked student and All students (`?student=`), the note on time
-// zones and quiet blocks naming the student (FR-012), and the automatic rules. Scheduled messages
-// arrive with US3.
+// The Alerts tab, "Reminders" (24-AdminNotify.png; spec 006 US2, US3; contracts/ui-routes.md ›
+// Alerts): + Rule and Message, a chip per linked student and All students (`?student=`), the note on
+// time zones and quiet blocks naming the student (FR-012), the scheduled messages, this week's sent
+// and cancelled ones, and the automatic rules.
 
 export function AlertsView({ scope }: { scope: AlertsScope }) {
   const t = useTranslations('alerts')
-  const { students, rules } = useSuspenseQuery(alertsQuery(scope)).data
+  const tm = useTranslations('scheduledMessages')
+  const { students, rules, scheduled, recent, sentThisWeek } = useSuspenseQuery(
+    alertsQuery(scope),
+  ).data
   const picked = students.find((s) => s.id === scope) ?? null
   const nameOf = (id: string | null) => students.find((s) => s.id === id)?.displayName ?? null
 
@@ -48,9 +52,42 @@ export function AlertsView({ scope }: { scope: AlertsScope }) {
         <StudentChips students={students} scope={scope} />
         <Note student={picked} />
 
-        {rules.length === 0 ? (
+        {scheduled.length > 0 && (
+          <section aria-labelledby="alerts-scheduled" className="flex flex-col gap-3">
+            <h2 id="alerts-scheduled" className="font-semibold text-muted-foreground">
+              {tm('heading', { count: scheduled.length })}
+            </h2>
+            <ul className="flex flex-col gap-3">
+              {scheduled.map((message, i) => (
+                <li key={message.id}>
+                  <ScheduledMessageCard
+                    message={message}
+                    sentThisWeek={i === scheduled.length - 1 ? sentThisWeek : undefined}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {recent.length > 0 && (
+          <section aria-labelledby="alerts-week" className="flex flex-col gap-3">
+            <h2 id="alerts-week" className="font-semibold text-muted-foreground">
+              {tm('week')}
+            </h2>
+            <ul className="flex flex-col gap-3">
+              {recent.map((message) => (
+                <li key={message.id}>
+                  <ScheduledMessageCard message={message} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {rules.length === 0 && scheduled.length === 0 && recent.length === 0 ? (
           <EmptyState icon={BellRing}>{t('empty')}</EmptyState>
-        ) : (
+        ) : rules.length === 0 ? null : (
           <section aria-labelledby="alerts-rules" className="flex flex-col gap-3">
             <h2 id="alerts-rules" className="font-semibold text-muted-foreground">
               {t('rules')}

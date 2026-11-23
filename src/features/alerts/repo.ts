@@ -2,14 +2,15 @@ import 'server-only'
 import { fail } from '@/lib/action'
 import { NotFound } from '@/lib/http'
 import { renderMessage } from '@/lib/notifications/render'
-import { storedRule, type RuleConfig } from '@/lib/notifications/rule-config'
+import { storedRule, type RuleConfig, type RuleView } from '@/lib/notifications/rule-config'
 import { prisma } from '@/lib/prisma'
 import type { PushSender } from '@/server/notifications/push'
 import { ruleTitle } from '@/server/notifications/rule-rows'
 import { ruleViewSelect, toRuleView } from '@/server/notifications/rule-view'
 import { textsFor } from '@/server/notifications/texts'
+import { listMessages } from './messages-repo'
 import type { SaveRuleInput, SendTestPushInput } from './schemas'
-import type { AlertsData, RuleData } from './types'
+import type { AlertStudent, AlertsData, RuleData } from './types'
 
 // The Admin's automatic rules (spec 006 US2; contracts/server-actions.md › Rules). Callers MUST have
 // run `requireRole('admin')`, and `requireAdminOf` for a named student; every `where` has
@@ -20,7 +21,10 @@ import type { AlertsData, RuleData } from './types'
  * theirs and the All students ones; for `null` (All students), every rule of a linked student or for
  * all of them.
  */
-export async function getAlerts(adminId: string, studentId: string | null): Promise<AlertsData> {
+export async function getAlerts(
+  adminId: string,
+  studentId: string | null,
+): Promise<{ students: AlertStudent[]; rules: RuleView[] }> {
   const linked = { linksAsStudent: { some: { adminId, status: 'active' as const } } }
   const [links, rules] = await Promise.all([
     prisma.studentLink.findMany({
@@ -38,6 +42,19 @@ export async function getAlerts(adminId: string, studentId: string | null): Prom
     }),
   ])
   return { students: links.map((link) => link.student), rules: rules.map(toRuleView) }
+}
+
+/** GET /api/alerts: the chips and rules, and the scheduled and this week's messages (US2, US3). */
+export async function getAlertsData(
+  admin: { id: string; timezone: string },
+  studentId: string | null,
+  now: Date,
+): Promise<AlertsData> {
+  const [alerts, messages] = await Promise.all([
+    getAlerts(admin.id, studentId),
+    listMessages(admin.id, studentId, { now, timeZone: admin.timezone }),
+  ])
+  return { ...alerts, ...messages }
 }
 
 export async function getRule(adminId: string, id: string): Promise<RuleData> {

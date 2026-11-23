@@ -739,3 +739,154 @@ describe('rules (US2)', () => {
     expect(row.url).toMatch(/^\/s\/lessons\//)
   })
 })
+
+// US3 (T052): one-off messages handed over to rows, urgent, unlinked or deleted students, and no
+// lapsing (research R2 step 2, R11; FR-004, FR-017; data-model.md › Lifecycles › A scheduled message).
+describe('messages (US3)', () => {
+  async function linkedPair() {
+    const zin = await newUser({ role: 'admin', name: 'Zin', timezone: 'Asia/Yangon' })
+    const may = await newUser({ name: 'May' })
+    await prisma.studentLink.create({
+      data: { adminId: zin.id, studentId: may.id, status: 'active' },
+    })
+    return { zin, may }
+  }
+
+  async function message(
+    adminId: string,
+    studentIds: string[],
+    deliverAt: Date,
+    data: { body?: string; lessonId?: string; urgent?: boolean } = {},
+  ) {
+    return prisma.scheduledMessage.create({
+      data: {
+        adminId,
+        body: data.body ?? '{name}, “{lesson}” is only 15 min.',
+        lessonId: data.lessonId,
+        mode: 'fixed',
+        sendAt: deliverAt,
+        urgent: data.urgent ?? false,
+        recipients: { create: studentIds.map((studentId) => ({ studentId, deliverAt })) },
+      },
+    })
+  }
+
+  const messageRows = (userId: string) =>
+    prisma.notification.findMany({ where: { userId, sourceType: 'message' } })
+  const status = async (id: string) =>
+    (await prisma.scheduledMessage.findUniqueOrThrow({ where: { id } })).status
+
+  test('a due recipient becomes a row in the student’s language, opening the lesson; then sent', async () => {
+    const { zin, may } = await linkedPair()
+    await prisma.profile.update({ where: { id: may.id }, data: { locale: 'ja' } })
+    await device(may.id)
+    const course = await prisma.course.create({
+      data: { ownerId: zin.id, title: 'JLPT N4', status: 'active' },
+    })
+    const lesson = await prisma.lesson.create({
+      data: { courseId: course.id, title: 'Particle で', status: 'published', position: 0 },
+    })
+    const sent = await message(zin.id, [may.id], at('2027-03-03', '18:00'), { lessonId: lesson.id })
+
+    expect((await runFor([zin.id, may.id], at('2027-03-03', '17:55'))).result.handedOver).toBe(0)
+    const { result } = await runFor([zin.id, may.id], at('2027-03-03', '18:00'))
+    expect(result).toMatchObject({ handedOver: 1, delivered: 1, pushes: 1 })
+    const [row] = await messageRows(may.id)
+    expect(row).toMatchObject({
+      sourceId: sent.id,
+      occurrenceKey: 'message',
+      urgent: false,
+      body: 'May, “Particle で” is only 15 min.',
+      url: `/s/lessons/${lesson.id}`,
+    })
+    expect(row.title).toBe(ja.pushTexts.messageTitle.replace('{admin}', 'Zin'))
+    expect(await status(sent.id)).toBe('sent')
+
+    const again = await runFor([zin.id, may.id], at('2027-03-03', '18:05'))
+    expect(again.result.handedOver).toBe(0)
+    expect(await messageRows(may.id)).toHaveLength(1)
+  })
+
+  test('urgent goes out inside a shift; a normal message waits for the shift to end', async () => {
+    const { zin, may } = await linkedPair()
+    await prisma.shift.create({
+      data: {
+        studentId: may.id,
+        type: 'night',
+        startAt: at('2027-03-03', '22:00'),
+        endAt: at('2027-03-04', '07:00'),
+      },
+    })
+    await message(zin.id, [may.id], at('2027-03-03', '23:00'), { urgent: true, body: 'Urgent' })
+    await message(zin.id, [may.id], at('2027-03-03', '23:00'), { body: 'Normal' })
+    await runFor([zin.id, may.id], at('2027-03-03', '23:00'))
+
+    const rows = await messageRows(may.id)
+    const urgent = rows.find((r) => r.body === 'Urgent')
+    const normal = rows.find((r) => r.body === 'Normal')
+    expect(urgent).toMatchObject({ urgent: true, deliveredAt: at('2027-03-03', '23:00') })
+    expect(normal).toMatchObject({
+      urgent: false,
+      deliveredAt: null,
+      deliverAt: at('2027-03-04', '08:00'),
+    })
+  })
+
+  test('an unlinked student’s pending recipient is deleted; a message left with none is cancelled', async () => {
+    const { zin, may } = await linkedPair()
+    const ken = await newUser({ name: 'Ken' })
+    await prisma.studentLink.create({
+      data: { adminId: zin.id, studentId: ken.id, status: 'active' },
+    })
+    const both = await message(zin.id, [may.id, ken.id], at('2027-03-03', '18:00'))
+    const kenOnly = await message(zin.id, [ken.id], at('2027-03-03', '18:00'))
+    await prisma.studentLink.updateMany({
+      where: { studentId: ken.id },
+      data: { status: 'removed' },
+    })
+
+    await runFor([zin.id, may.id, ken.id], at('2027-03-03', '12:00'))
+    const left = await prisma.scheduledMessageRecipient.findMany({ where: { messageId: both.id } })
+    expect(left.map((r) => r.studentId)).toEqual([may.id])
+    expect(await status(both.id)).toBe('scheduled')
+    expect(await status(kenOnly.id)).toBe('cancelled')
+  })
+
+  test('a scheduled message whose only student was deleted is cancelled', async () => {
+    const { zin } = await linkedPair()
+    const gone = await newUser({ name: 'Gone' })
+    await prisma.studentLink.create({
+      data: { adminId: zin.id, studentId: gone.id, status: 'active' },
+    })
+    const orphan = await message(zin.id, [gone.id], at('2027-03-03', '18:00'))
+    await prisma.$executeRaw`delete from auth.users where id = ${gone.id}::uuid`
+    await runFor([zin.id], at('2027-03-03', '12:00'))
+    expect(await status(orphan.id)).toBe('cancelled')
+  })
+
+  test('a held message never lapses: still delivered after 2 days (FR-017)', async () => {
+    const { zin, may } = await linkedPair()
+    // Two back-to-back 24 h shifts (shifts_max_length).
+    await prisma.shift.createMany({
+      data: [
+        {
+          studentId: may.id,
+          type: 'custom',
+          startAt: at('2027-03-03', '12:00'),
+          endAt: at('2027-03-04', '12:00'),
+        },
+        {
+          studentId: may.id,
+          type: 'custom',
+          startAt: at('2027-03-04', '12:00'),
+          endAt: at('2027-03-05', '12:00'),
+        },
+      ],
+    })
+    await message(zin.id, [may.id], at('2027-03-03', '13:00'))
+    await runFor([zin.id, may.id], at('2027-03-03', '13:00'))
+    expect(await messageRows(may.id)).toMatchObject([{ deliveredAt: null }])
+    await runFor([zin.id, may.id], at('2027-03-05', '12:00'))
+    expect((await messageRows(may.id))[0].deliveredAt).toEqual(at('2027-03-05', '12:00'))
+  })
+})

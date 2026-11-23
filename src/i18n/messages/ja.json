@@ -202,7 +202,10 @@
     "notification_not_found": "このお知らせはもうありません。",
     "rule_not_found": "このルールはもうありません。",
     "push_no_device": "まずこの端末でリマインダーをオンにしてから、テストを送ってください。",
-    "push_quiet_now": "今はおやすみ時間（または起きている時間外）のため、送信しませんでした。"
+    "push_quiet_now": "今はおやすみ時間（または起きている時間外）のため、送信しませんでした。",
+    "message_not_found": "このメッセージはもうありません。",
+    "message_already_sent": "このメッセージはすでに送信されました。",
+    "message_time_past": "その時刻は過ぎています。後の時刻を選んでください。"
   },
   "validation": {
     "nameRequired": "名前を入力してください",
@@ -234,7 +237,8 @@
     "messageEmpty": "メッセージを入力してください",
     "messageTooLong": "メッセージが長すぎます",
     "daysEmpty": "曜日を1つ以上選んでください",
-    "offsetsInvalid": "1〜72時間で、それぞれ違う値にしてください"
+    "offsetsInvalid": "1〜72時間で、それぞれ違う値にしてください",
+    "recipientsEmpty": "学生を1人以上選んでください"
   },
   "students": {
     "title": "学生",
@@ -707,7 +711,9 @@
     "overdue": "期限切れ {count} 件",
     "tileStreak": "連続学習日数",
     "tileWeek": "今週",
-    "tileLessons": "完了したレッスン"
+    "tileLessons": "完了したレッスン",
+    "nudge": "ひと声かける",
+    "nudgeLabel": "{name}さんにひと声かける"
   },
   "submission": {
     "answer": "あなたの回答",
@@ -1100,6 +1106,99 @@
     "test": "テスト · {title}",
     "copyTitle": "{name}さんへ: {title}",
     "inactiveAdminTitle": "{name}さんが{days}日間学習していません",
-    "inactiveAdminBody": "最後の学習: {date}"
+    "inactiveAdminBody": "最後の学習: {date}",
+    "messageTitle": "{admin}さんからのメッセージ"
+  },
+  "composer": {
+    "newTitle": "新しいメッセージ",
+    "editTitle": "メッセージを編集",
+    "cancel": "キャンセル",
+    "to": "宛先",
+    "toChip": "{name} · {city}",
+    "message": "メッセージ",
+    "templates": "テンプレート",
+    "opens": "開くレッスン",
+    "opensNone": "レッスンなし",
+    "removeLesson": "レッスンを外す",
+    "when": "送信タイミング",
+    "clock": "時計",
+    "theirClock": "{name}さんの時間 · {city}",
+    "theirClockAll": "学生の時間 · {city}",
+    "myClock": "自分の時間 · {city}",
+    "now": "今すぐ",
+    "nowHint": "すぐに送信",
+    "today": "今日",
+    "tomorrow": "明日",
+    "nextFree": "次の空き時間",
+    "nextFreeHint": "シフトを考慮",
+    "pick": "指定…",
+    "pickHint": "日付と時刻",
+    "pickDate": "日付",
+    "pickTime": "時刻",
+    "headNow": "今すぐ",
+    "headNextFree": "次の空き時間",
+    "head": "{day} {time}",
+    "dayToday": "今日",
+    "dayTomorrow": "明日",
+    "bothClocks": "{name}さんの時間 {theirs}（{city}）· あなたの時間 {mine}（{myCity}）",
+    "oneClock": "{time}（{city}）",
+    "free": "{name}さんはその時間空いています。勉強にちょうどいい時間です",
+    "shift": "{name}さんはその時間シフト中です。",
+    "sleep": "{name}さんはその時間睡眠中です。",
+    "quiet": "{name}さんはその時間おやすみ時間です。",
+    "fix": "{time}に送る",
+    "nextFreeNote": "各学生のシフト・睡眠・おやすみ時間が終わった、次の空き時間に届きます。",
+    "urgent": "緊急",
+    "urgentHint": "シフト中や睡眠中でも届きます",
+    "makeRule": "毎日必要ですか？ルールにする",
+    "sendNow": "今すぐ送信",
+    "schedule": "予約 · {when}",
+    "save": "保存 · {when}",
+    "scheduledToast": "メッセージを予約しました",
+    "sentToast": "メッセージを送信しました",
+    "saved": "変更を保存しました",
+    "pickTimeFirst": "日付と時刻を選んでください。"
+  },
+  "messageTemplates": {
+    "todaysLesson": {
+      "label": "今日のレッスン",
+      "text": "{name}さん、今日のレッスンの時間です。15分あれば始められます。"
+    },
+    "greatJob": {
+      "label": "よくできました！",
+      "text": "{name}さん、今週はよく頑張りました！この調子で。"
+    },
+    "catchUp": {
+      "label": "追いつこう",
+      "text": "{name}さん、レッスンが少し待っています。今日、小さく一歩進めませんか？"
+    },
+    "goodLuck": {
+      "label": "お仕事がんばって",
+      "text": "{name}さん、今日のお仕事がんばってください！帰ったら少し勉強しましょう。"
+    }
+  },
+  "scheduledMessages": {
+    "heading": "予約メッセージ · {count}",
+    "sentThisWeek": "今週の送信: {count}",
+    "week": "今週",
+    "whenTheirs": "{name}さんの時間 {day} {time}",
+    "whenOne": "{day} {time}",
+    "yoursTo": "あなたの時間 {time} · 宛先 {names}",
+    "to": "宛先 {names}",
+    "nextFree": "次の空き時間",
+    "edit": "編集",
+    "cancelSend": "送信を取り消す",
+    "cancelTitle": "このメッセージを取り消しますか？",
+    "cancelBody": "送信されません。すでに受け取った人の分はそのまま残ります。",
+    "keep": "残す",
+    "cancelled": "取り消し済み",
+    "cancelledToast": "メッセージを取り消しました",
+    "urgent": "緊急",
+    "state": {
+      "scheduled": "予約中",
+      "delivered": "配信済み",
+      "read": "既読"
+    },
+    "recipientState": "{name} · {state}"
   }
 }

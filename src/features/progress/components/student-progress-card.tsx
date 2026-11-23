@@ -23,6 +23,7 @@ import type { AdminStudentCard, CourseProgress } from '../types'
 // (research.md R10; SC-002): RLS limits the events to linked students' visible rows. Spec 005 US4
 // adds each student's live status under the name; it changes with the clock, so the list refetches
 // when the earliest shown time passes (and on window focus), not through Realtime (005 research R8).
+// Spec 006 adds "Send a nudge", opening the composer with the student picked (US3 scenario 7).
 
 export function StudentCardList() {
   const t = useTranslations('students')
@@ -121,6 +122,14 @@ function StudentProgressCard({ student }: { student: AdminStudentCard }) {
           ))}
         </ul>
       )}
+      {/* Spec 006 US3 scenario 7: above the card's own link, to the composer with this student. */}
+      <Link
+        href={`/a/alerts/messages/new?student=${student.id}`}
+        aria-label={t('nudgeLabel', { name: student.displayName })}
+        className="relative z-10 flex min-h-11 items-center self-start rounded-xl px-1 font-medium text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {t('nudge')}
+      </Link>
     </article>
   )
 }

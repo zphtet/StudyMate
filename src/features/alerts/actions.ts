@@ -1,12 +1,22 @@
 'use server'
 
 import { action } from '@/lib/action'
-import { requireAdminOf, requireRole } from '@/server/auth/guards'
+import { requireAdminOf, requireAdminOfAll, requireRole } from '@/server/auth/guards'
 import { webPushSender } from '@/server/notifications/push'
+import * as messages from './messages-repo'
 import * as repo from './repo'
-import { ruleIdSchema, saveRuleSchema, sendTestPushSchema, setRuleEnabledSchema } from './schemas'
+import {
+  messageIdSchema,
+  ruleIdSchema,
+  saveRuleSchema,
+  scheduleMessageSchema,
+  sendTestPushSchema,
+  setRuleEnabledSchema,
+  updateMessageSchema,
+} from './schemas'
 
-// Spec 006 writes for the Admin's rules (contracts/server-actions.md › Rules). Each starts with
+// Spec 006 writes for the Admin's rules and messages (contracts/server-actions.md › Rules, › Messages).
+// Each starts with
 // `requireRole('admin')`, or `requireAdminOf` when a student is named (it checks the role too). The
 // Admin's id always comes from the guard.
 
@@ -33,3 +43,24 @@ export const sendTestPush = action(sendTestPushSchema, async (input) => {
   const me = await adminFor(input.studentId)
   return repo.sendTestPush(me, input, { sender: webPushSender, now: new Date() })
 })
+
+/** Every recipient must be a linked student (data-model.md ScheduledMessageRecipient.student_id). */
+const adminOfRecipients = async (studentIds: string[]) => {
+  await requireRole('admin')
+  return requireAdminOfAll(studentIds)
+}
+
+/** Send now or schedule (US3 scenarios 1–5). message_time_past, lesson_not_found. */
+export const scheduleMessage = action(scheduleMessageSchema, async (input) =>
+  messages.scheduleMessage((await adminOfRecipients(input.studentIds)).id, input, new Date()),
+)
+
+/** Edit until sent (FR-006). message_not_found, message_already_sent. */
+export const updateMessage = action(updateMessageSchema, async (input) =>
+  messages.updateMessage((await adminOfRecipients(input.studentIds)).id, input, new Date()),
+)
+
+/** Cancel send (FR-006). message_not_found, message_already_sent. */
+export const cancelMessage = action(messageIdSchema, async (input) =>
+  messages.cancelMessage((await requireRole('admin')).id, input),
+)

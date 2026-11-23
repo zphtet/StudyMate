@@ -202,7 +202,10 @@
     "notification_not_found": "This notification no longer exists.",
     "rule_not_found": "This rule no longer exists.",
     "push_no_device": "Turn on reminders on this device first, then send a test.",
-    "push_quiet_now": "It's your quiet time now (quiet hours or outside your waking hours), so nothing was sent."
+    "push_quiet_now": "It's your quiet time now (quiet hours or outside your waking hours), so nothing was sent.",
+    "message_not_found": "This message no longer exists.",
+    "message_already_sent": "This message has already been sent.",
+    "message_time_past": "That time has passed. Choose a later time."
   },
   "validation": {
     "nameRequired": "Enter your name",
@@ -234,7 +237,8 @@
     "messageEmpty": "Write a message",
     "messageTooLong": "This message is too long",
     "daysEmpty": "Choose at least one day",
-    "offsetsInvalid": "Use 1 to 72 hours, each one different"
+    "offsetsInvalid": "Use 1 to 72 hours, each one different",
+    "recipientsEmpty": "Choose at least one student"
   },
   "students": {
     "title": "Students",
@@ -707,7 +711,9 @@
     "overdue": "{count} overdue",
     "tileStreak": "Day streak",
     "tileWeek": "This week",
-    "tileLessons": "Lessons done"
+    "tileLessons": "Lessons done",
+    "nudge": "Send a nudge",
+    "nudgeLabel": "Send a nudge to {name}"
   },
   "submission": {
     "answer": "Your answer",
@@ -1100,6 +1106,99 @@
     "test": "Test · {title}",
     "copyTitle": "To {name}: {title}",
     "inactiveAdminTitle": "{name} hasn't studied for {days, plural, one {# day} other {# days}}",
-    "inactiveAdminBody": "Last studied {date}."
+    "inactiveAdminBody": "Last studied {date}.",
+    "messageTitle": "Message from {admin}"
+  },
+  "composer": {
+    "newTitle": "New message",
+    "editTitle": "Edit message",
+    "cancel": "Cancel",
+    "to": "To",
+    "toChip": "{name} · {city}",
+    "message": "Message",
+    "templates": "Templates",
+    "opens": "Opens",
+    "opensNone": "No lesson",
+    "removeLesson": "Remove the lesson",
+    "when": "When to send",
+    "clock": "Clock",
+    "theirClock": "{name}'s time · {city}",
+    "theirClockAll": "Their time · {city}",
+    "myClock": "My time · {city}",
+    "now": "Now",
+    "nowHint": "immediately",
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "nextFree": "Next free",
+    "nextFreeHint": "shift-aware",
+    "pick": "Pick…",
+    "pickHint": "date + time",
+    "pickDate": "Date",
+    "pickTime": "Time",
+    "headNow": "Now",
+    "headNextFree": "Next free time",
+    "head": "{day}, {time}",
+    "dayToday": "Today",
+    "dayTomorrow": "Tomorrow",
+    "bothClocks": "{theirs} {name}'s time ({city}) · {mine} your time ({myCity})",
+    "oneClock": "{time} ({city})",
+    "free": "{name} is free then, a good study time",
+    "shift": "{name} is on shift then.",
+    "sleep": "{name} is asleep then.",
+    "quiet": "{name} is in quiet hours then.",
+    "fix": "Send at {time} instead",
+    "nextFreeNote": "Each student gets it at their own next free moment, after shifts, sleep and quiet hours.",
+    "urgent": "Urgent",
+    "urgentHint": "Delivers even during shifts and sleep",
+    "makeRule": "Need it every day? Make it a rule instead",
+    "sendNow": "Send now",
+    "schedule": "Schedule · {when}",
+    "save": "Save · {when}",
+    "scheduledToast": "Message scheduled",
+    "sentToast": "Message sent",
+    "saved": "Changes saved",
+    "pickTimeFirst": "Choose a date and time."
+  },
+  "messageTemplates": {
+    "todaysLesson": {
+      "label": "Today's lesson",
+      "text": "{name}, time for today's lesson. 15 minutes is enough to start."
+    },
+    "greatJob": {
+      "label": "Great job!",
+      "text": "Great job this week, {name}! Keep it going."
+    },
+    "catchUp": {
+      "label": "Catch up",
+      "text": "{name}, a few lessons are waiting. One small step today?"
+    },
+    "goodLuck": {
+      "label": "Good luck at work",
+      "text": "Good luck at work today, {name}! A little study when you're back."
+    }
+  },
+  "scheduledMessages": {
+    "heading": "Scheduled messages · {count}",
+    "sentThisWeek": "Sent: {count} this week",
+    "week": "This week",
+    "whenTheirs": "{day} {time} {name}'s time",
+    "whenOne": "{day} {time}",
+    "yoursTo": "{time} yours · to {names}",
+    "to": "to {names}",
+    "nextFree": "Next free time",
+    "edit": "Edit",
+    "cancelSend": "Cancel send",
+    "cancelTitle": "Cancel this message?",
+    "cancelBody": "It won't be sent. Anyone who already got it keeps it.",
+    "keep": "Keep",
+    "cancelled": "Cancelled",
+    "cancelledToast": "Message cancelled",
+    "urgent": "Urgent",
+    "state": {
+      "scheduled": "Scheduled",
+      "delivered": "Delivered",
+      "read": "Read"
+    },
+    "recipientState": "{name} · {state}"
   }
 }

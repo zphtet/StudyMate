@@ -12,6 +12,7 @@ import {
   type StudentData,
   type Window,
 } from './occurrences'
+import { messageRow, type HandedOver } from './message-rows'
 import type { PushPayload, PushSender } from './push'
 import { loadRuleTargets, loadStudentData, type Only, type RuleTarget } from './rule-data'
 import { copyRows, ruleRow, summaryEmail, type DeliveredRow } from './rule-rows'
@@ -60,7 +61,7 @@ export async function dispatch(
     scope ? Prisma.sql`and ${column} = any(${scope.userIds}::uuid[])` : Prisma.empty
 
   const created = await createRuleOccurrences(now, only)
-  const handedOver = await handOverMessages()
+  const handedOver = await handOverMessages(now, only)
   await createWeekChecks(now, only)
   const settled = await dropSettledWeekChecks(only)
   const held = await holdForBusyRecipients(now, only)
@@ -132,9 +133,64 @@ async function createRuleOccurrences(now: Date, only: Only) {
   return count
 }
 
-/** Step 2 (research R2, R11): due message recipients become rows. US3. */
-async function handOverMessages() {
-  return 0
+/**
+ * Step 2 (research R2, R11; data-model.md › Lifecycles › A scheduled message). First the Edge Cases:
+ * an unlinked student's pending delivery is dropped, and a scheduled message left with no recipient
+ * (all unlinked, or their profiles deleted) is cancelled. Then due recipients are claimed
+ * (ScheduledMessageRecipient.delivered_at) and become rows in the same transaction, keyed `message`
+ * (FR-004), and a message whose recipients have all been handed over is `sent`.
+ */
+async function handOverMessages(now: Date, only: Only) {
+  await prisma.$executeRaw`
+    delete from scheduled_message_recipients r using scheduled_messages m
+    where m.id = r.message_id and m.status = 'scheduled' and r.delivered_at is null
+      and not exists (
+        select 1 from student_links l
+        where l.admin_id = m.admin_id and l.student_id = r.student_id and l.status = 'active')
+      ${only(Prisma.sql`r.student_id`)}`
+  await prisma.$executeRaw`
+    update scheduled_messages m set status = 'cancelled'
+    where m.status = 'scheduled'
+      and not exists (select 1 from scheduled_message_recipients r where r.message_id = m.id)
+      ${only(Prisma.sql`m.admin_id`)}`
+
+  const handedOver = await prisma.$transaction(async (tx) => {
+    const due = await tx.$queryRaw<HandedOver[]>`
+      with claimed as (
+        update scheduled_message_recipients r set delivered_at = ${now}
+        from scheduled_messages m
+        where m.id = r.message_id and m.status = 'scheduled'
+          and r.delivered_at is null and r.deliver_at <= ${now}
+          ${only(Prisma.sql`r.student_id`)}
+        returning r.message_id, r.student_id, r.deliver_at
+      )
+      select c.message_id::text, c.student_id::text, c.deliver_at, m.body, m.urgent,
+             m.lesson_id::text, l.title as lesson, co.title as course,
+             case when m.lesson_id is null then null
+                  else effective_due(c.student_id, m.lesson_id) end as due_at,
+             s.display_name as student_name, s.locale, s.timezone, a.display_name as admin_name
+      from claimed c
+      join scheduled_messages m on m.id = c.message_id
+      join profiles s on s.id = c.student_id
+      join profiles a on a.id = m.admin_id
+      left join lessons l on l.id = m.lesson_id
+      left join courses co on co.id = l.course_id`
+    if (due.length > 0) {
+      const rows = await Promise.all(due.map((recipient) => messageRow(recipient, now)))
+      await tx.notification.createMany({ data: rows, skipDuplicates: true })
+    }
+    return due.length
+  })
+
+  await prisma.$executeRaw`
+    update scheduled_messages m set status = 'sent'
+    where m.status = 'scheduled'
+      and exists (select 1 from scheduled_message_recipients r where r.message_id = m.id)
+      and not exists (
+        select 1 from scheduled_message_recipients r
+        where r.message_id = m.id and r.delivered_at is null)
+      ${only(Prisma.sql`m.admin_id`)}`
+  return handedOver
 }
 
 /**

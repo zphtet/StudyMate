@@ -6,8 +6,9 @@ import { PageSkeleton } from '@/components/layout/page-skeleton'
 import { NotFound } from '@/lib/http'
 import { Prefetched } from '@/lib/query/prefetch'
 import { AuthError, requireAdminOf, requireRole } from '@/server/auth/guards'
-import { getAlerts, getRule } from '../repo'
-import { alertsQuery, ruleQuery, type AlertsScope } from '../queries'
+import { getMessage } from '../messages-repo'
+import { getAlerts, getAlertsData, getRule } from '../repo'
+import { alertsQuery, messageQuery, ruleQuery, type AlertsScope } from '../queries'
 import { alertsStudentSchema } from '../schemas'
 
 // Server-side seeds for Alerts and the rule editor (spec 006 US2): the same data and guards as the
@@ -55,50 +56,85 @@ async function SeedAlerts({
 }) {
   const me = await requireRole('admin').catch(notFoundOnRefusal)
   const scope = await scopeOf(me.id, searchParams)
-  const data = await getAlerts(me.id, scope === 'all' ? null : scope)
+  const data = await getAlertsData(me, scope === 'all' ? null : scope, new Date())
   return <Prefetched entries={[[alertsQuery(scope).queryKey, data]]}>{children(scope)}</Prefetched>
 }
 
-/** The editor: the students for Applies to, and the rule when editing one. */
-export function WithRuleEditor({
-  ruleId,
+/** What an editor page starts from. */
+export type EditorSeed = {
+  /** `?student=`: a student's id or `all` */
+  scope: AlertsScope
+  /** The rule or message being edited */
+  id: string | null
+  /** `?message=`: a rule made from a message (US3 scenario 8) */
+  message: string | null
+}
+
+/**
+ * The rule editor and the composer: the students (Applies to, To) and, when editing, the rule or the
+ * message. Someone else's is a 404.
+ */
+export function WithAlertsEditor({
+  kind,
+  id,
   searchParams,
   children,
 }: {
-  ruleId?: Promise<string>
-  searchParams?: SearchParams
-  children: (seed: { scope: AlertsScope; ruleId: string | null }) => ReactNode
+  kind: 'rule' | 'message'
+  id?: Promise<string>
+  searchParams?: EditorParams
+  children: (seed: EditorSeed) => ReactNode
 }) {
   return (
     <Suspense fallback={<PageSkeleton header={false} />}>
-      <SeedRuleEditor ruleId={ruleId} searchParams={searchParams}>
+      <SeedEditor kind={kind} id={id} searchParams={searchParams}>
         {children}
-      </SeedRuleEditor>
+      </SeedEditor>
     </Suspense>
   )
 }
 
-async function SeedRuleEditor({
-  ruleId,
+type EditorParams = Promise<{ student?: string | string[]; message?: string | string[] }>
+
+async function SeedEditor({
+  kind,
+  id,
   searchParams,
   children,
 }: {
-  ruleId?: Promise<string>
-  searchParams?: SearchParams
-  children: (seed: { scope: AlertsScope; ruleId: string | null }) => ReactNode
+  kind: 'rule' | 'message'
+  id?: Promise<string>
+  searchParams?: EditorParams
+  children: (seed: EditorSeed) => ReactNode
 }) {
   const me = await requireRole('admin').catch(notFoundOnRefusal)
-  const all = await getAlerts(me.id, null)
-  const entries: [readonly unknown[], unknown][] = [[alertsQuery('all').queryKey, all]]
+  const entries: [readonly unknown[], unknown][] = [
+    [alertsQuery('all').queryKey, await getAlertsData(me, null, new Date())],
+  ]
 
-  let id: string | null = null
-  if (ruleId) {
-    const parsed = z.uuid().safeParse(await ruleId)
+  let editing: string | null = null
+  if (id) {
+    const parsed = z.uuid().safeParse(await id)
     if (!parsed.success) notFound()
-    id = parsed.data
-    entries.push([ruleQuery(id).queryKey, await getRule(me.id, id).catch(notFoundOnRefusal)])
+    editing = parsed.data
+    entries.push(
+      kind === 'rule'
+        ? [ruleQuery(editing).queryKey, await getRule(me.id, editing).catch(notFoundOnRefusal)]
+        : [
+            messageQuery(editing).queryKey,
+            await getMessage(me.id, editing).catch(notFoundOnRefusal),
+          ],
+    )
   }
-  const student = searchParams ? (await searchParams).student : undefined
-  const scope = typeof student === 'string' ? student : 'all'
-  return <Prefetched entries={entries}>{children({ scope, ruleId: id })}</Prefetched>
+  const params = searchParams ? await searchParams : {}
+  const one = (value: string | string[] | undefined) => (typeof value === 'string' ? value : null)
+  return (
+    <Prefetched entries={entries}>
+      {children({
+        scope: one(params.student) ?? 'all',
+        id: editing,
+        message: one(params.message),
+      })}
+    </Prefetched>
+  )
 }

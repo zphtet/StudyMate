@@ -360,8 +360,8 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T050 [P] [US3] Write unit tests in src/features/alerts/quick-times.test.ts for `quickTimes(now, timeZone)` (research R11; US3 scenario 3): 15:00, 18:00 and 22:00 as instants in the chosen zone. A time already past rolls to tomorrow with `tomorrow: true`. Check that 18:00 Tokyo is 15:30 Yangon, and the New York daylight-saving day.
-- [ ] T051 [P] [US3] Write tests against the dev DB in src/features/alerts/messages-repo.test.ts (contracts/server-actions.md › Messages; data-model.md ScheduledMessage.mode, ScheduledMessage.send_at, ScheduledMessage.status, ScheduledMessageRecipient.deliver_at, ScheduledMessageRecipient.delivered_at). Cases:
+- [X] T050 [P] [US3] Write unit tests in src/features/alerts/quick-times.test.ts for `quickTimes(now, timeZone)` (research R11; US3 scenario 3): 15:00, 18:00 and 22:00 as instants in the chosen zone. A time already past rolls to tomorrow with `tomorrow: true`. Check that 18:00 Tokyo is 15:30 Yangon, and the New York daylight-saving day.
+- [X] T051 [P] [US3] Write tests against the dev DB in src/features/alerts/messages-repo.test.ts (contracts/server-actions.md › Messages; data-model.md ScheduledMessage.mode, ScheduledMessage.send_at, ScheduledMessage.status, ScheduledMessageRecipient.deliver_at, ScheduledMessageRecipient.delivered_at). Cases:
   - **Scheduling**: `now`, `fixed` and `next_free` set each recipient's `deliver_at` (next free from `next_free_at`, per student); a `fixed` time in the past → `message_time_past`; a lesson the students can't read → `lesson_not_found`. (An unlinked student is refused by `requireAdminOfAll` before the repo runs; check that src/server/auth/guards.test.ts covers it, and T053 checks the 403 end to end.)
   - **Update**: changes only recipients not handed over; once fully handed over → `message_already_sent`.
   - **Cancel**: deletes the pending recipients, and the status becomes `cancelled`, or `sent` if some already went.
@@ -369,12 +369,12 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Recent**: `listMessages` returns this week's sent and cancelled messages, newest first, and not older ones.
   - **Availability**: free, shift, sleep (and outside waking hours) and quiet, with `nextFree`, in one statement for 5 students.
   - **Scope**: another Admin's message → `message_not_found`.
-- [ ] T052 [P] [US3] Add message cases to src/server/notifications/dispatch.test.ts (research R2 step 2, R11). Cases:
+- [X] T052 [P] [US3] Add message cases to src/server/notifications/dispatch.test.ts (research R2 step 2, R11). Cases:
   - **Hand-over**: due recipients become rows with `source_type` `message` and key `message`, `urgent` copied, and the text rendered in the recipient's language with `{name}` and `{lesson}`; the url is the lesson. The message becomes `sent` once all recipients are handed over, and a re-run hands over nothing (FR-004).
   - **Urgent**: delivered inside a shift; a non-urgent message is held (data-model.md Notification.urgent).
   - **Unlinked or deleted students**: an unlinked student's pending recipient is deleted, and a message left with no recipient is `cancelled`; a `scheduled` message whose only student's profile was deleted (no recipient rows left) is `cancelled` too (Edge Cases).
   - **Never lapses**: a held message is still delivered after 2 days (FR-017).
-- [ ] T053 [P] [US3] Write Playwright tests in tests/e2e/us3-messages.spec.ts (390×844 and 1280×800, axe), with `page.clock` set to 16:00 Tokyo. Cases:
+- [X] T053 [P] [US3] Write Playwright tests in tests/e2e/us3-messages.spec.ts (390×844 and 1280×800, axe), with `page.clock` set to 16:00 Tokyo. Cases:
   - **Independent test**: template "Today's lesson"; Opens: a lesson; 18:00; the summary reads "18:00 May's time (Tokyo) · 15:30 your time (Yangon)"; Schedule; Alerts lists it with Edit and Cancel send.
   - **Scenario 3**: 15:00 reads "tomorrow".
   - **Scenario 2**: the clock switch flips the tiles.
@@ -389,8 +389,8 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Implementation for User Story 3
 
-- [ ] T054 [P] [US3] Implement `quickTimes` in src/features/alerts/quick-times.ts. T050 passes.
-- [ ] T055 [US3] Write src/features/alerts/messages-repo.ts (T051 passes):
+- [X] T054 [P] [US3] Implement `quickTimes` in src/features/alerts/quick-times.ts. T050 passes.
+- [X] T055 [US3] Write src/features/alerts/messages-repo.ts (T051 passes):
   - `scheduleMessage`, `updateMessage`, `cancelMessage`, `getMessage`, `listMessages(adminId, student | all)`;
   - `availability(studentIds, at)`: one `$queryRaw` over `busy_segments` and `next_free_at`;
   - `MessageView` mapping, with read state from the `notifications` rows (data-model.md › Derived values).
@@ -400,13 +400,13 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - `urgent` is stored on the message and copied to each delivery (data-model.md ScheduledMessage.urgent);
   - `lesson_id` is optional and must be a lesson every recipient can read (data-model.md ScheduledMessage.lesson_id);
   - one recipient row per student, with its planned `deliver_at` (data-model.md ScheduledMessageRecipient.student_id, ScheduledMessageRecipient.deliver_at).
-- [ ] T056 [US3] Add the message schemas to src/features/alerts/schemas.ts and the Server Actions `scheduleMessage`, `updateMessage` and `cancelMessage` to src/features/alerts/actions.ts (contracts/server-actions.md › Messages). Each starts with `requireRole('admin')`, then `requireAdminOfAll(studentIds)` so every recipient is a linked student (data-model.md ScheduledMessageRecipient.student_id). The lesson check for data-model.md ScheduledMessage.lesson_id runs in the repo (T055).
-- [ ] T057 [US3] Fill the message step in src/server/notifications/dispatch.ts (research R2 step 2). T052 passes.
+- [X] T056 [US3] Add the message schemas to src/features/alerts/schemas.ts and the Server Actions `scheduleMessage`, `updateMessage` and `cancelMessage` to src/features/alerts/actions.ts (contracts/server-actions.md › Messages). Each starts with `requireRole('admin')`, then `requireAdminOfAll(studentIds)` so every recipient is a linked student (data-model.md ScheduledMessageRecipient.student_id). The lesson check for data-model.md ScheduledMessage.lesson_id runs in the repo (T055).
+- [X] T057 [US3] Fill the message step in src/server/notifications/dispatch.ts (research R2 step 2). T052 passes.
   - Hand over due recipients (data-model.md ScheduledMessageRecipient.delivered_at) as rows with `source_type` `message` and key `message` (data-model.md Notification.source_type, Notification.occurrence_key). Render each one's title, body and url in the recipient's language (data-model.md Notification.title, Notification.body, Notification.url). Set the message to `sent` (data-model.md ScheduledMessage.status).
   - Delete the pending recipients of unlinked students, then set `cancelled` on every `scheduled` message with no recipient rows left (data-model.md ScheduledMessage.status).
   - Make the availability step skip rows with `urgent` (data-model.md Notification.urgent).
-- [ ] T058 [US3] Create the Route Handlers GET src/app/api/alerts/messages/[messageId]/route.ts and src/app/api/alerts/availability/route.ts (contracts/route-handlers.md › Admin). Parse `students` and `at` with Zod. Add their `queryOptions` in src/features/alerts/queries.ts.
-- [ ] T059 [US3] Build the components in src/features/alerts/components/ (contracts/ui-routes.md › Composer; 25-AdminMessage.png):
+- [X] T058 [US3] Create the Route Handlers GET src/app/api/alerts/messages/[messageId]/route.ts and src/app/api/alerts/availability/route.ts (contracts/route-handlers.md › Admin). Parse `students` and `at` with Zod. Add their `queryOptions` in src/features/alerts/queries.ts.
+- [X] T059 [US3] Build the components in src/features/alerts/components/ (contracts/ui-routes.md › Composer; 25-AdminMessage.png):
   - `Composer`:
     - To chips with each student's city; template chips; text; the lesson picker with ×;
     - the clock switch (only "My time" when students' zones differ); the six tiles; Pick… for date and time;
@@ -416,18 +416,18 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - `ScheduledMessageCard`: "Today 18:00 May's time", "15:30 yours · to May", 2 lines of text, Edit, Cancel send (confirm). After sending, each recipient's read state.
 
   Use `useMutation` + `useErrorMessage`.
-- [ ] T060 [US3] Create the pages and links:
+- [X] T060 [US3] Create the pages and links:
   - src/app/a/alerts/messages/new/page.tsx (`?student=` preselects) and src/app/a/alerts/messages/[messageId]/page.tsx;
   - "Send a nudge" in src/features/progress/components/student-progress-card.tsx, linking to `/a/alerts/messages/new?student={id}`;
   - src/app/a/alerts/rules/new/page.tsx accepts `?message=&student=` to open a Daily rule filled from the message (US3 scenario 8).
-- [ ] T061 [US3] Extend src/app/api/alerts/route.ts with `scheduled`, `recent` and `sentThisWeek` (contracts/route-handlers.md › GET `/api/alerts`). Show them in `AlertsView`: "Scheduled messages · n" with "Sent: n this week", then "This week" with each sent card's per-student state and cancelled cards marked "Cancelled" (contracts/ui-routes.md › Alerts).
-- [ ] T062 [US3] Add these strings to src/i18n/messages/en.json, my.json and ja.json:
+- [X] T061 [US3] Extend src/app/api/alerts/route.ts with `scheduled`, `recent` and `sentThisWeek` (contracts/route-handlers.md › GET `/api/alerts`). Show them in `AlertsView`: "Scheduled messages · n" with "Sent: n this week", then "This week" with each sent card's per-student state and cancelled cards marked "Cancelled" (contracts/ui-routes.md › Alerts).
+- [X] T062 [US3] Add these strings to src/i18n/messages/en.json, my.json and ja.json:
   - `composer`, `messageTemplates`, `scheduledMessages`;
   - `errors.message_not_found`, `errors.message_already_sent`, `errors.message_time_past`;
   - `validation.recipientsEmpty`.
 
   Templates are in the Admin's language and name the student (FR-012).
-- [ ] T063 [US3] Run T050–T052 until they pass, and the independent test from T053 with `--grep` on the :3100 build.
+- [X] T063 [US3] Run T050–T052 until they pass, and the independent test from T053 with `--grep` on the :3100 build.
 
 **Checkpoint**: US1–US3 work: notices, rules and one-off messages are delivered through one pipeline.
 

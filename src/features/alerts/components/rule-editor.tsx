@@ -62,15 +62,24 @@ const NEW_CONFIG: Record<RuleConfig['trigger'], RuleConfig> = {
 const ALL = 'all'
 const backTo = (studentId: string | null) => `/a/alerts?student=${studentId ?? ALL}`
 
-/** `/a/alerts/rules/new?student=`: for that student when they are linked, else All students. */
-export function NewRuleEditor({ scope }: { scope: AlertsScope }) {
+/**
+ * `/a/alerts/rules/new?student=`: for that student when they are linked, else All students. With
+ * `?message=` (the composer's "Make it a rule instead", US3 scenario 8) a Daily rule with that text.
+ */
+export function NewRuleEditor({ scope, message }: { scope: AlertsScope; message: string | null }) {
   const { students } = useSuspenseQuery(alertsQuery(ALL)).data
   const studentId = students.some((s) => s.id === scope) ? scope : null
   return (
     <RuleForm
       students={students}
       cancelHref={backTo(studentId)}
-      initial={{ studentId, config: NEW_CONFIG.daily, message: '', push: true, copyMe: false }}
+      initial={{
+        studentId,
+        config: NEW_CONFIG.daily,
+        message: message ?? '',
+        push: true,
+        copyMe: false,
+      }}
     />
   )
 }
