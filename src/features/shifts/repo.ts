@@ -24,7 +24,7 @@ import type {
   ShiftView,
   TodayBanner,
 } from './types'
-import { weekCheck } from './week-check'
+import { weekCheck } from '@/lib/week-check'
 
 // Spec 005 shifts and shift settings (research R2, R3, R10; contracts/server-actions.md). Callers MUST
 // have run requireRole('student'): every query is scoped to `student.id` from the guard

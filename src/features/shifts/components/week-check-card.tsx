@@ -11,7 +11,7 @@ import { useErrorMessage } from '@/lib/use-error-message'
 import { confirmShiftWeek } from '../actions'
 import { shiftKeys, shiftsTodayQuery } from '../queries'
 import type { ShiftsToday } from '../types'
-import { weekCheck } from '../week-check'
+import { weekCheck } from '@/lib/week-check'
 import { useDayLabel } from './use-day-label'
 import { useMinuteClock } from './use-minute-clock'
 

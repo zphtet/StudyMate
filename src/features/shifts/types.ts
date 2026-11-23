@@ -72,7 +72,7 @@ export type TodayBanner = {
 
 /**
  * GET /api/shifts/today: the Today banner, the Sunday check and the Me row. The browser judges
- * `weekCheck` again with its own clock (week-check.ts), so the card appears at 18:00.
+ * `weekCheck` again with its own clock (src/lib/week-check.ts), so the card appears at 18:00.
  */
 export type ShiftsToday = TodayBanner & {
   now: string
