@@ -85,9 +85,10 @@ studymate/
 │  │  │  ├─ (tabs)/                    # StudentLayout with the 5 tabs (route group, no URL segment)
 │  │  │  │  ├─ layout.tsx
 │  │  │  │  ├─ today/page.tsx · courses/page.tsx · progress/page.tsx
-│  │  │  │  ├─ shifts/page.tsx · shifts/new/page.tsx · shifts/[shiftId]/page.tsx
+│  │  │  │  ├─ shifts/page.tsx           # month calendar + selected day (spec 005)
 │  │  │  │  └─ me/page.tsx · me/appearance/page.tsx · me/reminders/page.tsx
-│  │  │  └─ courses/[courseId]/page.tsx · lessons/[lessonId]/page.tsx   # full screen, outside (tabs)
+│  │  │  ├─ courses/[courseId]/page.tsx · lessons/[lessonId]/page.tsx   # full screen, outside (tabs)
+│  │  │  └─ shifts/new/page.tsx · shifts/[shiftId]/page.tsx · shifts/rotation/page.tsx   # full screen
 │  │  ├─ a/                            # Admin area (AdminLayout: 4 tabs)
 │  │  │  ├─ layout.tsx
 │  │  │  ├─ welcome/page.tsx
@@ -112,7 +113,11 @@ studymate/
 │  │  │               student detail, lesson review], pure rules: completion.ts, submission-status.ts,
 │  │  │               focus.ts, streak.ts, forecast.ts, heat.ts; notices.ts, upload.ts [photo upload
 │  │  │               to the `submissions` bucket], use-focus-timer.ts, use-countdown.ts, components/)
-│  │  ├─ shifts/ ├─ notifications/ ├─ appearance/
+│  │  ├─ shifts/      (spec 005: actions.ts, queries.ts, repo.ts [shifts, month read, settings,
+│  │  │               Today banner], rotation-repo.ts [rotations, cron top-up, Sunday check], pure
+│  │  │               rules: rotation.ts, calendar.ts [month chips], timeline.ts [day list],
+│  │  │               week-check.ts, status-text.ts; components/)
+│  │  ├─ notifications/ ├─ appearance/
 │  ├─ components/
 │  │  ├─ ui/                           # shadcn/ui generated
 │  │  ├─ layout/ (BottomNav, SideNav, PageHeader)
@@ -133,6 +138,8 @@ studymate/
 │  ├─ i18n/ (request.ts, messages/en.json, my.json, ja.json)
 │  ├─ generated/prisma/                # prisma generate output (git-ignored)
 │  ├─ server/auth/guards.ts            # requireUser / requireAdminOf / requireCourseReader …
+│  ├─ server/availability.ts           # getBusySegments: busy_segments() → merged Shift / Sleep
+│  │                                   #   (003's Plan and 005's Shifts; guard first)
 │  ├─ app/api/**/route.ts              # GET endpoints for TanStack Query (guards + Prisma)
 │  └─ proxy.ts                         # session refresh + role guard
 ├─ prisma/
@@ -293,7 +300,7 @@ const create = useMutation({
 
 - DB stores `timestamptz`. UI converts with `@date-fns/tz` using `profiles.timezone`.
 - Entering a time for a student (deadline, message) uses the **student's** zone; the UI shows "18:00 her time · 15:30 your time".
-- Overnight shift input: if `end_time <= start_time`, `end_at = start_at date + 1 day`. Implemented in `lib/time.ts` with property tests.
+- Overnight shift input: if `end_time <= start_time`, `end_at = start_at date + 1 day`. Implemented by `shiftInstants` in `lib/time.ts` (unit tests in Tokyo, Yangon and New York daylight saving; spec 005 research R2); `fast-check` property tests cover the availability segments built from these shifts (`lib/availability.test.ts`, SC-002).
 - Study-day boundary for streaks: local midnight in the student's zone; shifts play no part (spec 004 research R4, `src/features/progress/streak.ts`).
 - Quick times in the message composer that are already past today roll to tomorrow.
 
@@ -341,6 +348,7 @@ const create = useMutation({
 - **i18n**: `next-intl` without locale prefix; locale from `locale` cookie (synced from profile, default from `Accept-Language`). Messages in `src/i18n/messages/{en,my,ja}.json`. Dates/numbers through `next-intl` formatters with the user's timezone.
 - **Contrast check**: a Vitest test computes contrast for every theme × mode token pair (≥ 4.5:1).
 - **Spec 003 tokens**: `--destructive-soft` (late chips and cards, a hex value per mode so the contrast test checks it against `--destructive`); `--avail-shift` (= `--primary`), `--avail-sleep` and `--avail-free` (`color-mix` of `--muted-foreground` / `--success` with `--card`, so every theme and mode gets them; graphics, not text).
+- **Spec 005 tokens**: `--shift-day`, `--shift-evening`, `--shift-night`, `--shift-custom`, each with a `-foreground` (research R5): fixed hex values per mode (not per theme, so a shift type keeps its colour when the theme changes), Tailwind `bg-shift-*` / `text-shift-*-foreground`. Calendar chips, type tiles, swatches and Today's banner use them; Off uses `--muted`. The contrast test checks each pair at 4.5:1.
 - **Spec 004 tokens**: `--heat-1..4` for the Progress calendar shades (research R5): `color-mix(in srgb, var(--primary) N%, var(--card))` at 18 %, 35 % and 60 %, then `--primary`, so every theme and mode gets them. Tailwind classes `bg-heat-1..4`. Day numbers are `--foreground` on levels 1–3 and `--primary-foreground` on 4; the contrast test mixes the tokens the same way and checks them at 4.5:1. `heatLevel(seconds)` (`progress/heat.ts`) picks the level: none, < 15 min, < 30, < 60, ≥ 60.
 
 ---
@@ -363,7 +371,7 @@ Custom shared components: `Markdown`, `CalendarMonth` (with overnight shift bars
 As built in spec 003:
 - `TimeBoth` / `useTimeBoth()` (`time-both.tsx`): the student's time first, the viewer's beside it only when the clocks differ. Default "Tue 1 Dec, 23:59 (Tokyo) · 22:29 (Yangon)"; `compact` "21:00 · 18:30 yours" for Plan cards and "Move to …".
 - `DayBar` (`day-bar.tsx`, with `DayBarLegend` and `DayBarScale`): one local day 00–24 scaled to its real length (23/25 h on DST days), Shift / Sleep segments from the server and free gaps between them, optional now-marker; `role="img"` with a text summary ("Sleep 00:00–08:00, Free 08:00–22:00, Shift 22:00–24:00").
-- `CalendarMonth` (`calendar-month.tsx`): a native table, weeks from Monday, one focusable day (arrow keys by day/week, Home/End), a badge slot per day and `onSelectDay`. 005 adds the shift bars.
+- `CalendarMonth` (`calendar-month.tsx`): a native table, weeks from Monday, one focusable day (arrow keys by day/week, Home/End), a badge slot per day and `onSelectDay`. 005 fills the badge slot with shift chips (`features/shifts/calendar.ts` `monthChips`: "9–18", "22→" / "→07" joined across the day border).
 - `StatusChip` gained the `danger` and `warning` tones.
 
 As built in spec 004:
@@ -397,6 +405,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 - File uploads: type allow-list (images, pdf, audio), size limits, Storage policies by path. Lesson files live at `lesson-files/<course_id>/<lesson_id>/<uuid>.<ext>` (10 MB bucket limit); policies read the folders with `uuid_folder()` and check `owns_course` / `can_read_lesson` (spec 002).
 - Content-Security-Policy via `next.config.ts` headers: self, Supabase URL, push endpoints; `frame-ancestors 'none'`; `frame-src https://www.youtube-nocookie.com` for the lesson YouTube player (spec 002 research R5).
 - Daily purge (spec 002): Vercel Cron calls `GET /api/cron/purge` with `Authorization: Bearer CRON_SECRET` (constant-time compare). It removes files with the server-only secret-key client (`src/server/supabase-admin.ts`), then the rows of content deleted more than 30 days ago.
+- Daily rotation top-up (spec 005): Vercel Cron calls `GET /api/cron/rotations` (04:00 UTC, `vercel.json`) with the same secret check. It extends every active rotation to the student's local today + 56 days; a second run the same day inserts nothing.
 - Auth: email confirmation required, OTP attempts limited, neutral reset messages, sign out other sessions on reset.
 - Keep Next.js on the latest 16.x patch (security releases are scheduled; subscribe to advisories).
 
@@ -444,7 +453,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 | 002 courses | `/a/courses/**` (incl. `/a/courses/deleted`), `/s/courses/**`, `/s/lessons/[id]`, `/api/cron/purge` | courses, course_sections, lessons, lesson_resources, `can_read_lesson`, Storage | react-markdown, dnd-kit, soft delete, daily purge via Vercel Cron (`vercel.json`) |
 | 003 assign | `/a/courses/[id]` assign sheet, `/a/plan`, `/s/today` | course_assignments, lesson_deadlines, `effective_due` | DayBar, drag deadlines |
 | 004 progress | `/s/lessons/[id]`, `/s/progress`, `/a/students` | lesson_progress, submissions, comments, study_sessions, `course_progress` | optimistic updates, Realtime |
-| 005 shifts | `/s/shifts/**`, `/a/plan`, `/a/students` | shifts, shift_patterns, `busy_segments`, `next_free_at`, `status_now` | exclusion constraint, overnight math |
+| 005 shifts | `/s/shifts/**` (incl. `/s/shifts/rotation`), `/s/today` (banner, Sunday check), `/s/me` (Shift calendar row), `/a/plan`, `/a/students` (live status), `/api/cron/rotations` | shifts, shift_patterns, profile shift settings, `busy_segments`, `next_free_at`, `status_now` | exclusion constraint, overnight math (`shiftInstants`), rotations stored as rows 8 weeks ahead + daily Vercel Cron top-up |
 | 006 notifications | `/a/alerts/**`, `/s/me/reminders` | notification_rules, scheduled_messages(+recipients), push_subscriptions, notifications | pg_cron → `/api/cron/dispatch`, web-push, Resend |
 | 007 appearance | `/s/me/appearance` (also admin) | profiles columns | next-themes, CSS variables, next/font, next-intl |
 | 008 pwa | global | – | Serwist, Dexie queue, persisted TanStack Query |

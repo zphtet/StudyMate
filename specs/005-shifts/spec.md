@@ -2,7 +2,7 @@
 
 **Feature Branch**: `005-shifts`
 **Created**: 2026-11-20
-**Status**: Draft
+**Status**: Implemented
 **Screens**: `07-Shifts.png`, `08-ShiftEdit.png`, `04-Today.png` (shift banner), Admin `22-AdminPlan.png`, `16-AdminStudents.png`
 
 ## Clarifications

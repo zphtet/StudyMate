@@ -33,7 +33,7 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 
 | Table (Prisma model) | Purpose | Key columns | Spec |
 | --- | --- | --- | --- |
-| `profiles` (Profile) | One per auth user; settings | `id` = auth.users.id, `role`, `display_name`, `timezone`, `locale`, `color_mode`, `theme_id`, `font_id`, `font_scale`, `sleep_minutes`, `after_shift_buffer`, `waking_start/end`, `quiet_start/end`, `weekly_goal_days` | 001, 005, 007 |
+| `profiles` (Profile) | One per auth user; settings | `id` = auth.users.id, `role`, `display_name`, `timezone`, `locale`, `color_mode`, `theme_id`, `font_id`, `font_scale`, `sleep_minutes`, `after_shift_buffer`, `waking_start/end`, `quiet_start/end`, `weekly_goal_days`; spec 005: `shift_presets` (json, Day / Evening / Night start and end times, per student), `shifts_confirmed_week` (date, the Monday of the last week answered in the Sunday check) | 001, 005, 007 |
 | `admin_invites` (AdminInvite) | Admin's join code | `admin_id`, `code` (6 chars, unique), `active` | 001 |
 | `student_links` (StudentLink) | Student ↔ admin | `student_id`, `admin_id`, `status` pending/active/declined/removed | 001 |
 | `courses` (Course) | Course | `owner_id`, `is_personal`, `title`, `icon`, `color`, `level_tag`, `target_date`, `unlock_in_order`, `allow_student_notes` (stored only until a notes feature), `status` draft/active/archived, `deleted_at` | 002 |
@@ -46,8 +46,8 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 | `submissions` (Submission) | Student assignment | `student_id`, `lesson_id` (unique pair), `body_md`, `attachments` (json), `status` | 004 |
 | `comments` (Comment) | Notes and review comments | `author_id`, `student_id`, `target_type` (`lesson` = Notes, `submission` = review), `target_id`, `body`; index `comments_thread` (`student_id`, `target_type`, `target_id`, `created_at`) | 004 |
 | `study_sessions` (StudySession) | Focus timer | `student_id`, `lesson_id`, `started_at`, `ended_at`, `planned_minutes` (15 or 25); index `study_sessions_student_started` (`student_id`, `started_at`) | 004 |
-| `shift_patterns` (ShiftPattern) | Rotation | `student_id`, `sequence` e.g. `DDDONNOO`, `start_date`, `presets` (json) | 005 |
-| `shifts` (Shift) | One row per shift | `student_id`, `type`, `start_at`, `end_at` (next day for nights), `sleep_minutes`, `pattern_id`, `overridden` | 005 |
+| `shift_patterns` (ShiftPattern) | Rotation | `student_id`, `sequence` e.g. `DDDONNOO`, `start_date`, `active`, `generated_until` (date, how far its shifts are stored); presets moved to the profile in spec 005 | 005 |
+| `shifts` (Shift) | One row per shift | `student_id`, `type`, `start_at`, `end_at` (next day for nights; Off is the whole local day), `sleep_minutes`, `pattern_id` (set when a rotation generated it), `overridden` (edited or deleted by hand: rotations leave it alone) | 005 |
 | `notification_rules` (NotificationRule) | Automatic reminders | `admin_id`, `student_id` (null = all), `trigger`, `config` (json), `message`, `channels`, `enabled` | 006 |
 | `scheduled_messages` (ScheduledMessage) | One-off message | `admin_id`, `body`, `lesson_id`, `mode` now/fixed/next_free, `send_at`, `urgent`, `status` | 006 |
 | `scheduled_message_recipients` (ScheduledMessageRecipient) | Per-student delivery | PK (`message_id`, `student_id`), `deliver_at`, `delivered_at`, `read_at` | 006 |
@@ -65,6 +65,13 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 
 A lesson's total = `minutes_spent` + its sessions' counted minutes. Daily totals, streaks and the heat calendar read both (`dailyActivity()` in `src/features/progress/repo.ts`).
 
+**Rotations (spec 005 research R4)** are stored as ordinary `shifts` rows 8 weeks ahead, so every reader sees one record per shift:
+- Saving a rotation makes it the student's only active one (the previous one becomes inactive) and generates its shifts from its start date or today, whichever is later, to today + 56 days (`generated_until`), in one transaction. A daily Vercel Cron (`/api/cron/rotations`) extends every active rotation to today + 56; a second run the same day inserts nothing.
+- A generated day is skipped when the student already has their own shift starting that local date (hand-entered, or `overridden`, of any type, Off included), or when it would overlap a working shift or start at or before now.
+- Editing a generated shift sets `overridden`; deleting one leaves an `overridden` Off row for that day, so the rotation doesn't fill it again.
+- Changing or deleting the rotation deletes its non-overridden shifts that haven't started; shifts that have started (past and running) are never touched. New preset times or a new sleep length regenerate those future shifts the same way.
+- Code: `src/features/shifts/rotation.ts` (pure: which shift each day gets) and `rotation-repo.ts`.
+
 ---
 
 ## 4. Rules that live only in SQL
@@ -73,9 +80,9 @@ Prisma can't describe these, so they stay in the SQL migration. When Prisma gene
 
 | Kind | What | Why |
 | --- | --- | --- |
-| CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h, `sequence` format; spec 002: `courses_color_check`, `courses_description_check`, `courses_level_tag_check`, `course_sections_title_check`, `course_sections_position_check`, `lessons_position_check`, `lessons_assignment_prompt_check`, `lessons_unlock_rule_check`, `lesson_resources_name_check`, `lesson_resources_size_check`, `lesson_resources_target_check`; spec 004: `study_sessions_planned` (`planned_minutes in (15, 25)`), `study_sessions_capped` (`ended_at` ≤ `started_at + planned_minutes`, so a session never counts past its length; research R3) | Data integrity |
+| CHECK constraints | title lengths, `est_minutes` 1–600, `font_scale` range, invite code format, shift `end_at > start_at` and ≤ 24 h (spec 005 `shifts_max_length`: ≤ 25 h for Off, a whole local day on a daylight-saving change), `shifts_off_no_sleep` (Off has `sleep_minutes = 0`; spec 005), `sequence` format; spec 002: `courses_color_check`, `courses_description_check`, `courses_level_tag_check`, `course_sections_title_check`, `course_sections_position_check`, `lessons_position_check`, `lessons_assignment_prompt_check`, `lessons_unlock_rule_check`, `lesson_resources_name_check`, `lesson_resources_size_check`, `lesson_resources_target_check`; spec 004: `study_sessions_planned` (`planned_minutes in (15, 25)`), `study_sessions_capped` (`ended_at` ≤ `started_at + planned_minutes`, so a session never counts past its length; research R3) | Data integrity |
 | EXCLUDE constraint | `shifts`: no overlapping working shifts per student (`btree_gist`) | Overlap rule from spec 005 |
-| Partial unique indexes | one active invite per admin; one active admin link per student; spec 003: `notification_rules_default_once` (`admin_id`, `student_id`, `trigger`) where `config->>'preset' = 'default'` (default reminders at most once); spec 004: `study_sessions_one_running` (`student_id`) where `ended_at is null` (one running focus session per student) | Spec 001, 003, 004 |
+| Partial unique indexes | one active invite per admin; one active admin link per student; spec 003: `notification_rules_default_once` (`admin_id`, `student_id`, `trigger`) where `config->>'preset' = 'default'` (default reminders at most once); spec 004: `study_sessions_one_running` (`student_id`) where `ended_at is null` (one running focus session per student); spec 005: `shift_patterns_one_active` (`student_id`) where `active` (one rotation per student, FR-010) | Spec 001, 003, 004, 005 |
 | Partial indexes | active courses/lessons, active assignments, undelivered messages; spec 002: `courses_deleted`, `lessons_deleted` (Recently deleted and the daily purge) | Performance |
 | Triggers | `handle_new_user` (profile + invite on sign-up), `prevent_role_change` | Spec 001 |
 | Functions | `is_admin_of`, `can_read_course`, `can_read_lesson` (002: Published, non-deleted, readable course, and completed-only in Archived courses; used by `lessons`, `lesson_resources` and `lesson-files` policies), `uuid_folder` (002: Storage path folder as uuid), `admin_lesson_target` (004: the Admin's lesson rule, mirrors `requireAdminLessonTarget`; used by the progress and comment policies), `request_join`, `respond_join`, `preview_invite`, `effective_due`, `busy_segments`, `next_free_at`, `status_at`, `status_now`, `custom_access_token_hook` | Shared logic |
