@@ -1,7 +1,8 @@
 import 'server-only'
-import { clashAt, displaySegments, mergeSegments, suggestSlot, type Busy } from '@/lib/availability'
+import { clashAt, suggestSlot, type Busy } from '@/lib/availability'
 import { NotFound } from '@/lib/http'
 import { prisma } from '@/lib/prisma'
+import { getBusySegments } from '@/server/availability'
 import {
   addCalendarDays,
   datesOfMonth,
@@ -18,16 +19,6 @@ import type { Clash, PlanCard, PlanMonth, PlanWeek, Segment, StudentRef } from '
 // (auth.uid() is null; docs/technical-spec.md §6.3), so the guard is the access rule here.
 
 const DAY_MS = 86_400_000
-
-/** Shift / Sleep segments in [from, to), merged and disjoint (one busy_segments call). */
-export async function getBusySegments(studentId: string, from: Date, to: Date): Promise<Busy[]> {
-  const rows = await prisma.$queryRaw<{ kind: string; start_at: Date; end_at: Date }[]>`
-    select kind, start_at, end_at
-    from public.busy_segments(${studentId}::uuid, ${from}::timestamptz, ${to}::timestamptz)`
-  return mergeSegments(
-    displaySegments(rows.map((r) => ({ kind: r.kind, start: r.start_at, end: r.end_at }))),
-  )
-}
 
 /** Shift or sleep at `at`, and where "Move to …" would put it (spec 003 FR-009). */
 function clashIn({

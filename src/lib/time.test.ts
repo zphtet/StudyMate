@@ -12,6 +12,7 @@ import {
   mondayOf,
   moveToDay,
   roundUpToLocalHour,
+  shiftInstants,
   startOfLocalDay,
   todayIn,
   utcToZoned,
@@ -222,5 +223,67 @@ describe('addMonths / datesOfMonth (Plan month, spec 003 FR-010)', () => {
     expect(datesOfMonth('2026-11')[0]).toBe('2026-11-01')
     expect(datesOfMonth('2026-11').at(-1)).toBe('2026-11-30')
     expect(datesOfMonth('2028-02')).toHaveLength(29)
+  })
+})
+
+describe('shiftInstants (spec 005 FR-001, US1 scenario 2; research R2)', () => {
+  const TOKYO = 'Asia/Tokyo'
+  const YANGON = 'Asia/Yangon'
+
+  test('a same-day shift starts and ends on its date', () => {
+    const shift = shiftInstants({ date: '2026-11-20', start: '09:00', end: '18:00' }, TOKYO)
+    expect(iso(shift.start)).toBe('2026-11-20T00:00:00.000Z')
+    expect(iso(shift.end)).toBe('2026-11-20T09:00:00.000Z')
+    expect(shift.minutes).toBe(9 * 60)
+    expect(shift.endsNextDay).toBe(false)
+  })
+
+  test('an end before the start is the next morning: one record, 9 h', () => {
+    const shift = shiftInstants({ date: '2026-11-20', start: '22:00', end: '07:00' }, TOKYO)
+    expect(iso(shift.start)).toBe('2026-11-20T13:00:00.000Z')
+    expect(iso(shift.end)).toBe('2026-11-20T22:00:00.000Z') // Sat 21 Nov 07:00 in Tokyo
+    expect(shift.minutes).toBe(9 * 60)
+    expect(shift.endsNextDay).toBe(true)
+  })
+
+  test('an end equal to the start is a full 24 h shift', () => {
+    const shift = shiftInstants({ date: '2026-11-20', start: '08:00', end: '08:00' }, TOKYO)
+    expect(shift.minutes).toBe(24 * 60)
+    expect(shift.endsNextDay).toBe(true)
+  })
+
+  test('a half-hour zone (Yangon +06:30) keeps the local clock times', () => {
+    const shift = shiftInstants({ date: '2026-11-20', start: '22:00', end: '07:00' }, YANGON)
+    expect(iso(shift.start)).toBe('2026-11-20T15:30:00.000Z')
+    expect(iso(shift.end)).toBe('2026-11-21T00:30:00.000Z')
+    expect(shift.minutes).toBe(9 * 60)
+  })
+
+  test('across the New York fall-back night, the length comes from the instants', () => {
+    // Clocks go back at 02:00 on Sun 1 Nov 2026: 22:00 → 07:00 is 10 h of real time.
+    expect(shiftInstants({ date: '2026-10-31', start: '22:00', end: '07:00' }, NY).minutes).toBe(
+      10 * 60,
+    )
+    // 08:00 → 08:00 is 25 h, which saving refuses (FR-001: at most 24 h).
+    expect(shiftInstants({ date: '2026-10-31', start: '08:00', end: '08:00' }, NY).minutes).toBe(
+      25 * 60,
+    )
+  })
+
+  test('across the New York spring-forward night, the shift is an hour shorter', () => {
+    // Clocks go forward at 02:00 on Sun 14 Mar 2027.
+    expect(shiftInstants({ date: '2027-03-13', start: '22:00', end: '07:00' }, NY).minutes).toBe(
+      8 * 60,
+    )
+  })
+
+  test('without times (Off) the shift is the whole local day', () => {
+    const off = shiftInstants({ date: '2026-11-20', start: null, end: null }, TOKYO)
+    expect(iso(off.start)).toBe('2026-11-19T15:00:00.000Z')
+    expect(iso(off.end)).toBe('2026-11-20T15:00:00.000Z')
+    expect(off.minutes).toBe(24 * 60)
+    expect(off.endsNextDay).toBe(false)
+    // The local day is 25 h long on the fall-back day.
+    expect(shiftInstants({ date: '2026-11-01', start: null, end: null }, NY).minutes).toBe(25 * 60)
   })
 })

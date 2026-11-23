@@ -104,6 +104,33 @@ export function localDayRange(date: string, timeZone: string) {
 }
 
 /**
+ * A shift's instants from the form's local date and clock times (spec 005 FR-001, US1 scenario 2;
+ * research R2). An end at or before the start is on the next local date, so 22:00–07:00 is one
+ * overnight shift and 08:00–08:00 is 24 h. Without times (an Off day) it is the whole local day.
+ * `minutes` comes from the instants, so a daylight-saving night is an hour longer or shorter
+ * (constitution IV); saving refuses more than 24 h.
+ */
+export function shiftInstants(
+  shift: { date: string } & ({ start: string; end: string } | { start: null; end: null }),
+  timeZone: string,
+) {
+  const { date, start, end } = shift
+  const endsNextDay = start !== null && end <= start
+  const bounds =
+    start === null
+      ? localDayRange(date, timeZone)
+      : {
+          start: zonedToUtc(date, start, timeZone),
+          end: zonedToUtc(endsNextDay ? addCalendarDays(date, 1) : date, end, timeZone),
+        }
+  return {
+    ...bounds,
+    minutes: (bounds.end.getTime() - bounds.start.getTime()) / 60_000,
+    endsNextDay,
+  }
+}
+
+/**
  * The next whole hour on the local clock (unchanged when already on one). Rounding in UTC would be
  * wrong for half-hour zones such as Asia/Yangon (+06:30). Offsets are whole quarter hours and DST
  * changes happen on the hour, so adding the local minutes left in the hour is enough.
