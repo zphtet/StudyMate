@@ -170,7 +170,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T018 [P] [US1] Write dispatcher tests in src/server/notifications/dispatch.test.ts, against the dev DB with the recording sender (research R2, R6, R9; data-model.md › Lifecycles › A delivery). Cases:
+- [X] T018 [P] [US1] Write dispatcher tests in src/server/notifications/dispatch.test.ts, against the dev DB with the recording sender (research R2, R6, R9; data-model.md › Lifecycles › A delivery). Cases:
   - **Delivery**: a pending system notice for a free recipient gets one push per device and `delivered_at` set; a second run delivers nothing (FR-004, SC-003).
   - **Held**: a recipient on shift → `deliver_at` moves to `next_free_at`, with no push and no inbox row; the next run after that time delivers it (FR-003).
   - **Replaced notice**: delivered again once.
@@ -179,7 +179,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Sunday check** (FR-010; data-model.md Profile.shifts_confirmed_week): a student with shifts, unconfirmed, at Sunday 18:05 local, gets one row with key `week-check@{monday}`, `source_id` = the student and url `/s/shifts`. Not before 18:00, not when the week is confirmed, not without shifts, and not twice. Tokyo and New York. A pending week-check row held by a shift is deleted, not delivered, once the student has confirmed that week.
   - **Retention**: rows older than 90 days are deleted on the first run after 03:00 UTC, and only once that day.
   - **Result**: the counts match contracts/route-handlers.md › Cron.
-- [ ] T019 [P] [US1] Write tests against the dev DB in src/features/notifications/repo.test.ts (research R8, R9; data-model.md PushSubscription, Notification.read_at). Cases:
+- [X] T019 [P] [US1] Write tests against the dev DB in src/features/notifications/repo.test.ts (research R8, R9; data-model.md PushSubscription, Notification.read_at). Cases:
   - **Saving a device**: by endpoint; saving the same endpoint as another user moves the row to them.
   - **Deleting a device**: only the caller's.
   - **Inbox**: delivered rows only, newest first, 30 per page with a cursor.
@@ -187,9 +187,9 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Mark read**: works on the caller's delivered row and does nothing the second time. Another user's row, or a pending one → `notification_not_found`.
   - **Mark all read**.
   - **Sign out**: removes the caller's endpoint only.
-- [ ] T020 [P] [US1] Write unit tests in src/features/notifications/device-state.test.ts for `deviceState({ hasServiceWorker, hasPushManager, permission, isIos, isStandalone, isSubscribed })` → `unsupported` / `needs-install` / `denied` / `off` / `on` (research R8; contracts/ui-routes.md › Turn on reminders). Include iPad desktop-mode Safari.
-- [ ] T021 [P] [US1] Write unit tests in src/features/notifications/inbox-time.test.ts for `inboxTime(at, now, timeZone)` → `{ kind: 'today' | 'yesterday' | 'date', … }` ("18:02", "Yesterday 18:02", "Fri 20 Nov"), at the local midnight boundary, in Tokyo and Yangon.
-- [ ] T022 [P] [US1] Write Playwright tests in tests/e2e/us1-inbox.spec.ts (390×844 and 1280×800, axe). Cases:
+- [X] T020 [P] [US1] Write unit tests in src/features/notifications/device-state.test.ts for `deviceState({ hasServiceWorker, hasPushManager, permission, isIos, isStandalone, isSubscribed })` → `unsupported` / `needs-install` / `denied` / `off` / `on` (research R8; contracts/ui-routes.md › Turn on reminders). Include iPad desktop-mode Safari.
+- [X] T021 [P] [US1] Write unit tests in src/features/notifications/inbox-time.test.ts for `inboxTime(at, now, timeZone)` → `{ kind: 'today' | 'yesterday' | 'date', … }` ("18:02", "Yesterday 18:02", "Fri 20 Nov"), at the local midnight boundary, in Tokyo and Yangon.
+- [X] T022 [P] [US1] Write Playwright tests in tests/e2e/us1-inbox.spec.ts (390×844 and 1280×800, axe). Cases:
   - **Independent test**: seed a "Needs redo" notice for May with `recordNotice`'s shape, then `runDispatch`. Today's bell reads "Notifications, 1 unread"; the inbox lists it; tapping it opens the lesson and the count is 0.
   - **Scenario 4**: newest first; Mark all read; `/s/lessons/…?n=<id>` marks the row read and drops the parameter.
   - **Scenario 1**: with permission granted and `PushManager.prototype.subscribe` stubbed by `page.addInitScript` (headless Chromium has no push service), Turn on saves a `push_subscriptions` row, and Me reads "On".
@@ -198,9 +198,11 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Admin**: the bell on Students works, and so does `/a/inbox`.
   - **Access**: `GET /api/notifications` without a session → 401; `POST /api/cron/dispatch` without the secret, and with a wrong one → 401.
 
+  (2026-11-23: only the independent test has run so far, on mobile and desktop. The other cases run with the gates in T082.)
+
 ### Implementation for User Story 1
 
-- [ ] T023 [US1] Implement `dispatch(now, { push, email })` in src/server/notifications/dispatch.ts (research R2 steps 3–4, R9; T018 passes). Each step is one or a few set-based statements:
+- [X] T023 [US1] Implement `dispatch(now, { push, email })` in src/server/notifications/dispatch.ts (research R2 steps 3–4, R9; T018 passes). Each step is one or a few set-based statements:
   - **Sunday check**: students whose local time is Sunday 18:00–23:59, with `hasShifts` and `confirmedWeek` loaded in one query, judged by `weekCheck` from src/lib/week-check.ts. The text comes from `textsFor`. Insert `on conflict do nothing` with `source_type` `system` and the key `week-check@{monday}` (data-model.md Notification.source_type, Notification.occurrence_key). Before delivery, delete pending week-check rows of students who have since confirmed that week (FR-010).
   - **Availability**: one `next_free_at` statement for every recipient with pending rows due (data-model.md Notification.deliver_at). Rows for a busy recipient move to that time (data-model.md Notification.urgent is honoured from US3 on).
   - **Delivery**: per recipient, one push per due row with `push` true, to every device (data-model.md Notification.push), with the row's title, body and url as stored (data-model.md Notification.title, Notification.body, Notification.url); then set `delivered_at` (data-model.md Notification.delivered_at). Bundling comes in T068.
@@ -208,27 +210,29 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Result**: the counts.
 
   Leave clearly named, empty step functions for rule occurrences (T043) and messages (T057), so later tasks fill them in rather than restructure.
-- [ ] T024 [US1] Create the Route Handler POST src/app/api/cron/dispatch/route.ts (contracts/route-handlers.md › Cron): `requireCronSecret` → `dispatch(new Date(), { push: webPushSender, email: resendSender })` → the counts, through `handle()`. Not in vercel.json: `pg_cron` calls it (quickstart.md §6).
-- [ ] T025 [US1] Clear the Sunday check when the student answers it (FR-010). Confirm and Edit on `WeekCheckCard` both call `confirmShiftWeek`, so this is one change:
+
+  (Done. `dispatch` also takes an optional `scope: { userIds }`, which only tests pass: the dev database is shared, and a run with a fake "now" must not deliver, insert or purge other users' rows. Delivery claims rows (`delivered_at`) before pushing, so a second run never sends twice. The push URL already carries `?n=<id>`.)
+- [X] T024 [US1] Create the Route Handler POST src/app/api/cron/dispatch/route.ts (contracts/route-handlers.md › Cron): `requireCronSecret` → `dispatch(new Date(), { push: webPushSender, email: resendSender })` → the counts, through `handle()`. Not in vercel.json: `pg_cron` calls it (quickstart.md §6).
+- [X] T025 [US1] Clear the Sunday check when the student answers it (FR-010). Confirm and Edit on `WeekCheckCard` both call `confirmShiftWeek`, so this is one change:
   - First add failing cases to src/features/shifts/rotation-repo.test.ts: after `confirmShiftWeek`, a delivered `week-check@{week}` row of the student is read, and a pending one is gone; another student's row is untouched.
   - Add `settleNotice({ userId, sourceId, occurrenceKey }, db)` to src/server/notifications/record.ts: it marks a delivered row read and deletes a pending one (data-model.md Notification.read_at, Notification.delivered_at, Notification.occurrence_key). It lives next to `recordNotice` because two features use it.
   - Call it from `confirmShiftWeek` in src/features/shifts/rotation-repo.ts, in the same transaction as the profile update.
   - `WeekCheckCard` also invalidates `['notifications']`, so the bell updates at once.
-- [ ] T026 [US1] Create the repo in src/features/notifications/repo.ts: `savePushSubscription` (upsert by endpoint, so a device another user had moves to the caller; `user_id` and `last_seen_at`; data-model.md PushSubscription.endpoint), `deletePushSubscription`, `listInbox(userId, cursor)`, `unreadCount`, `markRead`, `markAllRead` (data-model.md Notification.read_at, Notification.delivered_at). Every `where` has `userId: me.id`. T019 passes.
-- [ ] T027 [US1] Write the Server Actions in src/features/notifications/actions.ts with schemas in src/features/notifications/schemas.ts: `savePushSubscription`, `deletePushSubscription`, `markNotificationRead` and `markAllNotificationsRead` (contracts/server-actions.md; `requireUser()` first). Extend `signOut` in src/features/auth/actions.ts to `{ endpoint?: z.url() }`, deleting the caller's subscription before signing out (FR-014). src/features/profile/components/me-view.tsx passes the device's endpoint.
-- [ ] T028 [US1] Create the Route Handlers GET src/app/api/notifications/route.ts and src/app/api/notifications/unread/route.ts (contracts/route-handlers.md › Everyone). Add `InboxItem` in src/features/notifications/types.ts. In src/features/notifications/queries.ts, add the key factory `['notifications','inbox']` and `['notifications','unread']`, an `infiniteQueryOptions` for the inbox, and the unread query with `refetchOnWindowFocus`.
-- [ ] T029 [P] [US1] Write public/sw.js (research R7):
+- [X] T026 [US1] Create the repo in src/features/notifications/repo.ts: `savePushSubscription` (upsert by endpoint, so a device another user had moves to the caller; `user_id` and `last_seen_at`; data-model.md PushSubscription.endpoint), `deletePushSubscription`, `listInbox(userId, cursor)`, `unreadCount`, `markRead`, `markAllRead` (data-model.md Notification.read_at, Notification.delivered_at). Every `where` has `userId: me.id`. T019 passes.
+- [X] T027 [US1] Write the Server Actions in src/features/notifications/actions.ts with schemas in src/features/notifications/schemas.ts: `savePushSubscription`, `deletePushSubscription`, `markNotificationRead` and `markAllNotificationsRead` (contracts/server-actions.md; `requireUser()` first). Extend `signOut` in src/features/auth/actions.ts to `{ endpoint?: z.url() }`, deleting the caller's subscription before signing out (FR-014). src/features/profile/components/me-view.tsx passes the device's endpoint.
+- [X] T028 [US1] Create the Route Handlers GET src/app/api/notifications/route.ts and src/app/api/notifications/unread/route.ts (contracts/route-handlers.md › Everyone). Add `InboxItem` in src/features/notifications/types.ts. In src/features/notifications/queries.ts, add the key factory `['notifications','inbox']` and `['notifications','unread']`, an `infiniteQueryOptions` for the inbox, and the unread query with `refetchOnWindowFocus`.
+- [X] T029 [P] [US1] Write public/sw.js (research R7):
   - `push` shows the notification with its `tag`;
   - `notificationclick` focuses an open window or opens `url` with `?n=<id>` (the inbox for a bundle);
   - both post `{ type: 'notifications' }` to open windows.
 
   Create src/app/manifest.ts: name, short name, start URL by role-neutral `/`, `display: 'standalone'`, theme colours from the tokens' values. Add `sw.js` to the exclusions in src/proxy.ts's matcher (`.webmanifest` is already excluded), so signed-out devices can fetch it.
-- [ ] T030 [US1] Implement `deviceState` in src/features/notifications/device-state.ts (T020 passes) and `useDeviceReminders()` in src/features/notifications/use-device-reminders.ts (research R8):
+- [X] T030 [US1] Implement `deviceState` in src/features/notifications/device-state.ts (T020 passes) and `useDeviceReminders()` in src/features/notifications/use-device-reminders.ts (research R8):
   - **turn on**: register `/sw.js`, ask permission, `pushManager.subscribe` with the VAPID public key, then `savePushSubscription`;
   - **turn off**: `unsubscribe`, then `deletePushSubscription`;
   - **dismiss**: the card's dismissed flag goes in `localStorage`, wrapped in try/catch (a per-device convenience);
   - `endpoint()` is for sign-out.
-- [ ] T031 [US1] Implement `inboxTime` in src/features/notifications/inbox-time.ts (T021 passes). Build the components in src/features/notifications/components/ (contracts/ui-routes.md › Bell, Inbox, Turn on reminders):
+- [X] T031 [US1] Implement `inboxTime` in src/features/notifications/inbox-time.ts (T021 passes). Build the components in src/features/notifications/components/ (contracts/ui-routes.md › Bell, Inbox, Turn on reminders):
   - `Bell`: 44 px, a dot and the count, `aria-label` with the count, links to `/s/inbox` or `/a/inbox`;
   - `Inbox`: back, Mark all read, rows with the unread dot, 2-line text and `inboxTime`; load more on scroll; empty state through `EmptyState`; a tap marks read and opens the link;
   - `TurnOnRemindersCard`;
@@ -237,14 +241,16 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - `MarkReadOnOpen`: reads `?n=`, marks the row read, replaces the URL, and invalidates `['notifications']` on service-worker messages.
 
   Use `useMutation` + `useErrorMessage`.
-- [ ] T032 [US1] Wire up the screens:
+
+  (Done. The browser-subscription helpers are in src/lib/push-device.ts, because Me's sign-out uses them too: it unsubscribes this browser, so the next user on the device starts with reminders off. The dismissed flag also stays in memory when storage is blocked.)
+- [X] T032 [US1] Wire up the screens:
   - src/app/s/inbox/page.tsx and src/app/a/inbox/page.tsx, full screen with the role page guard and a prefetched first page;
   - `Bell` and `TurnOnRemindersCard` in src/features/assignments/components/today-view.tsx (04-Today.png);
   - on src/app/a/(tabs)/students/page.tsx, the disabled bell becomes `Bell`, and `TurnOnRemindersCard` is added;
   - `DeviceRemindersRow` in src/features/profile/components/me-view.tsx for both roles;
   - `MarkReadOnOpen` in src/app/s/layout.tsx and src/app/a/layout.tsx.
-- [ ] T033 [US1] Add the `inbox`, `bell`, `deviceReminders` and `installGuide` strings, `notices.weekCheck` (title and body, naming no pronoun) and `errors.notification_not_found` to src/i18n/messages/en.json, my.json and ja.json.
-- [ ] T034 [US1] Run T018–T021 until they pass, and the US1 independent test from T022 with `--grep` on the :3100 build.
+- [X] T033 [US1] Add the `inbox`, `bell`, `deviceReminders` and `installGuide` strings, `notices.weekCheck` (title and body, naming no pronoun) and `errors.notification_not_found` to src/i18n/messages/en.json, my.json and ja.json.
+- [X] T034 [US1] Run T018–T021 until they pass, and the US1 independent test from T022 with `--grep` on the :3100 build.
 
 **Checkpoint**: US1 works on its own. 003/004's notices and the Sunday check reach phones and the inbox, never while the recipient is busy. This is the MVP.
 
