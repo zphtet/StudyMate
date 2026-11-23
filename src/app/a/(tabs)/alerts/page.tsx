@@ -1,8 +1,11 @@
-import { Bell } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
-import { TabPlaceholder } from '@/components/layout/tab-placeholder'
+import { AlertsView } from '@/features/alerts/components/alerts-view'
+import { WithAlerts } from '@/features/alerts/components/with-alerts'
 
-export default async function AlertsPage() {
-  const [nav, empty] = await Promise.all([getTranslations('nav'), getTranslations('empty')])
-  return <TabPlaceholder title={nav('alerts')} body={empty('alerts')} icon={Bell} />
+// The Alerts tab, "Reminders" (screen 24-AdminNotify; spec 006 US2): `?student=<id|all>`.
+type SearchParams = Promise<{ student?: string | string[] }>
+
+export default function AlertsPage({ searchParams }: { searchParams: SearchParams }) {
+  return (
+    <WithAlerts searchParams={searchParams}>{(scope) => <AlertsView scope={scope} />}</WithAlerts>
+  )
 }

@@ -1,10 +1,20 @@
 import 'server-only'
 import { Prisma } from '@/generated/prisma/client'
+import type { RuleTrigger } from '@/generated/prisma/enums'
 import { prisma } from '@/lib/prisma'
 import { zonedToUtc } from '@/lib/time'
 import { weekCheck } from '@/lib/week-check'
-import type { EmailSender } from './email'
+import { emailAddresses, type EmailSender } from './email'
+import {
+  adminWeeklySummary,
+  occurrences,
+  stillApplies,
+  type StudentData,
+  type Window,
+} from './occurrences'
 import type { PushPayload, PushSender } from './push'
+import { loadRuleTargets, loadStudentData, type Only, type RuleTarget } from './rule-data'
+import { copyRows, ruleRow, summaryEmail, type DeliveredRow } from './rule-rows'
 import { textsFor } from './texts'
 
 // The dispatcher (spec 006 research R2): POST /api/cron/dispatch runs it every 5 minutes (pg_cron).
@@ -36,6 +46,10 @@ const RETENTION_DAYS = 90
 /** The daily purge runs on the first tick after 03:00 UTC; ticks are 5 minutes apart (R9). */
 const PURGE_HOUR_UTC = 3
 const TICK_MINUTES = 5
+/** Rule occurrences are looked for in (now − 15 min, now], so a late or missed tick loses nothing (R2). */
+const LOOK_BACK_MINUTES = 15
+const MINUTE = 60_000
+const NO_DATA: StudentData = { lessons: [], activity: [], shifts: [] }
 
 export async function dispatch(
   now: Date,
@@ -45,21 +59,77 @@ export async function dispatch(
   const only = (column: Prisma.Sql) =>
     scope ? Prisma.sql`and ${column} = any(${scope.userIds}::uuid[])` : Prisma.empty
 
-  const occurrences = await createRuleOccurrences()
+  const created = await createRuleOccurrences(now, only)
   const handedOver = await handOverMessages()
   await createWeekChecks(now, only)
-  const lapsed = await dropSettledWeekChecks(only)
-  const postponed = await holdForBusyRecipients(now, only)
-  const delivery = await deliverDue(now, deps.push, only)
+  const settled = await dropSettledWeekChecks(only)
+  const held = await holdForBusyRecipients(now, only)
+  const stale = await dropStale(now, only)
+  const delivery = await deliverDue(now, deps, only)
   await purgeOld(now, only)
-  return { occurrences, handedOver, postponed, lapsed, ...delivery }
+  return {
+    occurrences: created,
+    handedOver,
+    postponed: held.postponed,
+    lapsed: settled + held.lapsed + stale,
+    ...delivery,
+  }
 }
 
-type Only = (column: Prisma.Sql) => Prisma.Sql
+/**
+ * Step 1 (research R2, R3; data-model.md Notification.source_type `rule`,
+ * Notification.occurrence_key, Notification.expires_at): every occurrence due in the look-back window
+ * becomes a row, rendered for its recipient. The unique key keeps it to one however many runs see it
+ * (FR-004). A rule never fires for a moment before it existed.
+ */
+async function createRuleOccurrences(now: Date, only: Only) {
+  const window: Window = { from: new Date(now.getTime() - LOOK_BACK_MINUTES * MINUTE), to: now }
+  const targets = await loadRuleTargets(only)
+  if (targets.length === 0) return 0
+  const needsShifts = targets.some((t) => t.rule.config.trigger === 'after_shift')
+  const data = await loadStudentData(
+    targets.map((t) => t.student.id),
+    needsShifts ? { shiftsIn: window } : {},
+  )
+  const windowOf = ({ rule }: RuleTarget): Window => ({
+    from: rule.createdAt > window.from ? rule.createdAt : window.from,
+    to: now,
+  })
 
-/** Step 1 (research R2, R3): rule occurrences due in the look-back window become rows. US2. */
-async function createRuleOccurrences() {
-  return 0
+  const perStudent = targets.flatMap((target) =>
+    occurrences(
+      target.rule.config,
+      target.student,
+      data.get(target.student.id) ?? NO_DATA,
+      windowOf(target),
+    ).map((occurrence) => ruleRow(target, occurrence, now)),
+  )
+
+  // A weekly summary to the Admin is one row per rule and week, one line per student (FR-019).
+  const byRule = Map.groupBy(
+    targets.filter((t) => t.rule.config.trigger === 'weekly_summary'),
+    (t) => t.rule.id,
+  )
+  const summaries = [...byRule.values()].flatMap(([first, ...rest]) => {
+    const group = [first, ...rest]
+    const occurrence = adminWeeklySummary(
+      first.rule.config,
+      first.owner,
+      group.map(({ student }) => ({
+        id: student.id,
+        name: student.displayName,
+        timezone: student.timezone,
+        data: data.get(student.id) ?? NO_DATA,
+      })),
+      windowOf(first),
+    )
+    return occurrence ? [ruleRow(first, occurrence, now)] : []
+  })
+
+  const rows = await Promise.all([...perStudent, ...summaries])
+  if (rows.length === 0) return 0
+  const { count } = await prisma.notification.createMany({ data: rows, skipDuplicates: true })
+  return count
 }
 
 /** Step 2 (research R2, R11): due message recipients become rows. US3. */
@@ -127,33 +197,84 @@ async function dropSettledWeekChecks(only: Only) {
 }
 
 /**
- * Step 3 (FR-003; research R2, R14): rows due for a recipient who is on shift, asleep, outside waking
- * hours or in quiet hours move to their next free moment (data-model.md Notification.deliver_at).
- * One `next_free_at` per recipient, in one statement. Urgent rows go anyway
- * (data-model.md Notification.urgent).
+ * Step 3 (FR-003, FR-017; research R2, R14): rows due for a recipient who is on shift, asleep, outside
+ * waking hours or in quiet hours move to their next free moment (data-model.md
+ * Notification.deliver_at). A rule reminder that would lapse by then is deleted instead
+ * (Notification.expires_at): it is never sent and never in the inbox. One `next_free_at` per
+ * recipient, in one statement. Urgent rows go anyway (Notification.urgent).
  */
 async function holdForBusyRecipients(now: Date, only: Only) {
-  return prisma.$executeRaw`
+  const [counts] = await prisma.$queryRaw<{ lapsed: number; postponed: number }[]>`
     with due as (
       select distinct user_id from notifications
       where delivered_at is null and deliver_at <= ${now} and not urgent ${only(Prisma.sql`user_id`)}
     ), free as (
       select user_id, next_free_at(user_id, ${now}) as at from due
+    ), busy as (
+      select n.id, n.expires_at, f.at
+      from notifications n join free f on f.user_id = n.user_id
+      where n.delivered_at is null and n.deliver_at <= ${now} and not n.urgent and f.at > ${now}
+    ), lapsed as (
+      delete from notifications n using busy b
+      where n.id = b.id and b.expires_at is not null and b.expires_at <= b.at
+      returning n.id
+    ), moved as (
+      update notifications n set deliver_at = b.at from busy b
+      where n.id = b.id and (b.expires_at is null or b.expires_at > b.at)
+      returning n.id
     )
-    update notifications n set deliver_at = f.at
-    from free f
-    where n.user_id = f.user_id and n.delivered_at is null and n.deliver_at <= ${now}
-      and not n.urgent and f.at > ${now}`
+    select (select count(*) from lapsed)::int as lapsed, (select count(*) from moved)::int as postponed`
+  return counts
 }
 
-type DueRow = {
+/** A rule row about a student: the recipient, or the `{studentId}:` an Admin's row starts with. */
+const ABOUT_STUDENT = /^([0-9a-f-]{36}):(.+)$/
+
+/**
+ * Just before delivery (research R4, FR-011, FR-017): rule rows past their lapse time are deleted,
+ * and so are rows whose condition no longer holds: the lesson completed or its deadline moved or
+ * removed (Due soon, Overdue), the student studied (Streak at risk, Inactive). The owner's
+ * "Copy me" copies record a delivery that happened, so they aren't checked again. One batch.
+ */
+async function dropStale(now: Date, only: Only) {
+  const expired = await prisma.$executeRaw`
+    delete from notifications
+    where delivered_at is null and deliver_at <= ${now} and expires_at <= ${now}
+      ${only(Prisma.sql`user_id`)}`
+
+  const held = await prisma.$queryRaw<
+    { id: string; user_id: string; occurrence_key: string; trigger: RuleTrigger }[]
+  >`
+    select n.id::text, n.user_id::text, n.occurrence_key, r.trigger
+    from notifications n join notification_rules r on r.id = n.source_id
+    where n.source_type = 'rule' and n.delivered_at is null and n.deliver_at <= ${now}
+      and r.trigger in ('due_soon', 'overdue', 'streak_risk', 'inactive')
+      and (n.user_id <> r.owner_id or r.trigger = 'inactive')
+      ${only(Prisma.sql`n.user_id`)}`
+  if (held.length === 0) return expired
+
+  const about = held.map((row) => {
+    const match = ABOUT_STUDENT.exec(row.occurrence_key)
+    return match
+      ? { ...row, studentId: match[1], key: match[2] }
+      : { ...row, studentId: row.user_id, key: row.occurrence_key }
+  })
+  const data = await loadStudentData(about.map((row) => row.studentId))
+  const gone = about
+    .filter((row) => !stillApplies(row.trigger, row.key, data.get(row.studentId) ?? NO_DATA))
+    .map((row) => row.id)
+  if (gone.length > 0) await prisma.notification.deleteMany({ where: { id: { in: gone } } })
+  return expired + gone.length
+}
+
+type DueRow = DeliveredRow & {
   id: string
-  user_id: string
   title: string
-  body: string
   url: string | null
   push: boolean
   role: 'student' | 'admin'
+  locale: string
+  timezone: string
 }
 
 /**
@@ -163,7 +284,7 @@ type DueRow = {
  * body and url (data-model.md Notification.title, Notification.body, Notification.url). A device the
  * push service no longer knows is removed; other failures still count as delivered (the inbox has it).
  */
-async function deliverDue(now: Date, sender: PushSender, only: Only) {
+async function deliverDue(now: Date, { push: sender, email }: DispatchDeps, only: Only) {
   const due = await prisma.$queryRaw<DueRow[]>`
     update notifications n set delivered_at = ${now}
     from profiles p
@@ -171,7 +292,8 @@ async function deliverDue(now: Date, sender: PushSender, only: Only) {
       select id from notifications
       where delivered_at is null and deliver_at <= ${now} ${only(Prisma.sql`user_id`)}
       for update skip locked)
-    returning n.id::text, n.user_id::text, n.title, n.body, n.url, n.push, p.role::text as role`
+    returning n.id::text, n.user_id::text, n.source_type, n.source_id::text, n.occurrence_key,
+              n.title, n.body, n.url, n.push, p.role::text as role, p.locale, p.timezone`
 
   const toPush = due.filter((row) => row.push)
   const devices = toPush.length
@@ -190,10 +312,40 @@ async function deliverDue(now: Date, sender: PushSender, only: Only) {
   const gone = [...new Set(results.filter((r) => r.result === 'gone').map((r) => r.device.id))]
   if (gone.length > 0) await prisma.pushSubscription.deleteMany({ where: { id: { in: gone } } })
 
+  const copies = await copyRows(due, now)
+  if (copies.length > 0)
+    await prisma.notification.createMany({ data: copies, skipDuplicates: true })
+  await emailSummaries(due, email)
+
   return {
     delivered: due.length,
     pushes: results.filter((r) => r.result === 'ok').length,
     removedDevices: gone.length,
+  }
+}
+
+/**
+ * The weekly summary also goes by email to the recipient's sign-in address (FR-001, FR-019; research
+ * R13). The inbox already has it, so a refused email is reported and the run goes on.
+ */
+async function emailSummaries(due: DueRow[], sender: EmailSender) {
+  const summaries = due.filter(
+    (row) => row.source_type === 'rule' && row.occurrence_key.startsWith('week@'),
+  )
+  if (summaries.length === 0) return
+  const addresses = await emailAddresses(summaries.map((row) => row.user_id))
+  const sends = summaries.flatMap((row) => {
+    const to = addresses.get(row.user_id)
+    if (!to) return []
+    return [
+      textsFor({ id: row.user_id, locale: row.locale, timezone: row.timezone }).then(({ tr }) =>
+        sender.send(summaryEmail(row, { to, linkLabel: tr('weeklySummary.emailLink') })),
+      ),
+    ]
+  })
+  for (const result of await Promise.allSettled(sends)) {
+    if (result.status === 'rejected')
+      console.error('[dispatch] weekly summary email', result.reason)
   }
 }
 

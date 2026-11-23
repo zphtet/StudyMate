@@ -264,7 +264,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T035 [P] [US2] Write unit tests in src/server/notifications/occurrences.test.ts for `occurrences(rule, student, data, window)` (research R3 table; data-model.md NotificationRule.trigger, NotificationRule.config, Notification.occurrence_key, Notification.expires_at). Per trigger, check instant, key, lapse time and template values, in a window `(now − 15 min, now]`:
+- [X] T035 [P] [US2] Write unit tests in src/server/notifications/occurrences.test.ts for `occurrences(rule, student, data, window)` (research R3 table; data-model.md NotificationRule.trigger, NotificationRule.config, Notification.occurrence_key, Notification.expires_at). Per trigger, check instant, key, lapse time and template values, in a window `(now − 15 min, now]`:
   - **daily**: days of the week; a time that doesn't exist on New York's spring-forward day moves to the next valid minute; on the fall-back day it occurs once; lapses at local midnight.
   - **after_shift**: shift end + hours; lapses at the next shift's start, or never without one.
   - **due_soon**: each offset; none for a completed lesson or one without a deadline; lapses at the deadline.
@@ -274,14 +274,14 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **weekly_summary**: weekday and time, keyed by the week's Monday, never lapses. With `to: admin`, one combined occurrence per rule and week for the Admin, with one line per student.
 
   Run every case in Tokyo, Asia/Yangon (+06:30) and New York.
-- [ ] T036 [P] [US2] Write unit tests in src/lib/notifications/rule-summary.test.ts for `ruleSummary(rule, studentName)` → badge (DAY, SHIFT, DUE, LATE, FIRE, IDLE, WEEK), title key and summary key with values, for every example in contracts/ui-routes.md › Alerts. Cover "Mon–Fri", "Every day" and an irregular day list. The student is named, never "she/he" (FR-012).
-- [ ] T037 [P] [US2] Write tests against the dev DB in src/features/alerts/repo.test.ts (contracts/server-actions.md › Rules; data-model.md NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.channels, NotificationRule.enabled). Cases:
+- [X] T036 [P] [US2] Write unit tests in src/lib/notifications/rule-summary.test.ts for `ruleSummary(rule, studentName)` → badge (DAY, SHIFT, DUE, LATE, FIRE, IDLE, WEEK), title key and summary key with values, for every example in contracts/ui-routes.md › Alerts. Cover "Mon–Fri", "Every day" and an irregular day list. The student is named, never "she/he" (FR-012).
+- [X] T037 [P] [US2] Write tests against the dev DB in src/features/alerts/repo.test.ts (contracts/server-actions.md › Rules; data-model.md NotificationRule.owner_id, NotificationRule.student_id, NotificationRule.channels, NotificationRule.enabled). Cases:
   - **saveRule**: creates for a linked student and for All students (`studentId` null); editing another Admin's rule → `rule_not_found`; editing a default rule keeps `preset: 'default'`.
   - **setRuleEnabled** and **deleteRule**: scoped to the owner.
   - **getAlerts(student | all)**: the chips; for a student, their rules plus the "All students" ones; for all, every rule of the caller.
   - **sendTestPush**: pushes to the caller's own devices only, with sample values and no inbox row; with no device → `push_no_device`; while the Admin is in their own quiet hours or outside waking hours (`next_free_at(admin, now) > now`) → `push_quiet_now` and nothing is pushed (constitution IV).
   - **Guards**: an unlinked student is refused by `requireAdminOf` and a student caller by `requireRole('admin')`. Check that src/server/auth/guards.test.ts covers both and add any missing case there; T039 checks the 403 end to end.
-- [ ] T038 [P] [US2] Add rule cases to src/server/notifications/dispatch.test.ts (research R2 step 1, R3, R4, R13). Cases:
+- [X] T038 [P] [US2] Add rule cases to src/server/notifications/dispatch.test.ts (research R2 step 1, R3, R4, R13). Cases:
   - **Independent test**: Daily 20:00 Mon–Fri for May in Tokyo makes a row on a weekday at 20:00 and none at the weekend.
   - **Off and on**: a rule turned off makes nothing; turned on again, nothing missed is sent (US2 scenario 4).
   - **De-duplication**: a run 5 minutes later inside the look-back makes no duplicate (SC-003).
@@ -296,7 +296,7 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
   - **Weekly summary** (FR-019): the student gets an inbox row with lessons done, study time, streak, overdue lessons and the next 3 deadlines, plus one email to the sign-in address. "To admin" on an "All students" rule gives the Admin one row and one email, with one line per student.
   - **Inactive to the Admin**: an "All students" rule with `to: admin`, and two students with the same last active date, gives the Admin two rows. The Admin's rows follow the rule's `push` channel and wait for the Admin's own hours.
   - **Text**: in the recipient's language, with `{due}` in the student's zone.
-- [ ] T039 [P] [US2] Write Playwright tests in tests/e2e/us2-rules.spec.ts (390×844 and 1280×800, axe). Cases:
+- [X] T039 [P] [US2] Write Playwright tests in tests/e2e/us2-rules.spec.ts (390×844 and 1280×800, axe). Cases:
   - **Scenario 3**: May's default rules are listed with badges and summaries.
   - **Scenario 6**: the note names May and Tokyo; with All students, the general note.
   - **Toggle**: turning off Streak at risk survives a reload.
@@ -308,43 +308,43 @@ Delivery timing is tested in `dispatch.test.ts`, not in the browser (research R1
 
 ### Implementation for User Story 2
 
-- [ ] T040 [P] [US2] Implement `occurrences` in src/server/notifications/occurrences.ts with `@date-fns/tz` and src/lib/time.ts helpers. T035 passes.
-- [ ] T041 [P] [US2] Implement `ruleSummary` in src/lib/notifications/rule-summary.ts. T036 passes.
-- [ ] T042 [US2] Write the batched loaders in src/server/notifications/rule-data.ts (research R3 › data in batches, about 5 statements):
+- [X] T040 [P] [US2] Implement `occurrences` in src/server/notifications/occurrences.ts with `@date-fns/tz` and src/lib/time.ts helpers. T035 passes.
+- [X] T041 [P] [US2] Implement `ruleSummary` in src/lib/notifications/rule-summary.ts. T036 passes.
+- [X] T042 [US2] Write the batched loaders in src/server/notifications/rule-data.ts (research R3 › data in batches, about 5 statements):
   - enabled rules with their target students. A null `student_id` expands to the owner's active links at `now` (data-model.md NotificationRule.student_id). Each student comes with their zone, locale and display name.
   - effective deadlines with completion, through SQL `effective_due`, for those students' assigned lessons;
   - activity from src/server/activity.ts;
   - shifts that ended in the window, with each student's next shift start;
   - for the weekly summary: the week's facts, overdue count and next 3 deadlines.
-- [ ] T043 [US2] Fill the rule step and the checks in src/server/notifications/dispatch.ts (research R2 step 1, R4, R13). T038 passes.
+- [X] T043 [US2] Fill the rule step and the checks in src/server/notifications/dispatch.ts (research R2 step 1, R4, R13). T038 passes.
   - **Rule step**: insert a row per occurrence, `on conflict do nothing`, with `source_type` `rule` and the occurrence's key (data-model.md Notification.source_type, Notification.occurrence_key). Title, body and url are rendered in the recipient's language and zone: `renderMessage` with `textsFor` values (data-model.md Notification.title, Notification.body, Notification.url). `expires_at` comes from the occurrence (data-model.md Notification.expires_at); `push` from the channels; plus the owner's copy row when `copy` is set (data-model.md NotificationRule.channels). Rows for the Admin (`to: admin`) use the keys in data-model.md › Occurrence keys and the rule's `push` channel.
   - **Lapse**: postponed rows whose `expires_at` ≤ the new time are deleted.
   - **Re-check before delivery**: done in one batch with T042's loaders.
   - **Weekly summary**: the email goes through `EmailSender`, as plain HTML from the message files in the recipient's language.
-- [ ] T044 [US2] Write the alerts repo src/features/alerts/repo.ts (`getAlerts`, `getRule`, `saveRule`, `setRuleEnabled`, `deleteRule`), schemas src/features/alerts/schemas.ts (`saveRule` input built from `ruleConfig`) and Server Actions src/features/alerts/actions.ts (contracts/server-actions.md › Rules):
+- [X] T044 [US2] Write the alerts repo src/features/alerts/repo.ts (`getAlerts`, `getRule`, `saveRule`, `setRuleEnabled`, `deleteRule`), schemas src/features/alerts/schemas.ts (`saveRule` input built from `ruleConfig`) and Server Actions src/features/alerts/actions.ts (contracts/server-actions.md › Rules):
   - Every action starts with `requireRole('admin')`, plus `requireAdminOf` for a named student.
   - Each `where` has `ownerId: me.id`. `saveRule` writes the trigger from the config (data-model.md NotificationRule.trigger) and `enabled` true on create; `setRuleEnabled` changes only `enabled`, and turning a rule on never back-fills (data-model.md NotificationRule.enabled).
   - `sendTestPush` first checks `next_free_at(me, now)`: if the Admin is busy now, it fails with `push_quiet_now` (constitution IV). Otherwise it renders with sample values and uses `webPushSender` on the caller's subscriptions.
 
   T037 passes.
-- [ ] T045 [US2] Create the Route Handlers GET src/app/api/alerts/route.ts (`students` and `rules` for now; `scheduled`, `recent` and `sentThisWeek` arrive in T061) and src/app/api/alerts/rules/[ruleId]/route.ts (contracts/route-handlers.md › Admin). Add `queryOptions` and the key factory `['alerts', student]`, `['alerts','rule',id]` in src/features/alerts/queries.ts.
-- [ ] T046 [US2] Build the components in src/features/alerts/components/ (contracts/ui-routes.md › Alerts, Rule editor; 24-AdminNotify.png, 26-AdminRule.png):
+- [X] T045 [US2] Create the Route Handlers GET src/app/api/alerts/route.ts (`students` and `rules` for now; `scheduled`, `recent` and `sentThisWeek` arrive in T061) and src/app/api/alerts/rules/[ruleId]/route.ts (contracts/route-handlers.md › Admin). Add `queryOptions` and the key factory `['alerts', student]`, `['alerts','rule',id]` in src/features/alerts/queries.ts.
+- [X] T046 [US2] Build the components in src/features/alerts/components/ (contracts/ui-routes.md › Alerts, Rule editor; 24-AdminNotify.png, 26-AdminRule.png):
   - `AlertsView`: header, + Rule, Message, the chips in `?student=`, the note naming the student and zone, the empty state;
   - `RuleRow`: badge, title, summary, and a `Switch` with an optimistic update;
   - `RuleEditor`:
     - react-hook-form with T044's schema; the trigger chips and per-trigger fields;
     - Applies to; Message with the variable hint; Send to: Push and Copy me (no In-app: contracts/ui-routes.md › Intentional differences);
     - Preview through `renderMessage`; Send test; Delete with `alert-dialog`.
-- [ ] T047 [US2] Create the pages:
+- [X] T047 [US2] Create the pages:
   - replace the placeholder in src/app/a/(tabs)/alerts/page.tsx with `AlertsView`, prefetched with `HydrationBoundary`;
   - src/app/a/alerts/rules/new/page.tsx and src/app/a/alerts/rules/[ruleId]/page.tsx, full screen with the Admin page guard.
-- [ ] T048 [US2] Add these strings to src/i18n/messages/en.json, my.json and ja.json:
+- [X] T048 [US2] Add these strings to src/i18n/messages/en.json, my.json and ja.json:
   - `alerts`, `ruleEditor`, `ruleSummary`, `weeklySummary` (inbox and email), `pushTexts.test`;
   - `errors.rule_not_found`, `errors.push_no_device`, `errors.push_quiet_now`;
   - `validation.messageEmpty`, `validation.messageTooLong`, `validation.daysEmpty`, `validation.offsetsInvalid`.
 
   Name students, never use pronouns (FR-012).
-- [ ] T049 [US2] Run T035–T038 until they pass, and the scenario 1 test from T039 with `--grep` on the :3100 build.
+- [X] T049 [US2] Run T035–T038 until they pass, and the scenario 1 test from T039 with `--grep` on the :3100 build.
 
 **Checkpoint**: US1 and US2 work: default and custom rules reach students in their own zone and lapse when they no longer apply.
 

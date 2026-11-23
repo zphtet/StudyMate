@@ -6,12 +6,14 @@
 // retention.
 import { randomUUID } from 'node:crypto'
 import { afterAll, describe, expect, test, vi } from 'vitest'
+import ja from '@/i18n/messages/ja.json'
 import { prisma } from '@/lib/prisma'
 import { zonedToUtc } from '@/lib/time'
 import { emailRecorder } from '../../../tests/utils/email-recorder'
 import { pushRecorder } from '../../../tests/utils/push-recorder'
 import { dispatch } from './dispatch'
 import { recordNotice } from './record'
+import { textsFor } from './texts'
 
 vi.setConfig({ testTimeout: 90_000 })
 
@@ -35,6 +37,9 @@ async function newUser({
 }
 
 afterAll(async () => {
+  // Deadlines and assignments point at their Admin without a cascade (set_by, assigned_by).
+  await prisma.$executeRaw`delete from public.lesson_deadlines where student_id = any(${users}::uuid[])`
+  await prisma.$executeRaw`delete from public.course_assignments where student_id = any(${users}::uuid[])`
   await prisma.$executeRaw`delete from auth.users where id = any(${users}::uuid[])`
   await prisma.$disconnect()
 })
@@ -336,5 +341,401 @@ describe('retention (research R9)', () => {
     const later = await old(120)
     await runFor([may.id], new Date('2027-03-03T03:07:00Z'))
     expect(await row(later.id)).not.toBeNull()
+  })
+})
+
+// US2 (T038): rule occurrences, channels, who gets them, lapsing, the re-check before delivery and
+// the weekly summary (research R2 step 1, R3, R4, R13; FR-011, FR-017–FR-020).
+describe('rules (US2)', () => {
+  const YANGON = 'Asia/Yangon'
+
+  async function pair({ studentZone = TOKYO }: { studentZone?: string } = {}) {
+    const zin = await newUser({ role: 'admin', name: 'Zin', timezone: YANGON })
+    const may = await newUser({ name: 'May', timezone: studentZone })
+    await link(zin.id, may.id)
+    return { zin, may }
+  }
+
+  const link = (adminId: string, studentId: string, status: 'active' | 'removed' = 'active') =>
+    prisma.studentLink.create({ data: { adminId, studentId, status } })
+
+  function rule(
+    ownerId: string,
+    studentId: string | null,
+    trigger: 'daily' | 'due_soon' | 'streak_risk' | 'inactive' | 'weekly_summary',
+    config: Record<string, unknown>,
+    data: { message?: string; channels?: string[]; enabled?: boolean } = {},
+  ) {
+    return prisma.notificationRule.create({
+      data: {
+        ownerId,
+        studentId,
+        trigger,
+        config: config as never,
+        message: data.message ?? '{name}, time for today’s lesson.',
+        channels: data.channels ?? ['push'],
+        enabled: data.enabled ?? true,
+      },
+    })
+  }
+  const dailyRule = (ownerId: string, studentId: string | null, data = {}) =>
+    rule(ownerId, studentId, 'daily', { time: '20:00', days: [1, 2, 3, 4, 5] }, data)
+
+  const ruleRows = (userId: string) =>
+    prisma.notification.findMany({
+      where: { userId, sourceType: 'rule' },
+      orderBy: { occurrenceKey: 'asc' },
+    })
+
+  async function assignedLesson(
+    adminId: string,
+    studentId: string,
+    dueAt: Date | null,
+    title = 'Particles',
+  ) {
+    const course = await prisma.course.create({
+      data: { ownerId: adminId, title: 'JLPT N4', status: 'active' },
+    })
+    const lesson = await prisma.lesson.create({
+      data: { courseId: course.id, title, status: 'published', position: 0 },
+    })
+    await prisma.courseAssignment.create({
+      data: { courseId: course.id, studentId, assignedBy: adminId },
+    })
+    if (dueAt) {
+      await prisma.lessonDeadline.create({
+        data: { lessonId: lesson.id, studentId, dueAt, setBy: adminId },
+      })
+    }
+    return lesson
+  }
+
+  /** 15 minutes of focus: an active day (004 FR-006). */
+  const studied = (studentId: string, startedAt: Date) =>
+    prisma.studySession.create({
+      data: {
+        studentId,
+        startedAt,
+        endedAt: new Date(startedAt.getTime() + 15 * 60_000),
+        plannedMinutes: 15,
+      },
+    })
+
+  const shift = (studentId: string, startAt: Date, endAt: Date) =>
+    prisma.shift.create({ data: { studentId, type: 'custom', startAt, endAt } })
+
+  test('independent test: Daily 20:00 Mon–Fri reaches May at 20:00 her time on weekdays only', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    const daily = await dailyRule(zin.id, may.id)
+
+    const wednesday = await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+    expect(wednesday.result).toMatchObject({ occurrences: 1, delivered: 1, pushes: 1 })
+    const [row] = await ruleRows(may.id)
+    expect(row).toMatchObject({
+      sourceId: daily.id,
+      occurrenceKey: '2027-03-03',
+      title: 'Daily study reminder',
+      body: 'May, time for today’s lesson.',
+      deliveredAt: at('2027-03-03', '20:00'),
+      expiresAt: at('2027-03-04', '00:00'),
+    })
+    expect(wednesday.pushes[0].payload).toMatchObject({ title: 'Daily study reminder' })
+
+    const saturday = await runFor([zin.id, may.id], at('2027-03-06', '20:00'))
+    expect(saturday.result.occurrences).toBe(0)
+    expect(await ruleRows(may.id)).toHaveLength(1)
+  })
+
+  test('a rule turned off makes nothing; turned on again, nothing missed is sent (scenario 4)', async () => {
+    const { zin, may } = await pair()
+    const daily = await dailyRule(zin.id, may.id, { enabled: false })
+    await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+    expect(await ruleRows(may.id)).toHaveLength(0)
+
+    await prisma.notificationRule.update({ where: { id: daily.id }, data: { enabled: true } })
+    await runFor([zin.id, may.id], at('2027-03-04', '20:00'))
+    expect((await ruleRows(may.id)).map((r) => r.occurrenceKey)).toEqual(['2027-03-04'])
+  })
+
+  test('a later run inside the look-back makes no duplicate (SC-003)', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    await dailyRule(zin.id, may.id)
+    await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+    const again = await runFor([zin.id, may.id], at('2027-03-03', '20:05'))
+    expect(again.result).toMatchObject({ occurrences: 0, pushes: 0 })
+    expect(await ruleRows(may.id)).toHaveLength(1)
+  })
+
+  test('Copy me puts an inbox-only copy in the owner’s inbox (FR-018)', async () => {
+    const { zin, may } = await pair()
+    await device(zin.id)
+    await dailyRule(zin.id, may.id, { channels: ['push', 'copy'] })
+    await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+
+    const [copy] = await ruleRows(zin.id)
+    expect(copy).toMatchObject({
+      occurrenceKey: `${may.id}:2027-03-03`,
+      push: false,
+      body: 'May, time for today’s lesson.',
+    })
+    expect(copy.title).toContain('May')
+    const next = await runFor([zin.id, may.id], at('2027-03-03', '20:05'))
+    expect(next.pushes).toHaveLength(0)
+    expect((await ruleRows(zin.id))[0].deliveredAt).not.toBeNull()
+  })
+
+  test('without the push channel the student’s row is inbox only', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    await dailyRule(zin.id, may.id, { channels: [] })
+    const { pushes } = await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+    expect(pushes).toHaveLength(0)
+    expect(await ruleRows(may.id)).toMatchObject([{ push: false }])
+  })
+
+  test('an All students rule covers a student linked after it was made (FR-020)', async () => {
+    const { zin, may } = await pair()
+    await dailyRule(zin.id, null)
+    const ken = await newUser({ name: 'Ken' })
+    await link(zin.id, ken.id)
+    await runFor([zin.id, may.id, ken.id], at('2027-03-03', '20:00'))
+    expect(await ruleRows(may.id)).toHaveLength(1)
+    expect(await ruleRows(ken.id)).toMatchObject([{ body: 'Ken, time for today’s lesson.' }])
+  })
+
+  test('no row for a student who is no longer linked', async () => {
+    const { zin, may } = await pair()
+    const lin = await newUser({ name: 'Lin' })
+    await link(zin.id, lin.id, 'removed')
+    await dailyRule(zin.id, lin.id)
+    await dailyRule(zin.id, null)
+    await runFor([zin.id, may.id, lin.id], at('2027-03-03', '20:00'))
+    expect(await ruleRows(lin.id)).toHaveLength(0)
+  })
+
+  test('a Daily held by a shift until after local midnight lapses, never in the inbox (FR-017)', async () => {
+    const { zin, may } = await pair()
+    await device(may.id)
+    await dailyRule(zin.id, may.id)
+    await shift(may.id, at('2027-03-03', '19:00'), at('2027-03-04', '01:00'))
+    const { result, pushes } = await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+    expect(result).toMatchObject({ occurrences: 1, lapsed: 1, delivered: 0 })
+    expect(pushes).toHaveLength(0)
+    expect(await ruleRows(may.id)).toHaveLength(0)
+  })
+
+  test('a held Daily still goes at the next free moment that day', async () => {
+    const { zin, may } = await pair()
+    await dailyRule(zin.id, may.id)
+    await shift(may.id, at('2027-03-03', '19:00'), at('2027-03-03', '21:00'))
+    await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+    expect(await ruleRows(may.id)).toMatchObject([
+      { deliverAt: at('2027-03-03', '21:00'), deliveredAt: null },
+    ])
+    await runFor([zin.id, may.id], at('2027-03-03', '21:00'))
+    expect((await ruleRows(may.id))[0].deliveredAt).toEqual(at('2027-03-03', '21:00'))
+  })
+
+  describe('re-checked just before delivery (research R4, FR-011)', () => {
+    /** A Due soon 2 h row made at 20:00 and held by a shift until 21:00. */
+    async function heldDueSoon() {
+      const { zin, may } = await pair()
+      const dueAt = at('2027-03-03', '22:00')
+      const lesson = await assignedLesson(zin.id, may.id, dueAt)
+      await rule(
+        zin.id,
+        may.id,
+        'due_soon',
+        { offsets_h: [2] },
+        { message: '“{lesson}” is due {due}.' },
+      )
+      await shift(may.id, at('2027-03-03', '19:30'), at('2027-03-03', '21:00'))
+      await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+      expect(await ruleRows(may.id)).toMatchObject([
+        { occurrenceKey: `${lesson.id}@${dueAt.toISOString()}#2`, deliveredAt: null },
+      ])
+      return { zin, may, lesson }
+    }
+
+    test('a Due soon row still applies and goes out', async () => {
+      const { zin, may } = await heldDueSoon()
+      await runFor([zin.id, may.id], at('2027-03-03', '21:00'))
+      expect((await ruleRows(may.id))[0].deliveredAt).not.toBeNull()
+    })
+
+    test('dropped when the lesson is completed', async () => {
+      const { zin, may, lesson } = await heldDueSoon()
+      await prisma.lessonProgress.create({
+        data: {
+          studentId: may.id,
+          lessonId: lesson.id,
+          status: 'done',
+          completedAt: at('2027-03-03', '20:30'),
+        },
+      })
+      const { result } = await runFor([zin.id, may.id], at('2027-03-03', '21:00'))
+      expect(result.lapsed).toBe(1)
+      expect(await ruleRows(may.id)).toHaveLength(0)
+    })
+
+    test('dropped when the deadline moves, or is removed', async () => {
+      const moved = await heldDueSoon()
+      await prisma.lessonDeadline.update({
+        where: { lessonId_studentId: { lessonId: moved.lesson.id, studentId: moved.may.id } },
+        data: { dueAt: at('2027-03-05', '22:00') },
+      })
+      await runFor([moved.zin.id, moved.may.id], at('2027-03-03', '21:00'))
+      expect(await ruleRows(moved.may.id)).toHaveLength(0)
+
+      const removed = await heldDueSoon()
+      await prisma.lessonDeadline.delete({
+        where: { lessonId_studentId: { lessonId: removed.lesson.id, studentId: removed.may.id } },
+      })
+      await runFor([removed.zin.id, removed.may.id], at('2027-03-03', '21:00'))
+      expect(await ruleRows(removed.may.id)).toHaveLength(0)
+    })
+
+    test('a Streak at risk row is dropped once the student has studied that day', async () => {
+      const { zin, may } = await pair()
+      await rule(zin.id, may.id, 'streak_risk', { time: '21:30' })
+      await shift(may.id, at('2027-03-03', '21:00'), at('2027-03-03', '22:30'))
+      await runFor([zin.id, may.id], at('2027-03-03', '21:30'))
+      expect(await ruleRows(may.id)).toHaveLength(1)
+      await studied(may.id, at('2027-03-03', '22:00'))
+      await runFor([zin.id, may.id], at('2027-03-03', '22:30'))
+      expect(await ruleRows(may.id)).toHaveLength(0)
+    })
+
+    test('an Inactive row is dropped once the student studies again', async () => {
+      const { zin, may } = await pair()
+      await studied(may.id, at('2027-03-01', '12:00'))
+      await rule(zin.id, may.id, 'inactive', { days: 2, to: ['student'] })
+      await runFor([zin.id, may.id], at('2027-03-04', '00:00'))
+      // Held until May's waking hours begin.
+      expect(await ruleRows(may.id)).toMatchObject([
+        { occurrenceKey: 'inactive@2027-03-01', deliverAt: at('2027-03-04', '08:00') },
+      ])
+      await studied(may.id, at('2027-03-04', '07:00'))
+      await runFor([zin.id, may.id], at('2027-03-04', '08:00'))
+      expect(await ruleRows(may.id)).toHaveLength(0)
+    })
+  })
+
+  describe('the weekly summary (FR-019, research R13)', () => {
+    async function busyWeek(adminId: string, studentId: string, zone = TOKYO) {
+      await studied(studentId, at('2027-03-05', '12:00', zone))
+      const done = await assignedLesson(adminId, studentId, null, 'Done lesson')
+      await prisma.lessonProgress.create({
+        data: {
+          studentId,
+          lessonId: done.id,
+          status: 'done',
+          completedAt: at('2027-03-06', '12:00', zone),
+          minutesSpent: 20,
+        },
+      })
+      await assignedLesson(adminId, studentId, at('2027-03-02', '23:59', zone), 'Late lesson')
+      await assignedLesson(adminId, studentId, at('2027-03-08', '23:59', zone), 'First')
+      await assignedLesson(adminId, studentId, at('2027-03-09', '23:59', zone), 'Second')
+      await assignedLesson(adminId, studentId, at('2027-03-11', '23:59', zone), 'Third')
+      await assignedLesson(adminId, studentId, at('2027-03-12', '23:59', zone), 'Fourth')
+    }
+
+    test('the student gets the week in the inbox and one email to the sign-in address', async () => {
+      const { zin, may } = await pair()
+      await busyWeek(zin.id, may.id)
+      await rule(
+        zin.id,
+        may.id,
+        'weekly_summary',
+        { weekday: 7, time: '18:00', to: ['student'] },
+        {
+          message: 'Well done this week, {name}.',
+        },
+      )
+      const { emails } = await runFor([zin.id, may.id], at('2027-03-07', '18:00'))
+
+      const [row] = await ruleRows(may.id)
+      expect(row).toMatchObject({ occurrenceKey: 'week@2027-03-01', expiresAt: null })
+      expect(row.deliveredAt).not.toBeNull()
+      expect(row.body).toContain('Well done this week, May.')
+      expect(row.body).toMatch(/1 lesson done/)
+      expect(row.body).toMatch(/35 min/) // 15 min of focus + 20 min of completion credit
+      expect(row.body).toMatch(/2-day streak/)
+      expect(row.body).toMatch(/1 overdue/)
+      expect(row.body).toMatch(/First[\s\S]*Second[\s\S]*Third/)
+      expect(row.body).not.toContain('Fourth')
+
+      expect(emails).toHaveLength(1)
+      expect(emails[0].to).toBe(`dispatch-${run}-${may.id}@example.test`)
+      expect(emails[0].subject).toBe(row.title)
+      expect(emails[0].html).toContain('First')
+      expect(emails[0].html).not.toContain('<script')
+    })
+
+    test('“to admin” on an All students rule: one row and one email, one line per student', async () => {
+      const { zin, may } = await pair()
+      const ken = await newUser({ name: 'Ken', timezone: TOKYO })
+      await link(zin.id, ken.id)
+      await busyWeek(zin.id, may.id)
+      await rule(zin.id, null, 'weekly_summary', { weekday: 7, time: '18:00', to: ['admin'] })
+
+      const { emails } = await runFor([zin.id, may.id, ken.id], at('2027-03-07', '18:00', YANGON))
+      const rows = await ruleRows(zin.id)
+      expect(rows).toHaveLength(1)
+      expect(rows[0].occurrenceKey).toBe('week@2027-03-01')
+      expect(rows[0].body).toMatch(/May:[\s\S]*\n[\s\S]*Ken:|Ken:[\s\S]*\n[\s\S]*May:/)
+      expect(await ruleRows(may.id)).toHaveLength(0)
+      expect(emails.map((e) => e.to)).toEqual([`dispatch-${run}-${zin.id}@example.test`])
+    })
+  })
+
+  test('Inactive to the Admin: two students with the same last day give two rows, in the Admin’s hours', async () => {
+    const { zin, may } = await pair()
+    const ken = await newUser({ name: 'Ken', timezone: TOKYO })
+    await link(zin.id, ken.id)
+    // Zin's day ends at 21:00 Yangon; Thu 00:00 Tokyo is Wed 21:30 there.
+    await prisma.$executeRaw`update profiles set waking_end = '21:00' where id = ${zin.id}::uuid`
+    await studied(may.id, at('2027-03-01', '12:00'))
+    await studied(ken.id, at('2027-03-01', '15:00'))
+    await rule(zin.id, null, 'inactive', { days: 2, to: ['admin'] })
+
+    await runFor([zin.id, may.id, ken.id], at('2027-03-04', '00:00'))
+    const rows = await ruleRows(zin.id)
+    expect(rows.map((r) => r.occurrenceKey).sort()).toEqual(
+      [`${may.id}:inactive@2027-03-01`, `${ken.id}:inactive@2027-03-01`].sort(),
+    )
+    for (const row of rows) {
+      expect(row).toMatchObject({
+        push: true,
+        deliveredAt: null,
+        deliverAt: at('2027-03-04', '08:00', YANGON),
+      })
+    }
+    expect(rows.map((r) => r.title).join(' ')).toMatch(/May.*Ken|Ken.*May/)
+    expect(await ruleRows(may.id)).toHaveLength(0)
+  })
+
+  test('text in the recipient’s language, with {due} in the student’s zone', async () => {
+    const { zin, may } = await pair()
+    await prisma.profile.update({ where: { id: may.id }, data: { locale: 'ja' } })
+    const dueAt = at('2027-03-03', '22:00')
+    await assignedLesson(zin.id, may.id, dueAt, 'Particles は vs が')
+    await rule(
+      zin.id,
+      may.id,
+      'due_soon',
+      { offsets_h: [2] },
+      { message: '「{lesson}」は{due}まで' },
+    )
+    await runFor([zin.id, may.id], at('2027-03-03', '20:00'))
+
+    const { when } = await textsFor({ id: may.id, locale: 'ja', timezone: TOKYO })
+    const [row] = await ruleRows(may.id)
+    expect(row.title).toBe(ja.ruleSummary.title.due_soon)
+    expect(row.body).toBe(`「Particles は vs が」は${when(dueAt)}まで`)
+    expect(row.url).toMatch(/^\/s\/lessons\//)
   })
 })

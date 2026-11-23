@@ -12,6 +12,8 @@ export async function textsFor(recipient: NoticeRecipient) {
   const locale: Locale = hasLocale(recipient.locale) ? recipient.locale : 'en'
   const messages = (await import(`@/i18n/messages/${locale}.json`)).default
   const t = createTranslator({ locale, messages, namespace: 'notices' })
+  /** Any key, e.g. `ruleSummary.title.daily` (006 rule reminders and the weekly summary). */
+  const tr = createTranslator({ locale, messages })
   const format = createFormatter({ locale, timeZone: recipient.timezone })
   const when = (at: Date) =>
     format.dateTime(at, {
@@ -25,5 +27,7 @@ export async function textsFor(recipient: NoticeRecipient) {
   /** A calendar day, e.g. "Mon 8 Mar" (the Sunday check's week). */
   const day = (at: Date) =>
     format.dateTime(at, { weekday: 'short', day: 'numeric', month: 'short' })
-  return { t, when, day }
+  /** "24 h and 2 h", "First, Second and Third" */
+  const list = (items: string[]) => format.list(items)
+  return { t, tr, when, day, list }
 }
