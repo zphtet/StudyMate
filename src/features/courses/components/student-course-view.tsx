@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { ProgressBar } from '@/components/shared/progress-bar'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { studentCourseQuery } from '../queries'
+import { useKeepCourseOffline } from '../use-keep-course-offline'
 import type { StudentCourse } from '../types'
 import { COURSE_COLOR_CLASSES } from './course-icon'
 import { StudentLessonRow } from './student-lesson-row'
@@ -22,6 +23,7 @@ export function StudentCourseView({ courseId }: { courseId: string }) {
   const t = useTranslations('studentCourses')
   const f = useInstantFormat()
   const { data } = useSuspenseQuery(studentCourseQuery(courseId))
+  useKeepCourseOffline(data)
   const { course } = data
   const archived = course.status === 'archived'
 

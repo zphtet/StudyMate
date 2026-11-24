@@ -190,7 +190,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - `recoverSyncing()` turns `syncing` back into `pending` on start;
   - `pendingCount(userId)` and `droppedEntries(userId)`.
 - [X] T023 [P] [US2] Write src/lib/offline/persister.test.ts (research R4; data-model.md queryCache.client): `createDexiePersister(userId)` persists, restores and removes one `PersistedClient` per user, and another user's restore returns undefined.
-- [ ] T024 [P] [US2] Write src/lib/offline/keep-course.test.ts for the pure parts (research R3; data-model.md offlineCourses.bytes, offlineCourses.openedAt). Cases:
+- [X] T024 [P] [US2] Write src/lib/offline/keep-course.test.ts for the pure parts (research R3; data-model.md offlineCourses.bytes, offlineCourses.openedAt). Cases:
   - `pickMedia(resources, budget = 20 MB)` keeps lesson order and skips files that would cross the budget (later smaller ones still fit);
   - `pickEviction(courses, currentCourseId, estimate)` returns the least recently opened course other than the current one while usage > 80 % of quota, and nothing below that;
   - `changedSince(kept, lessons)` lists only lessons and URLs not stored yet.
@@ -315,19 +315,19 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - Before committing, re-run `grep -rl useMutation src/features src/components`, and add any component missing from the contract's table to both the table and this change.
 
   Add tests/e2e/us2-offline.spec.ts › "nothing that can't queue is sent offline": as an Admin and as a student, go offline, visit each tab and each editor screen, and check every control from the table is disabled with its reason. Record `page.on('request')` and check no Server Action POST (`next-action` header) is sent.
-- [ ] T045 [US2] Keep courses offline (research R3; data-model.md offlineCourses.*):
+- [X] T045 [US2] Keep courses offline (research R3; data-model.md offlineCourses.*):
   - write src/lib/offline/keep-course.ts (`pickMedia` within data-model.md offlineCourses.bytes's 20 MB, `pickEviction` by data-model.md offlineCourses.openedAt, `changedSince` — T024 passes — plus `keepCourse({ userId, courseId, lessons, fetchQuery })`: idle-time and sequential, fetch the lesson queries, `keepUrls` for the lesson documents and the picked media, update the row; `evictIfNeeded` with `forgetUrls` and `removeQueries`; `navigator.storage.persist()` once when standalone);
   - write src/features/courses/use-keep-course-offline.ts and call it from src/features/courses/components/student-course-view.tsx when online;
   - in src/features/courses/components/attachment-list.tsx, show "Not available offline" offline for files not in the row's `mediaUrls`;
   - in src/components/shared/youtube-embed.tsx, show "Video needs a connection" offline.
 
-  Add the `pwa.notOffline` and `pwa.videoOffline` keys.
+  Add the `pwa.notOffline` key. (Done. YouTube already falls back to a plain link offline since 002, so `videoOffline` wasn't needed. Media sizes come from the attachment list; inline Markdown files of unknown size count by their stored bytes.)
 - [X] T046 [US2] Write src/features/pwa/components/offline-banner.tsx and src/features/pwa/components/dropped-changes-sheet.tsx (contracts/ui-routes.md › Global pieces): student and Admin wording, "{n} waiting", "Syncing {n}…", the 401 "Sign in to sync" link, the toast "{n} changes weren't saved" → sheet with label, `errors.*` reason, the draft text with Copy, and OK deleting the dropped rows. Render both in src/app/s/layout.tsx and the banner in src/app/a/layout.tsx (sync already starts from `OfflineRuntime`, T038/T039). Add the `pwa.banner.*` and `pwa.dropped.*` keys.
-- [ ] T047 [US2] Sign-out warning and wipe (FR-004a; research R11):
+- [X] T047 [US2] Sign-out warning and wipe (FR-004a; research R11):
   - write src/lib/offline/wipe.ts: `wipeOfflineData()` deletes the Dexie database and the `pages`, `pages-rsc`, `pages-rsc-prefetch` and `media` caches, then clears the query client. `pendingCount` is re-exported;
   - in src/features/profile/components/me-view.tsx, Sign out first counts pending entries. If any, show a confirm (`AlertDialog` or `BottomSheet`) "{n} changes not synced yet — sign out anyway?" with Cancel / Sign out. Then wipe, then the existing push unsubscribe + `signOut`. Offline: the wipe, the push unsubscribe, then supabase-js `auth.signOut({ scope: 'local' })` and `router.replace('/sign-in')` (research R11 › Offline sign-out).
 
-  Add the `pwa.signOutPending.*` keys.
+  Add the `pwa.signOutPending.*` keys. (Done. The persister stops saving first, so a throttled save can't recreate the database after it is deleted.)
 - [ ] T048 [US2] Run tests/e2e/us2-offline.spec.ts (smoke with `--grep` while iterating) on the production build until green. Fix whatever it finds in the task that owns the file.
 
 **Checkpoint**: quickstart.md §4 scenarios 5–12 pass by hand on the production build.

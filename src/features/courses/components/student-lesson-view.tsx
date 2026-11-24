@@ -2,6 +2,8 @@
 
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { ChevronLeft, Clock, ClipboardList, ExternalLink, FileText, Lock } from 'lucide-react'
+import { useOnline } from '@/components/shared/use-online'
+import { useKeptMedia } from '@/lib/offline/keep-course'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
@@ -81,7 +83,9 @@ function LessonBody({
         <Markdown source={lesson.contentMd} />
       </article>
 
-      {lesson.attachments.length > 0 && <Attachments attachments={lesson.attachments} />}
+      {lesson.attachments.length > 0 && (
+        <Attachments courseId={lesson.course.id} attachments={lesson.attachments} />
+      )}
 
       {showAssignment && lesson.assignmentPrompt && (
         <section
@@ -104,9 +108,13 @@ function LessonBody({
   )
 }
 
-function Attachments({ attachments }: { attachments: Resource[] }) {
+function Attachments({ courseId, attachments }: { courseId: string; attachments: Resource[] }) {
   const t = useTranslations('lessonView')
+  const pwa = useTranslations('pwa')
   const format = useFormatter()
+  // Offline (spec 008 US2 scenario 1), a file this device didn't keep can't open.
+  const isOnline = useOnline()
+  const kept = useKeptMedia(courseId)
   const size = (bytes: number) =>
     bytes < 1024
       ? format.number(bytes, { style: 'unit', unit: 'byte', unitDisplay: 'short' })
@@ -147,7 +155,9 @@ function Attachments({ attachments }: { attachments: Resource[] }) {
               <span className="shrink-0 text-sm text-muted-foreground">
                 {resource.kind === 'link'
                   ? t('opensInNewTab')
-                  : resource.sizeBytes !== null && size(resource.sizeBytes)}
+                  : !isOnline && !kept.has(resource.url)
+                    ? pwa('notOffline')
+                    : resource.sizeBytes !== null && size(resource.sizeBytes)}
               </span>
             </a>
           </li>

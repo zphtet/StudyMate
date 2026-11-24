@@ -2,13 +2,24 @@
 
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { LanguageButtons } from '@/components/shared/language-buttons'
 import { SettingsGroup, SettingsRow, SettingsSection } from '@/components/shared/settings'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/features/auth/actions'
 import { fontName } from '@/lib/appearance'
+import { pendingCount, wipeOfflineData } from '@/lib/offline/wipe'
 import { unsubscribeThisDevice } from '@/lib/push-device'
 import { unwrap } from '@/lib/result'
 import { meQuery } from '../queries'
@@ -32,15 +43,34 @@ export function MeView({
   const { data: me } = useSuspenseQuery(meQuery)
   const base = me.role === 'admin' ? '/a/me' : '/s/me'
 
+  /** Changes not synced yet: sign-out asks first (spec 008 FR-004a). */
+  const [unsyncedCount, setUnsyncedCount] = useState(0)
+
   const out = useMutation({
-    // Spec 006 FR-014: this device stops getting the user's notifications.
+    networkMode: 'always',
     mutationFn: async () => {
+      // Spec 008 FR-004a: this device keeps nothing of the user's (research R11).
+      await wipeOfflineData()
+      // Spec 006 FR-014: this device stops getting the user's notifications.
       const endpoint = await unsubscribeThisDevice().catch(() => null)
-      return unwrap(await signOut({ endpoint: endpoint ?? undefined }))
+      try {
+        return unwrap(await signOut({ endpoint: endpoint ?? undefined }))
+      } catch (error) {
+        if (!(error instanceof TypeError)) throw error
+        // Offline: end the session on this device; the server's copy expires on its own (R11).
+        const { createBrowserClient } = await import('@/lib/supabase/client')
+        await createBrowserClient().auth.signOut({ scope: 'local' })
+      }
     },
     // Full reload: drops every cached query at once, so nothing refetches as a signed-out user.
     onSettled: () => window.location.replace('/sign-in'),
   })
+
+  const startSignOut = async () => {
+    const count = await pendingCount(me.id).catch(() => 0)
+    if (count > 0) setUnsyncedCount(count)
+    else out.mutate()
+  }
 
   const subtitle =
     me.role === 'admin'
@@ -100,12 +130,34 @@ export function MeView({
       <Button
         variant="outline"
         size="xl"
-        onClick={() => out.mutate()}
+        onClick={() => void startSignOut()}
         disabled={out.isPending}
         className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
       >
         {t('common.signOut')}
       </Button>
+      <AlertDialog open={unsyncedCount > 0} onOpenChange={(open) => !open && setUnsyncedCount(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('pwa.signOutPending.title', { count: unsyncedCount })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t('pwa.signOutPending.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-11">
+              {t('pwa.signOutPending.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="min-h-11"
+              onClick={() => out.mutate()}
+            >
+              {t('pwa.signOutPending.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1305,6 +1305,13 @@
       "copy": "Copy text",
       "copied": "Copied",
       "ok": "OK"
-    }
+    },
+    "signOutPending": {
+      "title": "{count, plural, one {# change} other {# changes}} not synced yet",
+      "body": "Signing out deletes them from this device. Sign out anyway?",
+      "cancel": "Cancel",
+      "confirm": "Sign out"
+    },
+    "notOffline": "Not available offline"
   }
 }
