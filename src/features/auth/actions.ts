@@ -7,12 +7,19 @@ import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 import { requireUser } from '@/server/auth/guards'
 import { changePasswordSchema } from '@/features/profile/schemas'
-import { checkVerify, decideSend, recordFailedAttempt } from './limits'
+import {
+  checkVerify,
+  decideSend,
+  recordFailedAttempt,
+  type LimitPurpose,
+  type LimitRow,
+} from './limits'
 import { clearLimit, getLimit, saveLimit } from './limits-repo'
 import { toAppearance } from '@/lib/appearance'
 import { setPreferenceCookies } from './preferences'
 import {
   emailOnlySchema,
+  resetPasswordSchema,
   setLocaleSchema,
   signInSchema,
   signUpSchema,
@@ -29,16 +36,38 @@ const CODE_LIFETIME_SECONDS = 60 * 60
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 const roleHome = (role: Role) => (role === 'admin' ? '/a/students' : '/s/today')
 
-/** Send (or resend) the sign-up confirmation code within the FR-011 limits. */
-async function sendSignupCode(email: string, send: () => Promise<{ error: AuthError | null }>) {
-  const decision = decideSend(await getLimit(email, 'signup'), new Date())
+/** Send (or resend) a sign-up or reset code within the FR-011 limits. */
+async function sendCode(
+  email: string,
+  purpose: LimitPurpose,
+  send: () => Promise<{ error: AuthError | null }>,
+) {
+  const decision = decideSend(await getLimit(email, purpose), new Date())
   if (!decision.ok) {
     if (decision.error === 'cooldown') fail('cooldown', { seconds: decision.seconds })
     fail('too_many_sends', { minutes: decision.minutes })
   }
   const { error } = await send()
   if (error) fail(...emailError(error))
-  await saveLimit(email, 'signup', decision.next)
+  await saveLimit(email, purpose, decision.next)
+}
+
+/**
+ * A code Supabase refused (FR-011): expired once its hour is up, otherwise a wrong try that counts
+ * towards the 5 allowed. Supabase answers "expired or invalid" for both; our send time tells them
+ * apart.
+ */
+async function failCode(
+  email: string,
+  purpose: LimitPurpose,
+  row: LimitRow | null,
+): Promise<never> {
+  const sentAt = row?.lastSentAt?.getTime()
+  if (sentAt && Date.now() - sentAt > CODE_LIFETIME_SECONDS * 1000) fail('code_expired')
+  const { next, attemptsLeft } = recordFailedAttempt(row, new Date())
+  await saveLimit(email, purpose, next)
+  if (attemptsLeft === 0) fail('too_many_attempts')
+  fail('wrong_code', { attemptsLeft })
 }
 
 /** Map Supabase Auth errors from sending a code to our error codes (never reveals accounts). */
@@ -60,7 +89,7 @@ function emailError(error: AuthError): [string, Record<string, number>?] {
 
 export const signUp = publicAction(signUpSchema, async (input) => {
   const supabase = await createServerClient()
-  await sendSignupCode(input.email, () =>
+  await sendCode(input.email, 'signup', () =>
     // An email that already has a confirmed account gets a normal-looking reply and no code
     // (Supabase hides it), so nobody can learn which emails are registered (spec edge cases).
     supabase.auth.signUp({
@@ -84,7 +113,7 @@ export const signUp = publicAction(signUpSchema, async (input) => {
 
 export const resendSignupCode = publicAction(emailOnlySchema, async ({ email }) => {
   const supabase = await createServerClient()
-  await sendSignupCode(email, () =>
+  await sendCode(email, 'signup', () =>
     supabase.auth.resend({
       type: 'signup',
       email,
@@ -101,15 +130,7 @@ export const verifyEmailCode = publicAction(verifyEmailSchema, async ({ email, c
   const supabase = await createServerClient()
   // `email` is the current type for sign-up codes (`signup` is deprecated), research R4.
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' })
-  if (error || !data.user) {
-    // Supabase answers "expired or invalid" for both; our send time tells them apart.
-    const sentAt = row?.lastSentAt?.getTime()
-    if (sentAt && Date.now() - sentAt > CODE_LIFETIME_SECONDS * 1000) fail('code_expired')
-    const { next, attemptsLeft } = recordFailedAttempt(row, new Date())
-    await saveLimit(email, 'signup', next)
-    if (attemptsLeft === 0) fail('too_many_attempts')
-    fail('wrong_code', { attemptsLeft })
-  }
+  if (error || !data.user) return failCode(email, 'signup', row)
 
   await clearLimit(email, 'signup')
   const profile = await prisma.profile.findUnique({
@@ -137,7 +158,7 @@ export const signIn = publicAction(signInSchema, async ({ role, email, password 
     if (error.code === 'email_not_confirmed') {
       // Right password, unconfirmed email: send a new code (within limits) and go to Confirm.
       try {
-        await sendSignupCode(email, () => supabase.auth.resend({ type: 'signup', email }))
+        await sendCode(email, 'signup', () => supabase.auth.resend({ type: 'signup', email }))
       } catch {
         // Cooldown or too many sends: the Confirm screen shows the limit when they resend.
       }
@@ -200,6 +221,46 @@ export const changePassword = action(
       if (error.code === 'same_password') fail('same_password')
       throw error
     }
+    return {}
+  },
+)
+
+/**
+ * Forgot password (User Story 5 scenario 1; FR-012): the same answer whether or not the account
+ * exists. Supabase sends nothing to an unknown email and doesn't say so; our limits apply to every
+ * email alike, so they don't tell either.
+ */
+export const requestPasswordReset = publicAction(emailOnlySchema, async ({ email }) => {
+  const supabase = await createServerClient()
+  await sendCode(email, 'recovery', () => supabase.auth.resetPasswordForEmail(email))
+  return { sentAt: Date.now(), cooldownSeconds: 60 }
+})
+
+/**
+ * Set a new password with the emailed code (User Story 5 scenarios 2–3; FR-011, FR-012): verify the
+ * code (5 tries, 1 hour), set the password, then sign out every session, this one included, so the
+ * user signs in again with the new password.
+ */
+export const resetPassword = publicAction(
+  resetPasswordSchema,
+  async ({ email, code, password }) => {
+    const row = await getLimit(email, 'recovery')
+    if (!checkVerify(row).ok) fail('too_many_attempts')
+
+    const supabase = await createServerClient()
+    const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' })
+    if (error || !data.user) return failCode(email, 'recovery', row)
+    await clearLimit(email, 'recovery')
+
+    const { error: updateError } = await supabase.auth.updateUser({ password })
+    if (updateError) {
+      // The code is used up; don't leave its session behind. They ask for a new code.
+      await supabase.auth.signOut({ scope: 'local' })
+      if (updateError.code === 'weak_password') fail('weak_password')
+      if (updateError.code === 'same_password') fail('same_password')
+      throw updateError
+    }
+    await supabase.auth.signOut({ scope: 'global' })
     return {}
   },
 )

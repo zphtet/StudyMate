@@ -55,3 +55,14 @@ export type SignInInput = z.input<typeof signInSchema>
 export const verifyEmailSchema = z.object({ email: emailSchema, code: codeSchema })
 export const emailOnlySchema = z.object({ email: emailSchema })
 export const setLocaleSchema = z.object({ locale: localeSchema })
+
+/** User Story 5 scenarios 2 and 4: the code, and the new password typed twice. */
+export const resetPasswordSchema = z
+  .object({
+    email: emailSchema,
+    code: codeSchema,
+    password: newPasswordSchema,
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, { error: 'passwords_differ', path: ['confirm'] })
+export type ResetPasswordInput = z.input<typeof resetPasswordSchema>

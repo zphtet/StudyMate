@@ -157,10 +157,12 @@ As built (2026-11-24, no tests run yet by the owner's decision): T045–T052 cod
 
 ### Implementation for User Story 5
 
-- [ ] T054 [US5] Actions `requestPasswordReset` (always the same response; sends within limits with data-model.md AuthEmailLimit.purpose = `recovery`) and `resetPassword` (`verifyOtp` type `recovery`, data-model.md AuthEmailLimit.failedAttempts, `updateUser({ password })`, then `signOut({ scope: 'global' })`) in src/features/auth/actions.ts with schemas in src/features/auth/schemas.ts
-- [ ] T055 [US5] Forgot page src/app/(auth)/forgot-password/page.tsx matching screenshots/28-ForgotPassword.png → `/reset-password?email=`
-- [ ] T056 [US5] Reset page src/app/(auth)/reset-password/page.tsx matching screenshots/29-ResetPassword.png: CodeInput, "Send again" with cooldown, new and confirm password with PasswordChecks, "Reset password", "You'll be signed out on your other devices", success → `/sign-in?reset=1`
+- [X] T054 [US5] Actions `requestPasswordReset` (always the same response; sends within limits with data-model.md AuthEmailLimit.purpose = `recovery`) and `resetPassword` (`verifyOtp` type `recovery`, data-model.md AuthEmailLimit.failedAttempts, `updateUser({ password })`, then `signOut({ scope: 'global' })`) in src/features/auth/actions.ts with schemas in src/features/auth/schemas.ts
+- [X] T055 [US5] Forgot page src/app/(auth)/forgot-password/page.tsx matching screenshots/28-ForgotPassword.png → `/reset-password?email=`
+- [X] T056 [US5] Reset page src/app/(auth)/reset-password/page.tsx matching screenshots/29-ResetPassword.png: CodeInput, "Send again" with cooldown, new and confirm password with PasswordChecks, "Reset password", "You'll be signed out on your other devices", success → `/sign-in?reset=1`
 - [ ] T057 [US5] Add `reset` strings to src/i18n/messages/{en,my,ja}.json; T053 passes
+
+As built (2026-11-24, no tests run yet by the owner's decision): actions, both screens and the `reset` strings are in; sign-up and reset share one code sender and one wrong-code rule in auth/actions.ts. T057 stays open until T053 is written and passes. The reset email must carry the 6-digit `{{ .Token }}` (Supabase "Reset password" template, part of T005).
 
 **Checkpoint**: all P1 stories complete.
 

@@ -249,7 +249,8 @@
     "daysEmpty": "Choose at least one day",
     "offsetsInvalid": "Use 1 to 72 hours, each one different",
     "recipientsEmpty": "Choose at least one student",
-    "quietSameTimes": "Start and end can't be the same time"
+    "quietSameTimes": "Start and end can't be the same time",
+    "passwords_differ": "Passwords don't match"
   },
   "students": {
     "title": "Students",
@@ -1363,5 +1364,26 @@
     "signedOutBody": "Create a student account first. We'll bring you back to this invite.",
     "signUp": "Create student account",
     "signIn": "I already have an account"
+  },
+  "reset": {
+    "forgotTitle": "Forgot your password?",
+    "forgotBody": "Enter the email you signed up with. We'll send a 6-digit code to reset your password.",
+    "send": "Send reset code",
+    "sent": "If an account exists for this email, a code is on its way. It works for 1 hour.",
+    "enterCode": "Enter the code",
+    "remembered": "Remembered it?",
+    "backToSignIn": "Back to sign in",
+    "title": "Set a new password",
+    "body": "Enter the code we sent to <b>{email}</b>, then choose a new password.",
+    "noEmail": "Start from \"Forgot your password?\" so we know where to send the code.",
+    "codeLabel": "Reset code",
+    "notReceived": "Didn't get it?",
+    "sendAgain": "Send again",
+    "sendAgainIn": "Send again in {time}",
+    "resent": "If an account exists for this email, a new code is on its way.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "submit": "Reset password",
+    "signedOutElsewhere": "You'll be signed out on your other devices."
   }
 }
