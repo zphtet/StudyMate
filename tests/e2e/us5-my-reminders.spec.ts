@@ -18,8 +18,11 @@ test.beforeEach(async () => {
   await linkStudent(may.id, zin.id)
 })
 
+/** A Me row: Quiet hours opens a sheet (a button); My reminders opens a page (a link). */
 const row = (page: Page, label: string) =>
-  page.getByRole('main').getByRole('button', { name: new RegExp(label) })
+  page.getByRole('main').getByRole(label === 'My reminders' ? 'link' : 'button', {
+    name: new RegExp(label),
+  })
 const reminder = (page: Page, text: string) => page.getByRole('listitem').filter({ hasText: text })
 
 test('scenario 1: quiet hours 12:00–13:00 show on Me; None brings back the default', async ({

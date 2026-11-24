@@ -142,7 +142,7 @@ test('scenarios 2–4: submit, the Admin reviews live, Needs redo, resubmit; pro
   expect(await percentOf(courseId)).toBe(0)
 
   // Scenario 3: comment + Needs redo → the student's open lesson shows it within 5 s.
-  await card.getByRole('link', { name: 'May' }).click()
+  await card.getByRole('link', { name: 'May', exact: true }).click()
   await expect(zin.getByRole('heading', { name: 'To review · 1' })).toBeVisible()
   await zin.getByRole('link', { name: /Verbs/ }).first().click()
   await expect(zin.getByText('食べて、飲んで、寝ます。')).toBeVisible()

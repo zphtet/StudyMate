@@ -168,6 +168,8 @@ test('done cards cannot be dragged', async ({ page }) => {
 test('scenarios 5–6: tap to change the time, then Remove; one notice per lesson', async ({
   page,
 }) => {
+  // Many writes and page loads against the hosted dev database (as in us3-day).
+  test.setTimeout(120_000)
   const course = await seed()
   await setLessonDeadline(course.lessonIds[0], may.id, at(1, '20:00'), admin.id)
   await openPlan(page)

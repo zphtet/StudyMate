@@ -105,6 +105,8 @@ test('scenarios 2 and 4: an edited day survives a change; a deleted day stays Of
   page,
   request,
 }) => {
+  // Many writes and page loads against the hosted dev database (as in us3-day).
+  test.setTimeout(120_000)
   await saveRotation(page, 'DDOO')
   // Edit Monday's generated Day to 09:00–19:00.
   await openShifts(page, monday)
@@ -116,6 +118,8 @@ test('scenarios 2 and 4: an edited day survives a change; a deleted day stays Of
   await saveRotation(page, 'EEOO')
   await openShifts(page, monday)
   await expect(cell(page, monday).getByTestId('shift-chip')).toHaveText('9–19')
+  // Tuesday can be in the next month (Mon 30 Nov → Tue 1 Dec); the grid's spill-over days show no chips.
+  await openShifts(page, dayOf(1))
   await expect(cell(page, dayOf(1)).getByTestId('shift-chip')).toHaveText('14–23')
 
   // Delete Tuesday's generated Evening: the day becomes Off, also after the daily top-up.

@@ -178,7 +178,8 @@ test('scenario 8: Make it a rule instead opens a Daily rule with the text', asyn
   await page.getByRole('link', { name: 'Need it every day? Make it a rule instead' }).click()
   await expect(page.getByRole('heading', { name: 'New rule' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Daily time', exact: true })).toBeChecked()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue(
+  // Next keeps the composer hidden in the DOM for Back, so ask for the visible textbox only.
+  await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toHaveValue(
     'Ten minutes of kanji, {name}?',
   )
   await expect(page.getByLabel('Applies to')).toHaveValue(may.id)

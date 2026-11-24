@@ -16,7 +16,7 @@ const TOKYO = 'Asia/Tokyo'
 let zin: TestUser
 let may: TestUser
 
-/** A fake push subscription for this browser (research R8 flow; no real push service). */
+/** Granted notifications and a fake push subscription (research R8 flow; no real push service). */
 async function stubPush(page: Page) {
   await page.addInitScript(() => {
     const KEY = 'e2e-push-endpoint'
@@ -34,6 +34,9 @@ async function stubPush(page: Page) {
       localStorage.setItem(KEY, endpoint)
       return fake(endpoint) as unknown as PushSubscription
     }
+    // The headless Chromium shell reports notifications as denied even after grantPermissions.
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' })
+    Notification.requestPermission = async () => 'granted'
     PushManager.prototype.getSubscription = async function () {
       const endpoint = localStorage.getItem(KEY)
       return (endpoint ? fake(endpoint) : null) as unknown as PushSubscription | null

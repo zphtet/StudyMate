@@ -97,7 +97,8 @@ test('Today’s banner: a night shift tonight, a running shift, another shift la
   await seed('night', at('20:00'), at('04:00', 1))
   await page.goto('/s/today')
   await expect(banner).toContainText('Night shift tonight · 20:00–04:00')
-  await expect(banner).toContainText(/Good window to study now: about \d+ h free/)
+  // The string has a no-break space before "h" (en.json shiftBanner.freeNowHours); \s matches it.
+  await expect(banner).toContainText(/Good window to study now: about \d+\sh free/)
   await expectNoSeriousA11yViolations(page)
 
   await seed('day', at('09:00'), at('18:00'))

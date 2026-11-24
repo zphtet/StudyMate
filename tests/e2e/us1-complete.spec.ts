@@ -159,7 +159,7 @@ test('scenario 4: the Admin marks a lesson done and reopens it; both are audited
   const zin = await signedInPage(browser, testInfo, admin)
 
   await zin.goto('/a/students')
-  await zin.getByRole('link', { name: /May/ }).click()
+  await zin.getByRole('link', { name: 'May', exact: true }).click()
   await expect(zin.getByRole('heading', { name: 'May', level: 1 })).toBeVisible()
   await zin.getByRole('link', { name: /Verbs/ }).click()
   await expect(zin.getByRole('heading', { name: 'Verbs', level: 1 })).toBeVisible()
