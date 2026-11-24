@@ -253,10 +253,10 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 **Independent Test**: Light / Dark / Auto switch at once and Auto follows the OS live; English → 日本語 → မြန်မာ translates the Appearance screen and Today's date.
 
-- [ ] T032 [P] [US4] Write Playwright tests in tests/e2e/us4-mode-language.spec.ts (390×844 and 1280×800, axe). Cases:
+- [X] T032 [P] [US4] Write Playwright tests in tests/e2e/us4-mode-language.spec.ts (390×844 and 1280×800, axe). Cases:
   - **scenario 1**: Light and Dark set `.dark` at once; with Auto, `page.emulateMedia({ colorScheme })` flips it live without a reload;
   - **scenario 2**: Me's language buttons switch the Appearance headings and theme names (e.g. ja), the Me row and Today's date line, and font names stay as written.
-- [ ] T033 [US4] Run tests/e2e/us4-mode-language.spec.ts (T032) on the :3100 build. Any failure is a regression from Phases 2–5: fix it in the code that caused it.
+- [X] T033 [US4] Run tests/e2e/us4-mode-language.spec.ts (T032) on the :3100 build. Any failure is a regression from Phases 2–5: fix it in the code that caused it.
 
 ---
 
