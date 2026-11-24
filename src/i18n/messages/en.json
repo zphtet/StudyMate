@@ -116,7 +116,13 @@
     "linkCopied": "Link copied",
     "shareText": "Join me on StudyMate. My invite code is {code}.",
     "qrTitle": "Scan to join",
-    "qrBody": "Your student can scan this with their phone camera to open your invite link."
+    "qrBody": "Your student can scan this with their phone camera to open your invite link.",
+    "menu": "Invite code options",
+    "regenerate": "Regenerate code",
+    "regenerateTitle": "Make a new code?",
+    "regenerateBody": "The current code stops working at once. Students already linked to you stay linked.",
+    "regenerateAction": "Make new code",
+    "regenerated": "New code ready"
   },
   "empty": {
     "courses": "Courses your admin assigns will appear here.",
@@ -248,7 +254,11 @@
   "students": {
     "title": "Students",
     "emptyTitle": "No students yet",
-    "emptyBody": "Share your invite code. When a student sends a join request, it appears here for you to approve."
+    "emptyBody": "Share your invite code. When a student sends a join request, it appears here for you to approve.",
+    "wantsToJoin": "{name} wants to join",
+    "requested": "Requested {time}",
+    "approve": "Approve",
+    "decline": "Decline {name}"
   },
   "appearance": {
     "title": "Appearance",
@@ -293,7 +303,13 @@
     "confirmTitle": "Delete your account?",
     "confirmBody": "Type DELETE to confirm. Your data will be removed and you'll be signed out.",
     "confirmLabel": "Type DELETE to confirm",
-    "confirmAction": "Delete account"
+    "confirmAction": "Delete account",
+    "leaveTitle": "Your admin",
+    "leaveBody": "You keep your own progress and history, but {name}'s courses and reminders stop.",
+    "leaveButton": "Leave {name}",
+    "leaveConfirmTitle": "Leave {name}?",
+    "leaveConfirmBody": "{name}'s courses and reminders stop at once. You can join an admin again later with a code.",
+    "leaveConfirmAction": "Leave"
   },
   "markdown": {
     "videoTitle": "Video from YouTube",
@@ -1317,5 +1333,35 @@
       "ready": "Update ready",
       "reload": "Reload"
     }
+  },
+  "join": {
+    "step": "Step 2 of 2",
+    "title": "Connect to your admin",
+    "body": "Enter the 6-character code your admin shared, or open their invite link.",
+    "codeLabel": "Invite code",
+    "checking": "Checking the code…",
+    "notFound": "Code not found. Check it with your admin — they may have made a new one.",
+    "adminMeta": "Admin · {count, plural, =0 {no courses yet} one {# course ready} other {# courses ready}}",
+    "info": "{name} will see your request and approve it. You can then see your assigned courses and reminders.",
+    "send": "Send join request",
+    "scanQr": "Scan QR code instead",
+    "scanTitle": "Scan your admin's QR code",
+    "scanBody": "Point your phone's camera at the QR code on your admin's screen. It opens their invite link here.",
+    "waitingTitle": "Waiting for {name} to approve",
+    "waitingBody": "You'll move into the app as soon as {name} approves. You can close the app and come back later.",
+    "requested": "Requested {time}",
+    "useAnother": "Use a different code",
+    "declinedTitle": "Request declined.",
+    "declinedBody": "{name} declined your request. Check the code with your admin, or try another one.",
+    "linkedTitle": "You're linked to {name}",
+    "linkedBody": "To join someone else, leave {name} first in Account and password.",
+    "openApp": "Open StudyMate",
+    "toAccount": "Account and password",
+    "adminDeleted": "Your admin closed their account. Enter a new code to join someone else.",
+    "dismiss": "Dismiss",
+    "signedOutTitle": "Sign up to join your admin",
+    "signedOutBody": "Create a student account first. We'll bring you back to this invite.",
+    "signUp": "Create student account",
+    "signIn": "I already have an account"
   }
 }

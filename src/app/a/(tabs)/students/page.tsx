@@ -7,6 +7,8 @@ import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { TodayLabel } from '@/components/shared/today-label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InviteCard } from '@/features/invites/components/invite-card'
+import { RegenerateCodeMenu } from '@/features/invites/components/regenerate-code-menu'
+import { JoinRequests } from '@/features/links/components/join-requests'
 import { Bell } from '@/features/notifications/components/bell'
 import { TurnOnRemindersCard } from '@/features/notifications/components/turn-on-reminders-card'
 import { StudentCardList } from '@/features/progress/components/student-progress-card'
@@ -14,8 +16,9 @@ import { WithStudentCards } from '@/features/progress/components/with-admin-prog
 import { getMe } from '@/features/profile/repo'
 import { requirePageUser } from '@/server/auth/page-guard'
 
-// Screen 16-AdminStudents: the invite card (001) and one progress card per linked student (spec 004).
-// Join requests arrive with 001 User Story 2. Spec 006: the bell, and "Turn on reminders" until it's on.
+// Screen 16-AdminStudents: the invite card with ⋯ → Regenerate code and the join requests (001), and
+// one progress card per linked student (spec 004). Spec 006: the bell, and "Turn on reminders" until
+// it's on.
 export default async function AdminStudentsPage() {
   const [t, tc, nav] = await Promise.all([
     getTranslations('students'),
@@ -46,6 +49,7 @@ export default async function AdminStudentsPage() {
         <Suspense fallback={<PageSkeleton header={false} />}>
           <Invite />
         </Suspense>
+        <JoinRequests />
         <WithStudentCards>
           <StudentCardList />
         </WithStudentCards>
@@ -66,6 +70,11 @@ async function ProfileButton({ label }: { label: string }) {
 async function Invite() {
   const me = await getMe(await requirePageUser())
   return me.invite ? (
-    <InviteCard variant="compact" code={me.invite.code} url={me.invite.url} />
+    <InviteCard
+      variant="compact"
+      code={me.invite.code}
+      url={me.invite.url}
+      menu={<RegenerateCodeMenu />}
+    />
   ) : null
 }

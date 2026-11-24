@@ -24,20 +24,81 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { changePassword } from '@/features/auth/actions'
+import { leaveAdmin } from '@/features/links/actions'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage, useValidationMessage } from '@/lib/use-error-message'
 import { deleteAccount } from '../actions'
 import { meQuery } from '../queries'
 import { changePasswordSchema } from '../schemas'
 
-// Account and password (contracts/ui-routes.md): change password, delete account.
-// "Leave admin" joins this screen with User Story 2 (linking).
+// Account and password (contracts/ui-routes.md): change password, leave admin (students), delete
+// account.
 export function AccountView() {
+  const { data: me } = useSuspenseQuery(meQuery)
   return (
     <div className="flex flex-col gap-8">
       <ChangePasswordForm />
+      {me.link?.status === 'active' && <LeaveAdmin admin={me.link.admin.displayName} />}
       <DeleteAccount />
     </div>
+  )
+}
+
+/** Spec 001 Edge Cases: the student keeps their own history and loses the admin's courses. */
+function LeaveAdmin({ admin }: { admin: string }) {
+  const t = useTranslations('account')
+  const tc = useTranslations('common')
+  const errorMessage = useErrorMessage()
+  const connection = useNeedsConnection()
+
+  const leave = useMutation({
+    mutationFn: async () => unwrap(await leaveAdmin({})),
+    // Full load: the admin's courses must leave the cache, and the app sends an unlinked student to
+    // /join.
+    onSuccess: () => window.location.replace('/join'),
+  })
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold">{t('leaveTitle')}</h2>
+      <p className="text-muted-foreground">{t('leaveBody', { name: admin })}</p>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="xl"
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
+          >
+            {t('leaveButton', { name: admin })}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('leaveConfirmTitle', { name: admin })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('leaveConfirmBody', { name: admin })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {leave.isError && (
+            <p className="text-sm text-destructive" role="alert">
+              {errorMessage(leave.error)}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={connection.disabled || leave.isPending}
+              aria-describedby={connection.describedBy}
+              onClick={() => leave.mutate()}
+            >
+              {t('leaveConfirmAction')}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
   )
 }
 

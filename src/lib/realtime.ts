@@ -39,7 +39,7 @@ export function useRealtimeInvalidate({
   queryKeys,
   when,
 }: {
-  table: 'submissions' | 'comments' | 'lesson_progress'
+  table: 'submissions' | 'comments' | 'lesson_progress' | 'student_links'
   /** A Realtime filter such as `student_id=eq.<id>`. */
   filter?: string
   queryKeys: QueryKey[]

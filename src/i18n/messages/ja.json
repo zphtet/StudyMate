@@ -116,7 +116,13 @@
     "linkCopied": "リンクをコピーしました",
     "shareText": "StudyMateで一緒に学びましょう。招待コードは {code} です。",
     "qrTitle": "スキャンして参加",
-    "qrBody": "学生はスマホのカメラでこれをスキャンすると、招待リンクを開けます。"
+    "qrBody": "学生はスマホのカメラでこれをスキャンすると、招待リンクを開けます。",
+    "menu": "招待コードのオプション",
+    "regenerate": "コードを再発行",
+    "regenerateTitle": "新しいコードを発行しますか？",
+    "regenerateBody": "今のコードはすぐに使えなくなります。すでにつながっている学生はそのままです。",
+    "regenerateAction": "新しいコードを発行",
+    "regenerated": "新しいコードを発行しました"
   },
   "empty": {
     "courses": "管理者が割り当てたコースがここに表示されます。",
@@ -248,7 +254,11 @@
   "students": {
     "title": "学生",
     "emptyTitle": "まだ学生がいません",
-    "emptyBody": "招待コードを共有しましょう。学生から参加リクエストが届くと、ここに表示され、承認できます。"
+    "emptyBody": "招待コードを共有しましょう。学生から参加リクエストが届くと、ここに表示され、承認できます。",
+    "wantsToJoin": "{name}さんが参加を希望しています",
+    "requested": "{time}にリクエスト",
+    "approve": "承認",
+    "decline": "{name}さんを承認しない"
   },
   "appearance": {
     "title": "外観",
@@ -293,7 +303,13 @@
     "confirmTitle": "アカウントを削除しますか？",
     "confirmBody": "確認のため DELETE と入力してください。データは削除され、ログアウトします。",
     "confirmLabel": "確認のため DELETE と入力",
-    "confirmAction": "アカウントを削除"
+    "confirmAction": "アカウントを削除",
+    "leaveTitle": "管理者",
+    "leaveBody": "自分の進捗と履歴は残りますが、{name}さんのコースとリマインダーは止まります。",
+    "leaveButton": "{name}さんとのつながりを解除",
+    "leaveConfirmTitle": "{name}さんとのつながりを解除しますか？",
+    "leaveConfirmBody": "{name}さんのコースとリマインダーはすぐに止まります。後でコードを使って、また管理者に参加できます。",
+    "leaveConfirmAction": "解除する"
   },
   "markdown": {
     "videoTitle": "YouTube の動画",
@@ -1317,5 +1333,35 @@
       "ready": "アップデートの準備ができました",
       "reload": "再読み込み"
     }
+  },
+  "join": {
+    "step": "ステップ 2/2",
+    "title": "管理者とつながる",
+    "body": "管理者から共有された6文字のコードを入力するか、招待リンクを開いてください。",
+    "codeLabel": "招待コード",
+    "checking": "コードを確認しています…",
+    "notFound": "コードが見つかりません。管理者に確認してください。新しいコードに変わっている可能性があります。",
+    "adminMeta": "管理者 · {count, plural, =0 {コースはまだありません} other {#件のコースが準備済み}}",
+    "info": "{name}さんがリクエストを確認して承認します。承認後、割り当てられたコースとリマインダーが表示されます。",
+    "send": "参加をリクエスト",
+    "scanQr": "QRコードを読み取る",
+    "scanTitle": "管理者のQRコードを読み取る",
+    "scanBody": "スマホのカメラを管理者の画面にあるQRコードに向けてください。招待リンクがここで開きます。",
+    "waitingTitle": "{name}さんの承認を待っています",
+    "waitingBody": "{name}さんが承認すると、すぐにアプリに入れます。アプリを閉じて、後で戻ってきても大丈夫です。",
+    "requested": "{time}にリクエスト",
+    "useAnother": "別のコードを使う",
+    "declinedTitle": "リクエストは承認されませんでした。",
+    "declinedBody": "{name}さんがリクエストを承認しませんでした。管理者にコードを確認するか、別のコードを試してください。",
+    "linkedTitle": "{name}さんとつながっています",
+    "linkedBody": "別の管理者に参加するには、「アカウントとパスワード」で先に{name}さんとのつながりを解除してください。",
+    "openApp": "StudyMateを開く",
+    "toAccount": "アカウントとパスワード",
+    "adminDeleted": "管理者がアカウントを削除しました。別の管理者に参加するには、新しいコードを入力してください。",
+    "dismiss": "閉じる",
+    "signedOutTitle": "アカウントを作成して管理者に参加",
+    "signedOutBody": "まず学生アカウントを作成してください。作成後、この招待に戻ります。",
+    "signUp": "学生アカウントを作成",
+    "signIn": "すでにアカウントがあります"
   }
 }

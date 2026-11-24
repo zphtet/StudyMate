@@ -51,16 +51,15 @@ type InvitePreview = {
 ```
 404 `code_not_found` when the code is unknown or inactive (replaced). No other admin data is returned.
 
-## GET `/api/admin/students`
+## GET `/api/admin/students/requests`
 Guard: `requireRole('admin')`
 
 ```ts
-type AdminStudents = {
+type JoinRequests = {
   requests: { linkId: string; student: { id: string; displayName: string }; requestedAt: string }[]   // pending, newest first
-  students: { linkId: string; student: { id: string; displayName: string; timezone: string }; linkedAt: string }[]   // active, by name
 }
 ```
-Card statistics (streak, time this week, lessons done, course progress) are added by feature 004.
+As built (2026-11-24): planned as `requests` + `students` on `GET /api/admin/students`, but spec 003 took that path for the linked students list and spec 004's `GET /api/admin/students/progress` feeds the student cards, so the requests have their own path.
 
 ## GET `/api/admin/overview`
 Guard: `requireRole('admin')`. Feeds the Welcome checklist.
