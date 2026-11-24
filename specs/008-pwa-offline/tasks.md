@@ -87,13 +87,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Tests first
 
-- [ ] T004 [P] Write unit tests in src/lib/offline/db.test.ts (data-model.md §2). Cases:
+- [X] T004 [P] Write unit tests in src/lib/offline/db.test.ts (data-model.md §2). Cases:
   - the `studymate` database opens at version 1 with tables `outbox`, `outboxFiles`, `queryCache`, `offlineCourses` and the indexes listed for each (data-model.md outbox, outboxFiles.path, queryCache.userId, offlineCourses.courseId);
   - `deleteOtherUsers(userId)` removes every row whose `userId` differs and keeps the user's own (research R10).
 
 ### Implementation
 
-- [ ] T005 Write src/lib/offline/db.ts: the Dexie schema from data-model.md §2, with types for `OutboxEntry`, `OutboxFile`, `OfflineCourse` and `QueryCacheRow`. `outbox.type` and `outbox.state` are string unions from data-model.md outbox.type and outbox.state. Also add `deleteOtherUsers(userId)`. Lazy-open, so server rendering never touches IndexedDB. T004 passes.
+- [X] T005 Write src/lib/offline/db.ts: the Dexie schema from data-model.md §2, with types for `OutboxEntry`, `OutboxFile`, `OfflineCourse` and `QueryCacheRow`. `outbox.type` and `outbox.state` are string unions from data-model.md outbox.type and outbox.state. Also add `deleteOtherUsers(userId)`. Lazy-open, so server rendering never touches IndexedDB. T004 passes.
 - [X] T006 Finish src/app/sw.ts (contracts/service-worker.md › Worker):
   - move 006's `push` and `notificationclick` handlers and `tellOpenWindows` from public/sw.js unchanged (FR-005);
   - runtime caching = a `media` rule first (research R2: CacheFirst, CORS refetch, ExpirationPlugin 300 / 30 d / `purgeOnQuotaError`, status 200 only), then Serwist's `defaultCache`;
@@ -105,11 +105,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   (Done with T001, same file. The rules are written out instead of `defaultCache` (T001 note). Outside production the worker precaches nothing and runs NetworkOnly, because 006's reminders can register it under `next dev`.)
 - [X] T007 Change `SERVICE_WORKER_URL` to `/serwist/sw.js` in src/lib/push-device.ts (update its comment to cite 008 R1). In src/features/notifications/use-device-reminders.ts, register the new URL with scope `/`. (Changed while implementing: awaiting only `ready` would hang under `next dev`, where `SerwistProvider` doesn't register; re-registering a registered worker returns it.) Update comments in src/server/notifications/push.ts and src/features/notifications/components/mark-read-on-open.tsx that name public/sw.js. Run 006's push-related Vitest tests.
 - [X] T008 [P] Write src/lib/offline/worker-messages.ts: `postToWorker(message)` with a `MessageChannel` reply, plus `keepUrls(urls)` → `{ url, bytes }[]`, `forgetUrls(urls)` and `skipWaiting()`. All are no-ops when there is no controller (dev, first load). Types match contracts/service-worker.md.
-- [ ] T009 [P] Build the real src/app/~offline/page.tsx (contracts/service-worker.md › `/~offline`): app mark, `pwa.offlinePage.title`, `.body`, link home. Static, translated from the `locale` cookie as 001 does for auth pages. Add the `pwa.offlinePage.*` keys to src/i18n/messages/{en,my,ja}.json.
-- [ ] T010 Add `headers()` to next.config.ts (research R15; contracts/service-worker.md › Headers): CSP, HSTS, `Referrer-Policy` and `X-Content-Type-Options` for `/:path*`, built from `NEXT_PUBLIC_SUPABASE_URL`, with the development additions (`'unsafe-eval'`, `ws:`). Add `Cache-Control: no-cache` + `Service-Worker-Allowed: /` for `/serwist/sw.js`. On the production build, check by hand that the browser console has no CSP violations on:
+- [X] T009 [P] Build the real src/app/~offline/page.tsx (contracts/service-worker.md › `/~offline`): app mark, `pwa.offlinePage.title`, `.body`, link home. Static, translated from the `locale` cookie as 001 does for auth pages. Add the `pwa.offlinePage.*` keys to src/i18n/messages/{en,my,ja}.json.
+- [X] T010 Add `headers()` to next.config.ts (research R15; contracts/service-worker.md › Headers): CSP, HSTS, `Referrer-Policy` and `X-Content-Type-Options` for `/:path*`, built from `NEXT_PUBLIC_SUPABASE_URL`, with the development additions (`'unsafe-eval'`, `ws:`). Add `Cache-Control: no-cache` + `Service-Worker-Allowed: /` for `/serwist/sw.js`. On the production build, check by hand that the browser console has no CSP violations on:
   - sign-in, Today and a lesson with an image, a PDF and a YouTube embed;
   - an Admin lesson editor uploading a file;
   - the inbox with Realtime connected.
+
+  (2026-11-24: a temporary Playwright check on the :3100 build covered all of these with 0 console CSP violations. The lesson image loaded, the YouTube frame was attached, the Admin's PDF upload went through, and the inbox loaded with Realtime. Changes from the contract: `media-src` added for lesson audio; `upgrade-insecure-requests` left out (research R15).)
 
 **Checkpoint**: production build has the worker at scope `/`, push still works (006 quickstart scenario for a test push), `/~offline` shows offline, no CSP errors.
 

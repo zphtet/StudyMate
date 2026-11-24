@@ -1263,5 +1263,12 @@
       "read": "Read"
     },
     "recipientState": "{name} · {state}"
+  },
+  "pwa": {
+    "offlinePage": {
+      "title": "You're offline",
+      "body": "Pages you've opened before still work. This one needs a connection.",
+      "retry": "Try again"
+    }
   }
 }

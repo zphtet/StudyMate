@@ -60,11 +60,11 @@ For `/:path*`:
 
 | Header | Value |
 | --- | --- |
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${SUPABASE_URL}; font-src 'self'; connect-src 'self' ${SUPABASE_URL} wss://${SUPABASE_HOST}; frame-src https://www.youtube-nocookie.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${SUPABASE_URL}; media-src 'self' blob: ${SUPABASE_URL}; font-src 'self'; connect-src 'self' ${SUPABASE_URL} wss://${SUPABASE_HOST}; frame-src https://www.youtube-nocookie.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` (no `upgrade-insecure-requests`: research R15) |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
 | `X-Content-Type-Options` | `nosniff` |
 
 - `${SUPABASE_URL}` comes from `NEXT_PUBLIC_SUPABASE_URL` at build time.
 - In development, `script-src` adds `'unsafe-eval'` (React's dev tooling) and `connect-src` adds `ws:` (HMR).
-- For `/serwist/sw.js`: `Service-Worker-Allowed: /` and `Cache-Control: no-cache`, so updates are found on the next open.
+- For `/serwist/sw.js`: `Cache-Control: no-cache` (next.config.ts), so updates are found on the next open. `Service-Worker-Allowed: /` comes from the route.

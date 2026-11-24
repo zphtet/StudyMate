@@ -243,6 +243,7 @@ Every op carries its `id` (op id), the `base` it was made on and the device time
   script-src 'self' 'unsafe-inline';
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob: <supabase>;
+  media-src 'self' blob: <supabase>;
   font-src 'self';
   connect-src 'self' <supabase> wss://<supabase-host>;
   frame-src https://www.youtube-nocookie.com;
@@ -251,13 +252,13 @@ Every op carries its `id` (op id), the `base` it was made on and the device time
   object-src 'none';
   base-uri 'self';
   form-action 'self';
-  frame-ancestors 'none';
-  upgrade-insecure-requests
+  frame-ancestors 'none'
   ```
 
   It also sets `Strict-Transport-Security: max-age=63072000; includeSubDomains`, `Referrer-Policy: strict-origin-when-cross-origin` and `X-Content-Type-Options: nosniff`.
   - Push endpoints need no browser CSP entry: the browser's push service is contacted by the browser itself, and the server sends with `web-push`.
-  - Vercel serves HTTPS only and redirects HTTP.
+  - Vercel serves HTTPS only and redirects HTTP. `upgrade-insecure-requests` is left out (T010): HSTS and Vercel already cover it, and it would break the http production build that e2e runs against.
+  - `media-src` covers lesson audio, which redirects to Storage like images (T010).
 - **Why `'unsafe-inline'` for scripts**: nonces require every document to be rendered per request, which turns off Cache Components' static shells app-wide. Next's inline RSC payload scripts differ per page, so they can't be hashed. The 001 `lang` script and the 007 `appearance` script are fixed strings, but hashing only them doesn't help while Next's own inline scripts need `'unsafe-inline'`. Recorded in Complexity Tracking.
 - **Alternatives**: nonce-based CSP (dynamic rendering everywhere; SC-002 and performance ≥ 90 at risk); no CSP (FR-006).
 

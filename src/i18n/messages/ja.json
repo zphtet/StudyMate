@@ -1263,5 +1263,12 @@
       "read": "既読"
     },
     "recipientState": "{name} · {state}"
+  },
+  "pwa": {
+    "offlinePage": {
+      "title": "オフラインです",
+      "body": "以前に開いたページは引き続き使えます。このページを開くには接続が必要です。",
+      "retry": "もう一度試す"
+    }
   }
 }
