@@ -43,11 +43,11 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 | `course_assignments` (CourseAssignment) | Course → student + course deadline | `course_id`, `student_id`, `assigned_by`, `due_at`; unique (course, student) | 003 |
 | `lesson_deadlines` (LessonDeadline) | Per-lesson deadline override | PK (`lesson_id`, `student_id`), `due_at`, `set_by`; index `lesson_deadlines_student_due` (`student_id`, `due_at`) | 003 |
 | `lesson_progress` (LessonProgress) | Completion | PK (`student_id`, `lesson_id`), `status`, `completed_at`, `completed_by`, `minutes_spent` (see below), `client_op_id`; index `lesson_progress_student_completed` (`student_id`, `completed_at`) | 004 |
-| `submissions` (Submission) | Student assignment | `student_id`, `lesson_id` (unique pair), `body_md`, `attachments` (json), `status` | 004 |
+| `submissions` (Submission) | Student assignment | `student_id`, `lesson_id` (unique pair), `body_md`, `attachments` (json), `status`; spec 008: `client_op_id` (unique, the last offline op applied) | 004, 008 |
 | `comments` (Comment) | Notes and review comments | `author_id`, `student_id`, `target_type` (`lesson` = Notes, `submission` = review), `target_id`, `body`; index `comments_thread` (`student_id`, `target_type`, `target_id`, `created_at`) | 004 |
-| `study_sessions` (StudySession) | Focus timer | `student_id`, `lesson_id`, `started_at`, `ended_at`, `planned_minutes` (15 or 25); index `study_sessions_student_started` (`student_id`, `started_at`) | 004 |
+| `study_sessions` (StudySession) | Focus timer | `student_id`, `lesson_id`, `started_at`, `ended_at`, `planned_minutes` (15 or 25), `client_op_id` (a session recorded offline, spec 008); index `study_sessions_student_started` (`student_id`, `started_at`) | 004, 008 |
 | `shift_patterns` (ShiftPattern) | Rotation | `student_id`, `sequence` e.g. `DDDONNOO`, `start_date`, `active`, `generated_until` (date, how far its shifts are stored); presets moved to the profile in spec 005 | 005 |
-| `shifts` (Shift) | One row per shift | `student_id`, `type`, `start_at`, `end_at` (next day for nights; Off is the whole local day), `sleep_minutes`, `pattern_id` (set when a rotation generated it), `overridden` (edited or deleted by hand: rotations leave it alone) | 005 |
+| `shifts` (Shift) | One row per shift | `student_id`, `type`, `start_at`, `end_at` (next day for nights; Off is the whole local day), `sleep_minutes`, `pattern_id` (set when a rotation generated it), `overridden` (edited or deleted by hand: rotations leave it alone); spec 008: `client_op_id` (the last offline op applied), `updated_at` (the version an offline edit is made on; Prisma `@updatedAt`) | 005, 008 |
 | `notification_rules` (NotificationRule) | Automatic reminders and personal reminders | `owner_id` (the Admin who made it, or the student for a personal reminder; renamed from `admin_id` in spec 006), `student_id` (null = all the owner's linked students at each occurrence), `trigger`, `config` (json, per trigger: `src/lib/notifications/rule-config.ts`), `message` (1–500), `channels` (`push`, `copy`; the inbox always gets it), `enabled`, `created_at` | 003, 006 |
 | `scheduled_messages` (ScheduledMessage) | One-off message | `admin_id`, `body` (1–1000), `lesson_id`, `mode` now/fixed/next_free, `send_at` (null for next_free), `urgent`, `status` scheduled/sent/cancelled | 006 |
 | `scheduled_message_recipients` (ScheduledMessageRecipient) | Per-student delivery | PK (`message_id`, `student_id`), `deliver_at` (planned), `delivered_at` (handed over to a `notifications` row; read status lives there, so `read_at` was dropped in spec 006) | 006 |
@@ -60,7 +60,7 @@ Mermaid sources: `data-model.mmd` (all tables) and `data-model-*.mmd` (per domai
 **View**: `course_progress` (student, course → published lessons, done, percent).
 
 **Study time (spec 004 research R2, R3)** comes from two facts, never recalculated after they are written:
-- `study_sessions`: counted seconds = `least(coalesce(ended_at, now()), started_at + planned_minutes) − started_at`. `planned_minutes` is 15 or 25; `started_at` and `ended_at` are server time. A session counts on the local date it started. A stop under 60 s deletes the row.
+- `study_sessions`: counted seconds = `least(coalesce(ended_at, now()), started_at + planned_minutes) − started_at`. `planned_minutes` is 15 or 25; `started_at` and `ended_at` are server time, except for a session run or stopped offline, which keeps the device's time within spec 008's window (research R8). A session counts on the local date it started. A stop under 60 s deletes the row.
 - `lesson_progress.minutes_spent`: **only** the estimate credited at completion when the lesson has no focus session (= `lessons.est_minutes`), else 0. Undo and reopen set it back to 0. It counts on the local date of `completed_at`. Never add timer minutes to it: they would count twice.
 
 A lesson's total = `minutes_spent` + its sessions' counted minutes. Daily totals, streaks and the heat calendar read both (`dailyActivity()` in `src/features/progress/repo.ts`).
@@ -79,6 +79,8 @@ A lesson's total = `minutes_spent` + its sessions' counted minutes. Daily totals
 - Lifecycles in detail: specs/006-notifications/data-model.md › Lifecycles. Code: `src/server/notifications/dispatch.ts`.
 
 ---
+
+**Offline replays (spec 008 research R7).** `POST /api/sync` writes `client_op_id` on the row each offline op changes (`lesson_progress`, `submissions`, `study_sessions`, `shifts`). A replay whose id is already on the row is a duplicate. A change to an existing row applies only when the row is unchanged since the student saw it: `submissions.updated_at` and `shifts.updated_at` (equality, server time), or the done-state for `lesson_progress`. Otherwise the server's row wins and the change is reported on the device.
 
 ## 4. Rules that live only in SQL
 

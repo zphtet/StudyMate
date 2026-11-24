@@ -55,7 +55,7 @@ Hosting: Vercel (Next.js) + Supabase Cloud. All email via Resend (Supabase Auth 
 | Drag & drop | `@dnd-kit/core` + `@dnd-kit/sortable` | Lessons, sections, Plan deadlines |
 | Dates & time zones | `date-fns` v4 + `@date-fns/tz` | All instants UTC; display in IANA zone |
 | i18n | `next-intl` (no locale in URL; locale from profile/cookie) | `en`, `my`, `ja` |
-| PWA | Serwist (`@serwist/next`, `serwist`) + `app/manifest.ts` | SW disabled in `next dev` |
+| PWA | Serwist (`@serwist/turbopack`, `serwist`, `esbuild`) + `app/manifest.ts` | SW off in `next dev`; Dexie for the outbox and persisted queries (`@tanstack/react-query-persist-client`) |
 | Push | Web Push (VAPID) via `web-push` in a Next.js Route Handler | iOS 16.4+ installed PWA only |
 | Offline queue | Dexie (IndexedDB) | Replays writes with idempotency keys |
 | Tests | Vitest + Testing Library, Playwright, pgTAP (`supabase test db`) | 390×844 viewport in e2e |
@@ -101,9 +101,11 @@ studymate/
 │  │  │  ├─ alerts/rules/new · alerts/rules/[ruleId] · alerts/messages/new · alerts/messages/[messageId]
 │  │  │  ├─ inbox/page.tsx              # Notifications, full screen (spec 006)
 │  │  │  └─ me/page.tsx
-│  │  ├─ manifest.ts                   # Web App Manifest (spec 006: the minimum for iOS push)
-│  │  ├─ sw.ts                         # Serwist service worker source (spec 008; until then
-│  │  │                                #   public/sw.js has 006's push and notificationclick)
+│  │  ├─ manifest.ts                   # Web App Manifest (spec 008: icons, id, scope)
+│  │  ├─ sw.ts                         # Serwist service worker: caches, KEEP/FORGET, 006's push
+│  │  ├─ serwist/[path]/route.ts       # builds sw.ts into /serwist/sw.js ('use cache', prerendered)
+│  │  ├─ ~offline/page.tsx             # spec 008: what the worker shows for an uncached page
+│  │  ├─ api/sync/route.ts             # spec 008: replays the device's outbox (features' sync-ops)
 │  │  ├─ layout.tsx                    # <html> with every font variable, the pre-paint `lang` and
 │  │  │                                #   appearance scripts, ThemeProvider, ThemeColorMeta, next-intl
 │  │  ├─ fonts.ts                      # spec 007: the 10 UI fonts + Noto JP / Myanmar (next/font)
@@ -156,7 +158,11 @@ studymate/
 │  │  │                                #   ({name} {lesson} …), rule-summary.ts (row text keys)
 │  │  ├─ week-check.ts · streak.ts     # 005's Sunday check and 004's streak, moved for the dispatcher
 │  │  ├─ push-device.ts                # this browser's push subscription (Turn on, sign-out)
-│  │  ├─ offline/ (db.ts [Dexie], queue.ts, sync.ts)
+│  │  ├─ offline/                      # spec 008: db.ts (Dexie), outbox.ts, sync.ts, run-or-queue.ts,
+│  │  │                                #   persister.ts, keep-course.ts, queued-files.ts, wipe.ts,
+│  │  │                                #   accepted-time.ts + server-op.ts (server), worker-messages.ts
+│  │  ├─ query/persist-queries.tsx      # spec 008: the user's queries saved in IndexedDB
+│  │  ├─ build-revision.ts             # spec 008: worker revision and cache buster
 │  │  └─ utils.ts                      # cn(), etc.
 │  ├─ i18n/ (request.ts, messages/en.json, my.json, ja.json)
 │  ├─ generated/prisma/                # prisma generate output (git-ignored)
@@ -179,7 +185,7 @@ studymate/
 │  ├─ config.toml                      # local stack (auth, storage, email templates)
 │  ├─ tests/*.sql                      # pgTAP RLS tests
 │  └─ seed.sql
-├─ public/sw.js                       # spec 006: push + notificationclick (replaced by sw.ts in 008)
+├─ public/icons/                      # spec 008: app icons (192, 512, maskable, apple-touch)
 ├─ tests/e2e/*.spec.ts                 # Playwright
 ├─ specs/ · .specify/ · screenshots/ · docs/
 └─ next.config.ts · components.json · package.json
@@ -254,7 +260,7 @@ Server Component (page) ──prefetch the same queryOptions──► repo (Pris
 **Setup**
 - `src/lib/query/client.ts`: one `QueryClient` per browser session (`staleTime: 30_000`, `gcTime: 24h`, `retry: 2`), provided by `QueryProvider` in `app/layout.tsx`.
 - `src/lib/query/server.ts`: `getQueryClient()` wrapped in React `cache()` for Server Component prefetching.
-- `persistQueryClient` with an IndexedDB persister (`idb-keyval`) for offline reads (§10). Devtools in development.
+- `PersistQueryClientProvider` with a Dexie persister, one saved client per user (spec 008, §10). Devtools in development.
 
 **Repository (Prisma, server-only)** — the only place queries are written:
 ```ts
@@ -355,7 +361,7 @@ Every delivery is a `notifications` row (docs/data-model.md › Notifications): 
 - **Email** (weekly summary): plain HTML built from the delivered row, which is already in the recipient's language, sent with the Resend API (`RESEND_API_KEY`, from `RESEND_FROM`). No React Email.
 - **Send test**: Server Action `sendTestPush()` on the rule editor pushes to the Admin's own devices only, and only when the Admin isn't in their own quiet hours.
 - **VAPID** keys: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (client subscribe), `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (server).
-- **Client**: "Turn on reminders" registers `public/sw.js`, asks permission, calls `pushManager.subscribe` and saves the subscription (`useDeviceReminders`). On an iPhone outside Home Screen mode, the "Add to Home Screen" guide comes first. Signing out deletes this device's subscription. A tapped notification opens its link with `?n=<id>`, which marks it read.
+- **Client**: "Turn on reminders" asks permission, makes sure the app's service worker (`/serwist/sw.js`, spec 008) is registered, calls `pushManager.subscribe` and saves the subscription (`useDeviceReminders`). On an iPhone outside Home Screen mode, the "Add to Home Screen" guide comes first. Signing out deletes this device's subscription. A tapped notification opens its link with `?n=<id>`, which marks it read.
 - **Deploy** (once per environment, Supabase SQL editor; the secret lives in Vault, never in a migration):
   ```sql
   select vault.create_secret('<CRON_SECRET>', 'cron_secret');
@@ -371,15 +377,24 @@ Every delivery is a `notifications` row (docs/data-model.md › Notifications): 
 
 ## 10. PWA & offline (spec 008)
 
-- **Manifest**: `app/manifest.ts` — name, short_name, `display: 'standalone'`, `start_url: '/'`, theme/background colours, icons 192/512 + maskable, `screenshots` for install UI.
-- **Service worker**: Serwist via `@serwist/next` (`withSerwist` in `next.config.ts`, `swSrc: 'src/app/sw.ts'`, disabled in dev). Strategies:
-  - app shell & static: precache;
-  - `/s/lessons/*` HTML + lesson JSON: StaleWhileRevalidate;
-  - Supabase Storage images/audio: CacheFirst with expiration (max 200 entries / 30 days, 20 MB per course budget);
-  - navigations offline → cached page or `/offline` fallback.
-  - `push` → `showNotification`; `notificationclick` → focus/open the deep link.
-- **Offline writes**: client screens that must work offline (lesson complete/undo, submission draft, focus session, shift edit) write to Dexie `queue` with `{ id: uuid, op, payload, createdAt }`, update the TanStack Query cache optimistically, and `sync.ts` replays to Supabase on `online` / app focus. TanStack Query `networkMode: 'offlineFirst'` for these mutations; reads come from the persisted cache. Server side uses the `id` as an idempotency key (`on conflict do nothing`).
-- **Updates**: Serwist `skipWaiting` disabled; show a "Update ready — Reload" toast when a new SW is waiting.
+As built (specs/008-pwa-offline: research R1–R16, contracts/).
+
+- **Manifest**: `app/manifest.ts`: `id`, `scope`, `start_url: '/'`, standalone, portrait, light background colours, icons 192/512 + maskable in `public/icons/`. The root layout adds Apple web-app meta and the touch icon; `viewportFit: 'cover'` with safe-area padding on the tab bars, sheets and sticky editor headers.
+- **Service worker**: Serwist through `@serwist/turbopack` (Next builds with Turbopack). `src/app/sw.ts` is built by `src/app/serwist/[path]/route.ts` inside `'use cache'`, so `/serwist/sw.js` is prerendered with the precache list. It is registered at scope `/` by `SerwistProvider` in the root layout: production only, `reloadOnOnline={false}`. Outside production it caches nothing. Rules, in order (not Serwist's `defaultCache`, which also caches `/api` JSON and signed URLs):
+  - `/api/lesson-files/*` and `/api/submissions/*/files/*`: CacheFirst `media`, refetched in CORS mode so the copy isn't opaque, 300 entries / 30 days;
+  - other `/api/*` and every cross-origin request: network only (the persisted query cache owns data);
+  - RSC and RSC prefetch: NetworkFirst 3 s (`pages-rsc`, `pages-rsc-prefetch`);
+  - documents: NetworkFirst 3 s (`pages`, 300 / 30 days); offline, a miss matches ignoring the query string, then falls back to `/~offline`;
+  - other static files: CacheFirst `assets`.
+
+  006's `push` and `notificationclick` handlers live here. The page asks the worker to store or drop URLs with `KEEP` / `FORGET` messages (`lib/offline/worker-messages.ts`).
+- **Kept for offline**: opening a course online keeps its open lessons' data, pages and up to 20 MB of files (`lib/offline/keep-course.ts`). Above 80 % of the storage quota, the least recently opened other course gives its pages and files back. Opening Shifts keeps the Add shift page and the month's shift pages.
+- **Persisted reads**: `PersistQueries` (`lib/query/persist-queries.tsx`) in the `/s` and `/a` layouts saves the user's successful queries in Dexie (`queryCache`, one row per user), busted by the build revision, 7 days; `gcTime` is 7 days.
+- **Offline writes**: complete/undo, draft save (with photos) and Submit, focus sessions, and add/edit/delete of one shift. `runOrQueue` uses the Server Action online; offline, or when the request can't reach the server, it adds to the Dexie `outbox` (one unsent entry per record). These mutations run with `networkMode: 'always'`. Photos wait in `outboxFiles` and upload to Storage before their draft. `lib/offline/sync.ts` sends the outbox in order to **`POST /api/sync`**: a Route Handler, because Server Action ids change every deploy (constitution VII 2.1.0). Triggers: start, `online`, visible, and every minute. Network errors back off 5 → 60 s, and a 401 pauses.
+
+  The server runs each op through its feature's `sync-ops.ts`, with the same guard and repo function as the Server Action. Duplicates are recognised by `client_op_id`. A change to an existing record applies only on the version the student saw; otherwise the server wins and the change shows in the "Not saved" sheet. User-facing times keep the device's time within [now − 14 d, now + 2 min] and not before the base version (`lib/offline/accepted-time.ts`).
+- **Global UI** (`features/pwa`): the offline banner (which also says "Editing needs a connection", pointed to by every write that can't queue through `useNeedsConnection`), "Will sync" pills, the install sheet (2nd visit, 14-day dismissal, iOS steps), and "Update ready — Reload" (`skipWaiting: false`; Reload lets the outbox finish first).
+- **Sign-out**: it warns when changes are unsynced, then deletes the `studymate` database, the per-user caches and the query cache. Offline it signs out locally with supabase-js.
 
 ---
 
@@ -455,7 +470,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 - Use a dedicated Postgres role for Prisma (Supabase docs: create a `prisma` user) instead of `postgres`, and keep `DATABASE_URL` server-only.
 - Markdown sanitized (`rehype-sanitize`); no raw HTML.
 - File uploads: type allow-list (images, pdf, audio), size limits, Storage policies by path. Lesson files live at `lesson-files/<course_id>/<lesson_id>/<uuid>.<ext>` (10 MB bucket limit); policies read the folders with `uuid_folder()` and check `owns_course` / `can_read_lesson` (spec 002).
-- Content-Security-Policy via `next.config.ts` headers: self, Supabase URL, push endpoints; `frame-ancestors 'none'`; `frame-src https://www.youtube-nocookie.com` for the lesson YouTube player (spec 002 research R5).
+- Content-Security-Policy via `next.config.ts` headers (spec 008 research R15): `default-src 'self'`; `script-src 'self' 'unsafe-inline'` (a nonce would make every document request-bound under Cache Components, and Next's inline RSC scripts can't be hashed); images, audio and `connect-src` allow the Supabase origin (+ `wss://` for Realtime); `frame-src https://www.youtube-nocookie.com` (spec 002 research R5); `worker-src`/`manifest-src 'self'`; `object-src 'none'`; `base-uri`/`form-action 'self'`; `frame-ancestors 'none'`. Also HSTS, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`. No `upgrade-insecure-requests` (Vercel is HTTPS-only; e2e runs over http).
 - Daily purge (spec 002): Vercel Cron calls `GET /api/cron/purge` with `Authorization: Bearer CRON_SECRET` (constant-time compare). It removes files with the server-only secret-key client (`src/server/supabase-admin.ts`), then the rows of content deleted more than 30 days ago.
 - Daily rotation top-up (spec 005): Vercel Cron calls `GET /api/cron/rotations` (04:00 UTC, `vercel.json`) with the same secret check. It extends every active rotation to the student's local today + 56 days; a second run the same day inserts nothing.
 - Auth: email confirmation required, OTP attempts limited, neutral reset messages, sign out other sessions on reset.
@@ -507,9 +522,9 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 | 003 assign | `/a/courses/[id]` assign sheet, `/a/plan`, `/s/today` | course_assignments, lesson_deadlines, `effective_due` | DayBar, drag deadlines |
 | 004 progress | `/s/lessons/[id]`, `/s/progress`, `/a/students` | lesson_progress, submissions, comments, study_sessions, `course_progress` | optimistic updates, Realtime |
 | 005 shifts | `/s/shifts/**` (incl. `/s/shifts/rotation`), `/s/today` (banner, Sunday check), `/s/me` (Shift calendar row), `/a/plan`, `/a/students` (live status), `/api/cron/rotations` | shifts, shift_patterns, profile shift settings, `busy_segments`, `next_free_at`, `status_now` | exclusion constraint, overnight math (`shiftInstants`), rotations stored as rows 8 weeks ahead + daily Vercel Cron top-up |
-| 006 notifications | `/a/alerts/**`, `/s/inbox`, `/a/inbox`, `/s/me/reminders`, Me rows (quiet hours, devices), `/api/notifications`, `/api/me/reminders`, `/api/alerts/**`, `/api/cron/dispatch` | notification_rules (owner_id), scheduled_messages(+recipients), push_subscriptions, notifications (delivery state) | pg_cron → `/api/cron/dispatch`, web-push, Resend, `public/sw.js` |
+| 006 notifications | `/a/alerts/**`, `/s/inbox`, `/a/inbox`, `/s/me/reminders`, Me rows (quiet hours, devices), `/api/notifications`, `/api/me/reminders`, `/api/alerts/**`, `/api/cron/dispatch` | notification_rules (owner_id), scheduled_messages(+recipients), push_subscriptions, notifications (delivery state) | pg_cron → `/api/cron/dispatch`, web-push, Resend, the service worker's push handlers (`src/app/sw.ts` since 008) |
 | 007 appearance | `/s/me/appearance` (also admin) | profiles columns | next-themes, CSS variables, next/font, next-intl |
-| 008 pwa | global | – | Serwist, Dexie queue, persisted TanStack Query |
+| 008 pwa | global (banner, install, update), `/~offline`, `/api/sync`, `/serwist/sw.js` | submissions.client_op_id, shifts.updated_at; device: Dexie `studymate` | Serwist (Turbopack), Dexie outbox, persisted TanStack Query |
 
 ---
 
