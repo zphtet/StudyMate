@@ -1,13 +1,17 @@
 <!--
-Sync Impact Report — 2.0.0 → 2.0.1 (2026-11-21)
-Why PATCH: wording fix in Principle VII that matches its intent (supabase-js was never meant only for uploads);
-  no principle added, removed or redefined.
-Modified: VII (supabase-js covers all Storage operations: uploads, signed URLs, copy, delete; never table queries).
+Sync Impact Report — 2.0.1 → 2.1.0 (2026-11-24)
+Why MINOR: VII gains one write path (offline-queued writes replay through one guarded Route Handler), which
+  materially expands guidance; the other two edits are wording fixes. No principle added or removed.
+Modified:
+  - VII: offline-queued writes replay through one guarded Route Handler, because Server Action ids change every
+    deploy; PWA line names Serwist's Turbopack integration (`@serwist/turbopack`), `@serwist/next` + webpack
+    only as a fallback.
+  - Quality Gates: "Lighthouse PWA installable" → Chrome's installability check (Lighthouse 12 removed the PWA
+    category, so the old gate could not be run).
 Added sections: none. Removed sections: none.
-Trigger: /speckit-analyze on 002 (finding C1): reading private lesson files needs signed URLs; copy and purge need
-  Storage copy/delete.
-Dependent docs: CLAUDE.md "Working rules" line on supabase-js aligned to the same wording (outside this file).
-  specs/002-courses-lessons/plan.md Constitution Check VII cites 2.0.1. Templates unchanged.
+Trigger: /speckit-analyze on 008 (findings C1–C3).
+Dependent docs: specs/008-pwa-offline/spec.md SC-001 and plan.md Constitution Check cite 2.1.0;
+  docs/technical-spec.md §2/§10 updated by 008 T052. CLAUDE.md names only "Serwist" (no change). Templates unchanged.
 Still open (carried from 2.0.0):
   - 003: lesson status chips (done/overdue/due soon/upcoming) have no SQL function. 002 research R1 chose app code
     for Open/Locked (src/features/courses/lock.ts); 003's /speckit-plan decides whether its chips reuse it.
@@ -58,8 +62,8 @@ StudyMate is one mobile-first PWA used by two roles: **Student** (studies, submi
 
 ### VII. Simple, boring stack
 - Frontend: **Next.js 16 (App Router) + React 19 + TypeScript (strict)**, **Tailwind CSS v4** (CSS-first, no `tailwind.config.js`), **shadcn/ui** (Radix) + `lucide-react`, `next-themes`, `next-intl`, `react-hook-form` + Zod, **TanStack Query v5 for all data fetching and mutations**, Zustand (small UI state only), `@uiw/react-md-editor` for lesson editing, `react-markdown` + `remark-gfm` + `rehype-sanitize` for rendering, `@dnd-kit`, `date-fns` + `@date-fns/tz`.
-- Reads through TanStack Query `queryOptions` factories that call Route Handlers (`src/app/api/**`); Server Components may prefetch the same queries + `HydrationBoundary`. Writes through `useMutation` calling Server Actions that validate with the same Zod schema as the form. `proxy.ts` refreshes the Supabase session and guards `/s/*` and `/a/*`.
-- PWA: Serwist (`@serwist/next`) + `app/manifest.ts`; offline write queue in IndexedDB (Dexie).
+- Reads through TanStack Query `queryOptions` factories that call Route Handlers (`src/app/api/**`); Server Components may prefetch the same queries + `HydrationBoundary`. Writes through `useMutation` calling Server Actions that validate with the same Zod schema as the form. Exception: writes queued offline replay through one guarded Route Handler (`POST /api/sync`) that reuses the same Zod field schemas, guards and repo functions, because Server Action ids change with every deploy. `proxy.ts` refreshes the Supabase session and guards `/s/*` and `/a/*`.
+- PWA: Serwist via its Turbopack integration (`@serwist/turbopack`; `@serwist/next` with a webpack build only as a fallback) + `app/manifest.ts`; offline write queue in IndexedDB (Dexie).
 - Email: Resend (Supabase Auth SMTP + app emails). Hosting: Vercel.
 - Backend: Supabase only (Auth, Postgres, RLS, Storage, Realtime, pg_cron + pg_net). Server code reaches tables only through **Prisma 7** (`@prisma/adapter-pg`, queries in each feature's `repo.ts`). supabase-js (`@supabase/ssr`) is used only for Auth, Storage (uploads, signed URLs, copy, delete) and Realtime, never for table queries. Server logic, including the notification dispatcher, runs in Next.js Route Handlers and Server Actions; no custom server unless a spec proves it is needed.
 - `prisma/schema.prisma` and the generated Prisma Client are the single source for data types. Rules Prisma can't express (RLS, functions, triggers, CHECK and EXCLUDE constraints, partial indexes) live in the SQL migrations, and a Prisma-generated migration must never drop them.
@@ -68,7 +72,7 @@ StudyMate is one mobile-first PWA used by two roles: **Student** (studies, submi
 ## Quality Gates
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:e2e` and `supabase test db` all pass before merge.
 - Every Route Handler and Server Action calls a guard before any data access; review rejects one that doesn't.
-- `pnpm build` succeeds; Lighthouse PWA installable; performance ≥ 90 on a mid-range phone profile.
+- `pnpm build` succeeds; installable (Chrome's installability check reports no errors; Lighthouse 12 has no PWA category); performance ≥ 90 on a mid-range phone profile.
 - No feature merges without updating its `spec.md` status and screenshots if the UI changed.
 
 ## Workflow
@@ -77,4 +81,4 @@ StudyMate is one mobile-first PWA used by two roles: **Student** (studies, submi
 ## Governance
 This constitution overrides other conventions. Amendments are made in this file with a version bump and a one-line reason, and affected specs are re-checked with `/speckit.analyze`.
 
-**Version**: 2.0.1 | **Ratified**: 2026-11-20 | **Last Amended**: 2026-11-21 (VII: supabase-js covers all Storage operations, not only uploads)
+**Version**: 2.1.0 | **Ratified**: 2026-11-20 | **Last Amended**: 2026-11-24 (VII: offline-queued writes replay through one guarded Route Handler; Serwist via Turbopack; installability gate without Lighthouse's removed PWA category)
