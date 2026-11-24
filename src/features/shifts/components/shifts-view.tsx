@@ -12,6 +12,7 @@ import { SettingsGroup, SettingsRow } from '@/components/shared/settings'
 import { Button } from '@/components/ui/button'
 import { addMonths } from '@/lib/time'
 import { monthShiftsQuery, shiftSettingsQuery } from '../queries'
+import { useKeepShiftPages } from '../use-keep-shift-pages'
 import { lettersOf } from '../rotation'
 import type { ShiftType } from '../types'
 import { DayCard } from './day-card'
@@ -31,6 +32,7 @@ export function ShiftsView({ month }: { month: string }) {
   const format = useFormatter()
   const { data } = useSuspenseQuery(monthShiftsQuery(month))
   const { rotation, settings } = useSuspenseQuery(shiftSettingsQuery).data
+  useKeepShiftPages(data.shifts)
   const tRotation = useTranslations('rotation')
   const searchParams = useSearchParams()
   const [isSettingsOpen, setSettingsOpen] = useState(false)

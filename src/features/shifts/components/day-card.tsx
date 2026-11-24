@@ -3,12 +3,14 @@
 import { Pencil } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { SyncPill } from '@/components/shared/sync-pill'
 import { DayBar, DayBarScale } from '@/components/shared/day-bar'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { dayBar, dayTimeline, type TimelineEntry } from '../timeline'
 import type { Segment, ShiftView } from '../types'
+import { isLocalShift, shiftKey } from '../offline'
 import { ShiftSwatch } from './shift-chip'
 import { useDayLabel } from './use-day-label'
 
@@ -57,7 +59,9 @@ export function DayCard({
         <Button asChild variant="ghost" size="touch" className="text-primary">
           <Link
             href={
-              startingToday ? `/s/shifts/${startingToday.shift.id}` : `/s/shifts/new?date=${date}`
+              startingToday && !isLocalShift(startingToday.shift.id)
+                ? `/s/shifts/${startingToday.shift.id}`
+                : `/s/shifts/new?date=${date}`
             }
             aria-label={t('editLabel', { date: dayName })}
           >
@@ -130,8 +134,8 @@ function EntryRow({
 
   if (entry.kind === 'shift') {
     const type = t(`named.${entry.shift.type}`)
-    return (
-      <Link href={`/s/shifts/${entry.shift.id}`} className={cn(row, 'hover:bg-muted/50')}>
+    const content = (
+      <>
         <ShiftSwatch type={entry.shift.type} className="size-3 w-3 shrink-0 rounded-sm" />
         {rangeText}
         <span className="min-w-0 flex-1">
@@ -139,6 +143,15 @@ function EntryRow({
             ? t('fromYesterday', { type, weekday: weekday(entry.start, timeZone) })
             : type}
         </span>
+        <SyncPill recordKey={shiftKey(entry.shift.id)} className="shrink-0" />
+      </>
+    )
+    // Added offline (spec 008): it has no page until it syncs and gets its real id.
+    return isLocalShift(entry.shift.id) ? (
+      <div className={row}>{content}</div>
+    ) : (
+      <Link href={`/s/shifts/${entry.shift.id}`} className={cn(row, 'hover:bg-muted/50')}>
+        {content}
       </Link>
     )
   }

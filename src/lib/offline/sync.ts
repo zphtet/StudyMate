@@ -143,6 +143,11 @@ export function syncNow(): Promise<void> {
   return inFlight
 }
 
+/** The signed-in student whose outbox this device syncs; null for Admins and before sign-in. */
+export function outboxUserId() {
+  return activeUserId
+}
+
 /** Starts syncing for the signed-in student; returns the stop function. */
 export function startSync(userId: string) {
   activeUserId = userId

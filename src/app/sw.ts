@@ -88,6 +88,9 @@ const runtimeCaching: RuntimeCaching[] = [
     handler: new NetworkFirst({
       cacheName: CACHE.pages,
       networkTimeoutSeconds: 3,
+      // Offline, /s/shifts/new?date=B can use the copy saved for ?date=A; pages that depend on the
+      // query read it on the client too (spec 008 R2).
+      matchOptions: { ignoreSearch: true },
       // Room for several kept courses' lesson pages (R3); eviction removes a course's pages.
       plugins: [new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 30 * DAY })],
     }),

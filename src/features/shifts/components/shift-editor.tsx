@@ -4,7 +4,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-q
 import { Loader2, Trash2 } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useId, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
@@ -26,13 +26,21 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { todayKeys } from '@/features/assignments/queries'
+import { runOrQueue } from '@/lib/offline/run-or-queue'
 import { ActionResultError, unwrap } from '@/lib/result'
 import { addCalendarDays, shiftInstants, startOfLocalDay, utcToZoned } from '@/lib/time'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { cn } from '@/lib/utils'
 import { deleteShift, saveShift } from '../actions'
 import { shiftKeys, shiftQuery, shiftSettingsQuery } from '../queries'
-import { clockTimeSchema, type RotationLetter, type ShiftPresets } from '../schemas'
+import { queueShiftDelete, queueShiftSave } from '../offline'
+import {
+  clockTimeSchema,
+  localDateSchema,
+  type RotationLetter,
+  type SaveShiftInput,
+  type ShiftPresets,
+} from '../schemas'
 import type { ShiftSettings, ShiftType, ShiftView } from '../types'
 import { ShiftTypePicker } from './shift-type-picker'
 import { useDayLabel } from './use-day-label'
@@ -59,8 +67,11 @@ const LETTER_OF: Partial<Record<ShiftType, RotationLetter>> = {
 const DAY_MS = 86_400_000
 
 /** A new shift on `date` (default Day; Add shift → Night → Save shift is SC-001's three taps). */
-export function NewShiftEditor({ timeZone, date }: { timeZone: string; date: string }) {
+export function NewShiftEditor({ timeZone, date: serverDate }: { timeZone: string; date: string }) {
   const { settings } = useSuspenseQuery(shiftSettingsQuery).data
+  // Read here too: offline, the page may come from a copy saved for another ?date= (spec 008 R2).
+  const fromUrl = localDateSchema.safeParse(useSearchParams().get('date'))
+  const date = fromUrl.success ? fromUrl.data : serverDate
   const [start, end] = settings.presets.D
   return (
     <ShiftForm
@@ -159,23 +170,47 @@ function ShiftForm({
     router.push(backHref)
   }
 
+  // Offline (spec 008 FR-003), the change is queued and shown at once; overlap is checked on the
+  // shifts this device has, with the same message.
+  const queuedDone = (message: string) => {
+    toast.success(message)
+    router.push(backHref)
+  }
+  const label = dayLabel(date)
   const save = useMutation({
-    mutationFn: async () =>
-      unwrap(
-        await saveShift({
-          shiftId: shift?.id,
-          date,
-          type: form.type,
-          ...(!isOff && { start: form.start, end: form.end }),
-          blockSleep: form.blockSleep,
-        }),
-      ),
-    onSuccess: () => done(t('saved')),
+    networkMode: 'always',
+    mutationFn: () => {
+      const input: SaveShiftInput = {
+        shiftId: shift?.id,
+        date,
+        type: form.type,
+        ...(!isOff && { start: form.start, end: form.end }),
+        blockSleep: form.blockSleep,
+      }
+      return runOrQueue({
+        online: async () => unwrap(await saveShift(input)),
+        queue: () =>
+          queueShiftSave({
+            queryClient,
+            input,
+            shift,
+            timeZone,
+            sleepMinutes: settings.sleepMinutes,
+            label,
+          }),
+      })
+    },
+    onSuccess: ({ isQueued }) => (isQueued ? queuedDone(t('saved')) : done(t('saved'))),
     onError: (e) => setError(describeError(e)),
   })
   const remove = useMutation({
-    mutationFn: async (shiftId: string) => unwrap(await deleteShift({ shiftId })),
-    onSuccess: () => done(t('deleted')),
+    networkMode: 'always',
+    mutationFn: (existing: ShiftView) =>
+      runOrQueue({
+        online: async () => unwrap(await deleteShift({ shiftId: existing.id })),
+        queue: () => queueShiftDelete({ queryClient, shift: existing, label }),
+      }),
+    onSuccess: ({ isQueued }) => (isQueued ? queuedDone(t('deleted')) : done(t('deleted'))),
     onError: (e) => setError(describeError(e)),
   })
 
@@ -338,7 +373,7 @@ function ShiftForm({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('keep')}</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => remove.mutate(shift.id)}>
+                <AlertDialogAction variant="destructive" onClick={() => remove.mutate(shift)}>
                   {t('delete')}
                 </AlertDialogAction>
               </AlertDialogFooter>
