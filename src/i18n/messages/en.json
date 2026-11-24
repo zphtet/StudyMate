@@ -207,7 +207,7 @@
     "message_already_sent": "This message has already been sent.",
     "message_time_past": "That time has passed. Choose a later time.",
     "lesson_unavailable": "This lesson is no longer available.",
-    "changed_on_server": "It was changed on another device or by your teacher first.",
+    "changed_on_server": "It was changed on another device or by your admin first.",
     "file_missing": "A photo didn't finish uploading.",
     "focus_overlap": "This study time overlaps a session already saved."
   },

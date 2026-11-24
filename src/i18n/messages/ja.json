@@ -207,7 +207,7 @@
     "message_already_sent": "このメッセージはすでに送信されました。",
     "message_time_past": "その時刻は過ぎています。後の時刻を選んでください。",
     "lesson_unavailable": "このレッスンはもう利用できません。",
-    "changed_on_server": "別の端末または先生が先に変更しました。",
+    "changed_on_server": "別の端末または管理者が先に変更しました。",
     "file_missing": "写真のアップロードが完了していません。",
     "focus_overlap": "この学習時間は、保存済みのセッションと重なっています。"
   },

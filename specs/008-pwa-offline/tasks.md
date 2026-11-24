@@ -381,7 +381,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - §14: the CSP as shipped and why `'unsafe-inline'`;
   - §2: the new packages.
 - [X] T053 [P] Update docs/data-model.md: `submissions.client_op_id` and `shifts.updated_at` in the model section, and a note that `client_op_id` columns are written by `/api/sync` (008 R7).
-- [ ] T054 [P] Review the new `my` and `ja` strings (`pwa.*` and the four new `errors.*`) against their `en` meaning, and list them in the commit for the user's review, as 007 did.
+- [X] T054 [P] Review the new `my` and `ja` strings (`pwa.*` and the four new `errors.*`) against their `en` meaning, and list them in the commit for the user's review, as 007 did.
 - [ ] T055 At 390×844 and 1280×800, in all 3 languages at Large text (007), check that the banner, install sheet, Not-saved sheet, pills and "Needs a connection" lines fit without clipping, and the tab bar keeps 44 px targets. Fix in the owning component.
 - [ ] T056 Performance (SC-001, SC-002; quickstart.md §5):
   - Lighthouse mobile on `/s/today` of the production build, performance ≥ 90;

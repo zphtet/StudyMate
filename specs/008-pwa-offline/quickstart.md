@@ -54,6 +54,37 @@ Before running Playwright:
 | 14 | Turn reminders on (006), send a test push, go offline, tap it | Opens the cached lesson, or `/~offline` if it was never opened |
 | 15 | DevTools → Application → Storage → simulate a low quota, open several courses | Least recently opened course's media are removed first; the current one stays |
 
+## _review: strings for a native speaker (T054)
+
+008 adds 40 keys: 36 `pwa.*` and 4 `errors.*` (`lesson_unavailable`, `changed_on_server`, `file_missing`, `focus_overlap`). All exist in `my` and `ja` with the same placeholders and `<share>`/`<add>` tags as `en` (`messages.test.ts` passes). Burmese and Japanese don't change the noun for a count, so `{count}` is a plain number there and plurals stay only in `en`. No string refers to a student with a pronoun.
+
+Fixed in this review:
+- `errors.changed_on_server` said "your teacher" (ဆရာ, 先生); every other string calls the role "your admin", so it now says admin in all three (သင့်အက်ဒမင်, 管理者).
+- `pwa.dropped.overlap` in Burmese said အလုပ်ချိန် ("work time"); the app's word for a shift is အလုပ်ဆိုင်း (`nav.shifts`, `dayBar.shift`).
+- Sign in: ログイン and ဝင်ရန်, as on the sign-in screen (`auth.signUp.signIn`), not サインイン and အကောင့်ဝင်ရန်.
+- The Not-saved sheet title is one fixed phrase in every language, not a plural.
+
+Kept the same as the rest of the app: Cancel (`common.cancel`), Sign out (`common.signOut`), Submit as 提出 / တင်သွင်း (`submission.submit`), device as 端末 / စက် (`errors.push_no_device`), offline page title as `errors.offline` (オフラインです / အင်တာနက် မရှိပါ).
+
+| Idea | Burmese | Japanese |
+| --- | --- | --- |
+| Will sync / Will submit (pills) | နောက်မှ ပို့မည် / နောက်မှ တင်သွင်းမည် | あとで同期 / あとで提出 |
+| Offline — changes will sync | အော့ဖ်လိုင်း — ပြောင်းလဲမှုများကို နောက်မှ ပို့မည် | オフライン — 変更はあとで同期されます |
+| Syncing … | ပို့နေသည် | 同期中 |
+| Editing needs a connection | ပြင်ဆင်ရန် အင်တာနက် လိုအပ်သည် | 編集には接続が必要です |
+| Not saved | မသိမ်းနိုင်ခဲ့ပါ | 保存できませんでした |
+| The server's version was kept | ဆာဗာ၏ ဗားရှင်းကို ထားရှိပါသည် | サーバーの内容を残しています |
+| Install StudyMate / Not now | StudyMate ကို ထည့်သွင်းရန် / နောက်မှ | StudyMateをインストール / 今はしない |
+| Update ready — Reload | အပ်ဒိတ် အသင့်ဖြစ်ပါပြီ — ပြန်ဖွင့်ရန် | アップデートの準備ができました — 再読み込み |
+
+The iPhone steps (`pwa.install.iosStep1–3`) name Safari's own buttons. Japanese uses iOS's Japanese labels (共有, 「ホーム画面に追加」, 「追加」). Burmese keeps them in English (Share, Add to Home Screen, Add, Home Screen), on the assumption that the phone shows them in English.
+
+Questions:
+- Burmese "sync" is ပို့ ("send") everywhere: the pills, the banner and the sign-out warning. Does that read right for changes that are waiting to be sent, or is there a better word?
+- The banner says အော့ဖ်လိုင်း (a loanword), while the offline page and `errors.offline` say အင်တာနက် မရှိပါ ("no internet"). Should one of them be used everywhere?
+- Is it right that an iPhone set to Burmese shows Share and Add to Home Screen in English? If it shows Burmese words, which ones?
+- Japanese "Not now" is 今はしない. Would あとで read more naturally on the install sheet?
+
 ## 5. Performance (SC-001, SC-002)
 
 - Lighthouse (mobile) on `/s/today` of the production build: performance ≥ 90. Installability: no errors in the Manifest panel (Lighthouse 12 has no PWA category; R16).
