@@ -120,6 +120,18 @@ export async function leaveAdmin(studentId: string) {
   if (count === 0) fail('not_linked')
 }
 
+/**
+ * The admin removes one of their students (Edge Cases: the student keeps their own history and loses
+ * the admin's courses). Error: student_not_found (not linked to this admin).
+ */
+export async function removeStudent(adminId: string, studentId: string) {
+  const { count } = await prisma.studentLink.updateMany({
+    where: { adminId, studentId, status: 'active' },
+    data: { status: 'removed', respondedAt: new Date() },
+  })
+  if (count === 0) fail('student_not_found')
+}
+
 /** Pending requests to this admin, newest first (screen 16-AdminStudents). */
 export async function listJoinRequests(adminId: string): Promise<JoinRequest[]> {
   const links = await prisma.studentLink.findMany({

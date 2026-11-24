@@ -7,6 +7,7 @@ import { InstallPrompt } from '@/features/pwa/components/install-prompt'
 import { OfflineBanner } from '@/features/pwa/components/offline-banner'
 import { OfflineRuntime } from '@/features/pwa/components/offline-runtime'
 import { UpdateToast } from '@/features/pwa/components/update-toast'
+import { LinkWatcher } from '@/features/links/components/link-watcher'
 import { hasActiveLink } from '@/features/links/repo'
 import { toAppearance } from '@/lib/appearance'
 import { PersistQueries } from '@/lib/query/persist-queries'
@@ -28,6 +29,8 @@ export default async function StudentLayout({ children }: { children: ReactNode 
       {children}
       <OfflineRuntime userId={me.id} role="student" />
       <AppearanceSync appearance={toAppearance(me)} />
+      {/* Spec 001 FR-015: removed by their admin while the app is open → /join. */}
+      <LinkWatcher studentId={me.id} />
       {/* Spec 008 US1 and US3. */}
       <InstallPrompt />
       <UpdateToast />

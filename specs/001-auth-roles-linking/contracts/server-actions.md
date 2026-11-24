@@ -35,7 +35,7 @@ Notes:
 | `requestJoin` (`links/actions.ts`) | `requireRole('student')` | `code` | `{ linkId, admin: { displayName } }`; an older pending request is withdrawn | `code_not_found`, `already_linked` |
 | `respondToRequest` (`links/actions.ts`) | `requireRole('admin')`, link's `adminId` = caller | `linkId`, `approve: boolean` | `{ status: 'active' \| 'declined' }` | `request_not_found`, `already_linked` (student got linked elsewhere first) |
 | `leaveAdmin` (`links/actions.ts`) | `requireRole('student')` | — | `{}`; active link → `removed` | `not_linked` |
-| `removeStudent` (`links/actions.ts`) | `requireRole('admin')`, link's `adminId` = caller | `linkId` | `{}`; active link → `removed` | `student_not_found` |
+| `removeStudent` (`links/actions.ts`) | `requireRole('admin')`, link's `adminId` = caller | `studentId` (as built: the Admin's student screen knows the student, not the link) | `{}`; active link → `removed` | `student_not_found` |
 | `dismissNotice` (`links/actions.ts`) | `requireUser`, notification's `userId` = caller | `id` | `{}`; `read_at` set | `notice_not_found` |
 | `regenerateInviteCode` (`invites/actions.ts`) | `requireRole('admin')` | — | `{ code, url }`; old code stops working at once | — |
 | `updateProfile` (`profile/actions.ts`) | `requireUser` | any of `displayName`, `timezone`, `locale` | updated profile; `locale` cookie refreshed | `invalid_input` |

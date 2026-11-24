@@ -6,6 +6,7 @@ import * as repo from './repo'
 import {
   dismissNoticeSchema,
   noInputSchema,
+  removeStudentSchema,
   requestJoinSchema,
   respondToRequestSchema,
 } from './schemas'
@@ -26,6 +27,12 @@ export const respondToRequest = action(respondToRequestSchema, async ({ linkId, 
 export const leaveAdmin = action(noInputSchema, async () => {
   const me = await requireRole('student')
   await repo.leaveAdmin(me.id)
+  return {}
+})
+
+export const removeStudent = action(removeStudentSchema, async ({ studentId }) => {
+  const me = await requireRole('admin')
+  await repo.removeStudent(me.id, studentId)
   return {}
 })
 

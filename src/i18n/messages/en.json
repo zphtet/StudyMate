@@ -756,7 +756,13 @@
     "tileWeek": "This week",
     "tileLessons": "Lessons done",
     "nudge": "Send a nudge",
-    "nudgeLabel": "Send a nudge to {name}"
+    "nudgeLabel": "Send a nudge to {name}",
+    "menu": "Student options",
+    "remove": "Remove student",
+    "removeTitle": "Remove this student?",
+    "removeBody": "They lose your courses and reminders right away. Their own progress and history stay with them, and they can join again with your code.",
+    "removeAction": "Remove",
+    "removed": "Student removed"
   },
   "submission": {
     "answer": "Your answer",

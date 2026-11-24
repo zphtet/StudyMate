@@ -4,6 +4,7 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { BookOpen, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ProgressBar } from '@/components/shared/progress-bar'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
@@ -18,7 +19,14 @@ import { SubmissionStatusChip } from './submission-status-chip'
 // screen layout): "To review" first, oldest first, then each assigned course with its progress and
 // lessons, each with its submission chip (never a Draft), linking to the review screen.
 
-export function StudentDetail({ studentId }: { studentId: string }) {
+export function StudentDetail({
+  studentId,
+  menu,
+}: {
+  studentId: string
+  /** Controls for the header's right side, e.g. ⋯ → Remove student (spec 001). */
+  menu?: ReactNode
+}) {
   const t = useTranslations('adminStudents')
   const { data } = useSuspenseQuery(adminStudentQuery(studentId))
   const { student } = data
@@ -26,13 +34,16 @@ export function StudentDetail({ studentId }: { studentId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 pt-5">
-        <Link
-          href="/a/students"
-          aria-label={t('back')}
-          className="-ml-2 flex size-11 items-center justify-center rounded-full hover:bg-muted"
-        >
-          <ChevronLeft className="size-6" aria-hidden />
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/a/students"
+            aria-label={t('back')}
+            className="-ml-2 flex size-11 items-center justify-center rounded-full hover:bg-muted"
+          >
+            <ChevronLeft className="size-6" aria-hidden />
+          </Link>
+          {menu}
+        </div>
         <div>
           <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight">
             {student.displayName}

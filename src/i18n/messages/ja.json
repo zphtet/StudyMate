@@ -756,7 +756,13 @@
     "tileWeek": "今週",
     "tileLessons": "完了したレッスン",
     "nudge": "ひと声かける",
-    "nudgeLabel": "{name}さんにひと声かける"
+    "nudgeLabel": "{name}さんにひと声かける",
+    "menu": "学生のオプション",
+    "remove": "学生を外す",
+    "removeTitle": "この学生を外しますか？",
+    "removeBody": "あなたのコースとリマインダーはすぐに止まります。学生自身の進捗と履歴は残り、あなたのコードでまた参加できます。",
+    "removeAction": "外す",
+    "removed": "学生を外しました"
   },
   "submission": {
     "answer": "あなたの回答",

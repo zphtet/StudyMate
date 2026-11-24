@@ -16,6 +16,9 @@ export const requestJoinSchema = z.object({ code: inviteCodeSchema })
 
 export const respondToRequestSchema = z.object({ linkId: z.uuid(), approve: z.boolean() })
 
+/** By student, not link id: the admin's student screens know the student (contract note). */
+export const removeStudentSchema = z.object({ studentId: z.uuid() })
+
 export const dismissNoticeSchema = z.object({ id: z.uuid() })
 
 export const noInputSchema = z.object({})

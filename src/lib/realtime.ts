@@ -38,6 +38,7 @@ export function useRealtimeInvalidate({
   filter,
   queryKeys,
   when,
+  onChange,
 }: {
   table: 'submissions' | 'comments' | 'lesson_progress' | 'student_links'
   /** A Realtime filter such as `student_id=eq.<id>`. */
@@ -45,13 +46,15 @@ export function useRealtimeInvalidate({
   queryKeys: QueryKey[]
   /** Skips events that can't change the screen, e.g. the viewer's own autosaves. */
   when?: (row: ChangedRow) => boolean
+  /** Also runs on each event that passes `when`, e.g. to refresh server-rendered checks. */
+  onChange?: () => void
 }) {
   const queryClient = useQueryClient()
   const id = useId()
   // Read when an event arrives, so new values each render don't resubscribe.
-  const latest = useRef({ queryKeys, when })
+  const latest = useRef({ queryKeys, when, onChange })
   useEffect(() => {
-    latest.current = { queryKeys, when }
+    latest.current = { queryKeys, when, onChange }
   })
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export function useRealtimeInvalidate({
           (payload) => {
             const row = Object.keys(payload.new).length > 0 ? payload.new : payload.old
             if (latest.current.when && !latest.current.when(row)) return
+            latest.current.onChange?.()
             refetchSoon(queryClient, latest.current.queryKeys)
           },
         )
