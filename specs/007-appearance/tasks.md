@@ -275,12 +275,18 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
   3. only after those finish: `pnpm build`, `PORT=3100 pnpm start`, then `PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e`.
 
   This is the one full Playwright run, covering every feature's specs. Leave :3000 alone and stop :3100 afterwards. Record failures as they are, with the test name and error, and fix the ones 007 caused before ticking the task.
-- [ ] T037 [P] Accessibility and layout pass at 390×844 and 1280×800, in Light and Dark, with Indigo, Forest and Mocha, in en, my and ja. Check:
+- [X] T037 [P] Accessibility and layout pass at 390×844 and 1280×800, in Light and Dark, with Indigo, Forest and Mocha, in en, my and ja. Check:
   - swatches, tiles and segments are radios with names and visible focus rings in every theme;
   - the preview card is read as one image;
   - at Large, long Burmese labels wrap instead of truncating where the full label matters (spec Edge Cases);
   - the 44 px targets at Small.
-- [ ] T038 Compare /s/me/appearance and /s/me at 390×844 with screenshots/12-Appearance.png and 11-Profile.png. Fix layout, hierarchy and copy, keeping only the differences in contracts/ui-routes.md › Intentional differences.
+
+  (Done 2026-11-24, at 390×844 in light/Indigo/Default/en, dark/Mocha/Large/en and dark/Mocha/Large/my. Fixed three overflows, all on Appearance: font names past the tile edge (Merriweather, Hyperlegible) — smaller "Aa", 15 px names, `lang="en"` with hyphens and an anywhere-break fallback; the Burmese "Auto" label past its segment — segment labels may break anywhere; the preview pills overflowing in Burmese — `min-h-11` instead of `h-11`. Theme names now wrap instead of truncating ("Laven…"). Swatches, tiles and segments are radios with names; axe passes in us1/us2/us4; focus rings use the theme ring. 44 px targets at Small checked in us2 scenario 3.)
+
+- [X] T038 Compare /s/me/appearance and /s/me at 390×844 with screenshots/12-Appearance.png and 11-Profile.png. Fix layout, hierarchy and copy, keeping only the differences in contracts/ui-routes.md › Intentional differences.
+
+  (Done 2026-11-24. /s/me/appearance matches 12-Appearance.png: preview, Mode, 2 × 5 swatches, 2-column font tiles with Atkinson and M PLUS on two lines, Text size with labels at their own sizes. Differences are the ones listed: 44 px swatches, and the greeting wraps when it is "Good afternoon". /s/me matches 11-Profile.png: the Appearance row reads "Indigo · Inter · Light" with the swatch.)
+
 - [ ] T039 Performance (plan.md › Performance Goals):
   - Lighthouse mobile on /s/today and /s/me/appearance (target ≥ 90);
   - on /s/today, list the font files requested: one Latin family, plus Noto slices only when Japanese or Burmese is on screen (SC-005);

@@ -47,7 +47,8 @@ export function ThemeSwatches({
             </span>
             <span
               className={cn(
-                'w-full truncate text-center text-sm',
+                // Wrap, don't truncate, at Large text (spec Edge Cases).
+                'w-full text-center text-sm leading-tight [overflow-wrap:anywhere] hyphens-auto',
                 active ? 'font-semibold text-foreground' : 'text-muted-foreground',
               )}
             >

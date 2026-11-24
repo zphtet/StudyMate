@@ -34,7 +34,9 @@ export function SegmentedChoice<T extends string>({
             aria-checked={active}
             onClick={() => !active && onChange(option.value)}
             className={cn(
-              'min-h-12 rounded-xl px-2 text-lg font-medium transition-colors',
+              // Burmese has no spaces to wrap at, so a long label may break anywhere (spec Edge
+              // Cases: wrap, don't overflow, at Large text).
+              'min-h-12 rounded-xl px-2 py-1 text-lg leading-tight font-medium [overflow-wrap:anywhere] transition-colors',
               active
                 ? 'bg-card text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',

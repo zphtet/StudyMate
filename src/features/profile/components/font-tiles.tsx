@@ -30,14 +30,21 @@ export function FontTiles({
             onClick={() => !active && onChange(id)}
             style={{ fontFamily: `var(--font-${id})` }}
             className={cn(
-              'flex min-h-14 items-center gap-3 rounded-2xl border-2 px-4 py-2 text-left transition-colors',
+              'flex min-h-14 items-center gap-2 rounded-2xl border-2 px-3 py-2 text-left transition-colors',
               active ? 'border-primary bg-accent' : 'border-border bg-card hover:border-input',
             )}
           >
-            <span className="shrink-0 text-2xl font-semibold" aria-hidden>
+            <span className="shrink-0 text-xl font-semibold" aria-hidden>
               Aa
             </span>
-            <span className="min-w-0 text-[1.0625rem] leading-tight">{name}</span>
+            {/* Latin names in any UI language: sized so the longest single word (Merriweather) fits
+                at Default; at Large it hyphenates where the browser can, else breaks, never overflows. */}
+            <span
+              lang="en"
+              className="min-w-0 text-[0.9375rem] leading-tight [overflow-wrap:anywhere] hyphens-auto"
+            >
+              {name}
+            </span>
           </button>
         )
       })}

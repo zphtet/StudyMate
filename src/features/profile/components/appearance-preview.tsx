@@ -34,10 +34,10 @@ export function AppearancePreview({ name }: { name: string }) {
         <span className="block h-full w-3/5 rounded-full bg-primary" />
       </span>
       <div className="grid grid-cols-[1fr_1.4fr] gap-3">
-        <span className="flex h-11 items-center justify-center rounded-xl border bg-card px-3 font-semibold">
+        <span className="flex min-h-11 items-center justify-center rounded-xl border bg-card px-3 py-1.5 text-center leading-tight font-semibold">
           {t('lessonWork.focus.start', { minutes: 15 })}
         </span>
-        <span className="flex h-11 items-center justify-center rounded-xl bg-primary px-3 font-semibold text-primary-foreground">
+        <span className="flex min-h-11 items-center justify-center rounded-xl bg-primary px-3 py-1.5 text-center leading-tight font-semibold text-primary-foreground">
           {t('lessonWork.markComplete')}
         </span>
       </div>
