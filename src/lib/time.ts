@@ -5,6 +5,7 @@ import { TZDate } from '@date-fns/tz'
 // instants; days late and Plan days follow the student's calendar, including 23/25 h DST days.
 
 const dayFormatters = new Map<string, Intl.DateTimeFormat>()
+const clockFormatters = new Map<string, Intl.DateTimeFormat>()
 
 /** Today's calendar date (`YYYY-MM-DD`) in an IANA time zone. */
 export function todayIn(timeZone: string, now: Date = new Date()): string {
@@ -21,8 +22,6 @@ export function todayIn(timeZone: string, now: Date = new Date()): string {
   }
   return format.format(now)
 }
-
-const pad = (n: number) => String(n).padStart(2, '0')
 
 function parseDate(date: string) {
   const [year, month, day] = date.split('-').map(Number)
@@ -47,11 +46,25 @@ export function zonedToUtc(date: string, time: string | null, timeZone: string):
 
 /** Local `{ date: 'YYYY-MM-DD', time: 'HH:mm' }` of an instant, e.g. for date and time inputs. */
 export function utcToZoned(instant: Date | string, timeZone: string) {
-  const local = new TZDate(new Date(instant).getTime(), timeZone)
-  return {
-    date: `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`,
-    time: `${pad(local.getHours())}:${pad(local.getMinutes())}`,
+  // Intl, like todayIn: reading a TZDate's getHours() gave the browser's own zone under
+  // Playwright's fake clock (spec 006 T082), and Intl needs no Date subclass.
+  let format = clockFormatters.get(timeZone)
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+    clockFormatters.set(timeZone, format)
   }
+  const part = Object.fromEntries(
+    format.formatToParts(new Date(instant)).map(({ type, value }) => [type, value]),
+  )
+  return { date: `${part.year}-${part.month}-${part.day}`, time: `${part.hour}:${part.minute}` }
 }
 
 /** Calendar days from `earlier` to `later`, both read in the zone (23:59 → 00:01 is 1 day). */
