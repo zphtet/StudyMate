@@ -55,6 +55,7 @@ test('scenario 1: Atkinson Hyperlegible is used for all text, and the screen ord
     )
     .toMatch(/Merriweather/)
   await expectNoSeriousA11yViolations(page)
+  await expect.poll(async () => (await profileLook(may.id)).font_id).toBe('atkinson')
 
   await page.goto('/s/today')
   expect(await fontFamilyOf(page, 'h1')).toMatch(/Atkinson/)
@@ -73,6 +74,8 @@ test('scenario 2: Japanese text falls back to Noto Sans JP under Merriweather', 
   await page.goto('/s/me/appearance')
   await page.getByRole('radio', { name: 'Merriweather' }).click()
   await expect(page.getByRole('heading', { name: 'Font · Merriweather' })).toBeVisible()
+  // A full page load cancels a save still queued; wait for it.
+  await expect.poll(async () => (await profileLook(may.id)).font_id).toBe('merriweather')
 
   await page.goto(`/s/courses/${courseId}`)
   const family = await fontFamilyOf(page, 'main')
