@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { expectNoSeriousA11yViolations } from './fixtures/a11y'
-import { htmlLook } from './fixtures/appearance'
+import { htmlLook, profileLook } from './fixtures/appearance'
 import { assignCourse, linkStudent, seedCourse, seedShift } from './fixtures/courses'
 import { seedMessage, seedRule } from './fixtures/notifications'
 import { createConfirmedUser, signIn, type TestUser } from './fixtures/users'
@@ -46,6 +46,14 @@ test('scenario 1: Atkinson Hyperlegible is used for all text, and the screen ord
   await page.getByRole('radio', { name: 'Atkinson Hyperlegible' }).click()
   await expect(page.getByRole('heading', { name: 'Font · Atkinson Hyperlegible' })).toBeVisible()
   expect((await htmlLook(page)).font).toBe('atkinson')
+  // Each tile shows its name in its own font, once the page is idle (T039).
+  await expect
+    .poll(() =>
+      page
+        .getByRole('radio', { name: 'Merriweather' })
+        .evaluate((el) => getComputedStyle(el).fontFamily),
+    )
+    .toMatch(/Merriweather/)
   await expectNoSeriousA11yViolations(page)
 
   await page.goto('/s/today')
@@ -211,4 +219,25 @@ test('scenario 4: at Large, no page of either role scrolls sideways at 390 px (S
   await signedOut.close()
 
   expect(overflowing).toEqual([])
+})
+
+test('scenario 1, on-demand fonts: Zen Maru Gothic loads when chosen and after a reload (T039)', async ({
+  page,
+}) => {
+  await signIn(page, may)
+  await page.goto('/s/me/appearance')
+  await page.getByRole('radio', { name: 'Zen Maru Gothic' }).click()
+  await expect(page.getByRole('heading', { name: 'Font · Zen Maru Gothic' })).toBeVisible()
+  // A full page load cancels a save still queued; wait for it.
+  await expect.poll(async () => (await profileLook(may.id)).font_id).toBe('zen-maru')
+
+  const zenMaruLoaded = () =>
+    page.evaluate(() =>
+      [...document.fonts].some((f) => /Zen Maru/.test(f.family) && f.status === 'loaded'),
+    )
+  await page.goto('/s/today')
+  await expect.poll(() => fontFamilyOf(page, 'h1')).toMatch(/Zen Maru/)
+  await expect.poll(zenMaruLoaded).toBe(true)
+  await page.reload()
+  await expect.poll(() => fontFamilyOf(page, 'h1')).toMatch(/Zen Maru/)
 })

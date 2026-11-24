@@ -76,3 +76,20 @@ Run Playwright against a production build on :3100 (`pnpm build && PORT=3100 pnp
 Questions:
 - Is မဲနယ် (indigo dye) understood as the colour, or should it be a transliteration (အင်ဒီဂို)?
 - Does a two-line Burmese "Auto" (အလိုအ / လျောက်) in the Mode control read naturally at Large text, or is a shorter word better?
+
+## 5. Performance (T039, 2026-11-24)
+
+Measured on `pnpm build && pnpm start` (localhost, dev Supabase over the internet), Lighthouse 12.8.2, mobile, performance only, signed in (session cookies passed with `--extra-headers` from a throwaway Playwright test), 3 runs each. The account's look was the default, so the device and the account agree.
+
+| Page | `main` (before 007) | 007 as first built | 007 as shipped |
+| --- | --- | --- | --- |
+| `/s/today` | 77–82 (FCP 1.2–1.7 s, LCP 3.6–4.1 s) | 70–71 (FCP 2.7 s, LCP 4.4–4.7 s) | **77–84** (FCP 1.7–2.0 s, LCP 3.5–3.9 s) |
+| `/s/me/appearance` | – | 66–69 (LCP 6.8–8.1 s) | **79–80** (FCP 1.7–2.0 s, LCP 4.5 s, CLS 0) |
+
+- **Found and fixed**:
+  - M PLUS Rounded 1c and Zen Maru Gothic are Japanese fonts. `next/font` writes an `@font-face` rule for every Unicode slice and weight, which put ~550 KB of render-blocking CSS on every page for every user (render-blocking CSS grew from ~210 KB to ~790 KB). They now load on demand (`src/lib/lazy-fonts`, the user's choice in T039): only when chosen, and on Appearance. Without them the CSS is ~231 KB.
+  - On Appearance, the tiles switch to their own fonts once the browser is idle, so their ~760 KB no longer holds back the preview card's largest paint.
+- **Still below the 90 target, as for 003–006's pages**: LCP waits for data seeded on the server from the dev database over the internet. Worth re-measuring on Vercel next to the database.
+- **CLS 0.18 on `/s/today` already exists on `main`**: Today's "Nothing due today" card moves when content above it appears after the first paint. Not caused by 007; follow-up for the Today screen's owner (006's Turn on reminders card is the likely cause).
+- **SC-001**: a theme change repaints in 27–40 ms (Ocean, Rose, Slate; tap to the next frame), with layout shift 0.
+- **SC-005**: `/s/today` downloads one font file with Inter, and one with Nunito; the Japanese and Burmese fallbacks only load for text in those scripts. Appearance downloads the ten families (allowed by FR-007).

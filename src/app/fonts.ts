@@ -2,7 +2,6 @@ import {
   Atkinson_Hyperlegible,
   DM_Sans,
   Inter,
-  M_PLUS_Rounded_1c,
   Manrope,
   Merriweather,
   Noto_Sans_JP,
@@ -10,14 +9,14 @@ import {
   Nunito,
   Poppins,
   Roboto,
-  Zen_Maru_Gothic,
 } from 'next/font/google'
 
-// Spec 007 research R6: the 10 UI fonts (src/lib/appearance.ts fontIds) and the Japanese and Burmese
+// Spec 007 research R6: 8 of the 10 UI fonts (src/lib/appearance.ts fontIds) and the Japanese and Burmese
 // fallbacks (constitution VI), self-hosted at build. None is preloaded: every family is only a CSS
 // variable on <html>, [data-font] picks one as --font-active (globals.css), and the browser
 // downloads a face only when text uses it (FR-007, SC-005). Static families get the weights the app
-// uses (400 body, 500 medium, 600 semibold, 700 bold); variable ones cover them all.
+// uses (400 body, 500 medium, 600 semibold, 700 bold); variable ones cover them all. M PLUS Rounded
+// 1c and Zen Maru Gothic load on demand instead (src/lib/lazy-fonts, decided in T039).
 
 const inter = Inter({
   subsets: ['latin'],
@@ -69,20 +68,6 @@ const merriweather = Merriweather({
   display: 'swap',
   preload: false,
 })
-const mPlusRounded = M_PLUS_Rounded_1c({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-m-plus-rounded',
-  display: 'swap',
-  preload: false,
-})
-const zenMaru = Zen_Maru_Gothic({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-zen-maru',
-  display: 'swap',
-  preload: false,
-})
 
 // Fallbacks for Japanese and Burmese text in any UI font (001 research R9).
 const notoJp = Noto_Sans_JP({
@@ -108,8 +93,6 @@ export const fontVariables = [
   roboto,
   atkinson,
   merriweather,
-  mPlusRounded,
-  zenMaru,
   notoJp,
   notoMy,
 ]

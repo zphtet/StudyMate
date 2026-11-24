@@ -287,12 +287,14 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
   (Done 2026-11-24. /s/me/appearance matches 12-Appearance.png: preview, Mode, 2 × 5 swatches, 2-column font tiles with Atkinson and M PLUS on two lines, Text size with labels at their own sizes. Differences are the ones listed: 44 px swatches, and the greeting wraps when it is "Good afternoon". /s/me matches 11-Profile.png: the Appearance row reads "Indigo · Inter · Light" with the swatch.)
 
-- [ ] T039 Performance (plan.md › Performance Goals):
+- [X] T039 Performance (plan.md › Performance Goals):
   - Lighthouse mobile on /s/today and /s/me/appearance (target ≥ 90);
   - on /s/today, list the font files requested: one Latin family, plus Noto slices only when Japanese or Burmese is on screen (SC-005);
   - time a theme change from tap to repaint in the Performance panel (< 100 ms, no layout shift; SC-001).
 
   Record the results in specs/007-appearance/quickstart.md §5.
+
+  (Done 2026-11-24, quickstart.md §5. The two Japanese fonts blocked every page's first paint with ~550 KB of CSS (`/s/today` 70 against 80 on main). By the user's choice they now load on demand (src/lib/lazy-fonts, LazyFontLoader, tests in lazy-fonts/index.test.ts and us2-fonts). Appearance's tiles switch to their fonts when idle. Result: `/s/today` 77–84 (main 77–82), Appearance 79–80. A theme change takes 27–40 ms with no layout shift. One font file per page. CLS 0.18 on Today already exists on main.)
 - [ ] T040 Walk through quickstart.md §4 scenarios 1–15. For each one, record the test that covers it or what wasn't checked.
   - Also check by hand: a lesson's code block keeps a monospace face with every font (FR-006), and, with the network off on a fresh profile, a font that can't download falls back and loads on the next online open (spec Edge Cases).
   - SC-003's 10 throttled reloads are scenario 8 here; the automated T029 reloads without throttling.

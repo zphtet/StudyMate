@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { ThemeProvider } from 'next-themes'
 import { Suspense, type ReactNode } from 'react'
+import { LazyFontLoader } from '@/components/shared/lazy-font-loader'
 import { ThemeColorMeta } from '@/components/shared/theme-color-meta'
 import { Toaster } from '@/components/ui/sonner'
 import { appearanceScript, barColor } from '@/lib/appearance'
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </Suspense>
           <Toaster position="top-center" />
           <ThemeColorMeta />
+          <LazyFontLoader />
         </ThemeProvider>
       </body>
     </html>
