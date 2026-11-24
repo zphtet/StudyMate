@@ -38,12 +38,19 @@ export function SettingsRow({
   const content = (
     <>
       {icon && <span className="flex size-6 shrink-0 items-center justify-center">{icon}</span>}
-      <span className="min-w-0 flex-1 truncate text-[1.0625rem]">{label}</span>
-      {/* At most half the row, so a long value (a 28-day rotation) never squeezes the label. */}
-      {value && (
-        <span className="max-w-1/2 min-w-0 truncate text-[0.9375rem] text-muted-foreground">
+      {/*
+        The value starts from nothing (flex-basis 0) and fills what the label leaves, but never less
+        than 5.5rem, so short values ("Blocked", "5 days", "3 on") stay whole. The label keeps its
+        full width whenever it fits next to that, and truncates only when it doesn't. So a long value
+        ("While on shift + sleep", a 28-day rotation) never cuts "Quiet hours" short.
+      */}
+      <span className="min-w-0 truncate text-[1.0625rem]">{label}</span>
+      {value ? (
+        <span className="min-w-22 flex-1 truncate text-right text-[0.9375rem] text-muted-foreground">
           {value}
         </span>
+      ) : (
+        <span className="flex-1" />
       )}
       <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
     </>

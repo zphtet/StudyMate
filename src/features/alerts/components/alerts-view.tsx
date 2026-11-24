@@ -150,7 +150,7 @@ function StudentChips({ students, scope }: { students: AlertStudent[]; scope: Al
 function Note({ student }: { student: AlertStudent | null }) {
   const t = useTranslations('alerts')
   return (
-    <p className="flex gap-3 rounded-2xl bg-accent p-4 text-accent-foreground">
+    <p className="flex gap-3 rounded-2xl bg-accent p-4 text-[0.9375rem] text-accent-foreground">
       <Moon className="mt-0.5 size-5 shrink-0" aria-hidden />
       <span>
         {student

@@ -18,7 +18,8 @@ export function RuleBadge({ badge, label }: { badge: Badge; label: string }) {
   return (
     <span
       className={cn(
-        'flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl px-1.5 text-xs font-bold',
+        // 36 px as in 24-AdminNotify.png; the row around it is the 44 px tap target.
+        'flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg px-1.5 text-xs font-bold',
         TONES[badge],
       )}
     >
