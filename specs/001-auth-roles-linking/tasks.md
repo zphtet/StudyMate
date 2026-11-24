@@ -28,7 +28,7 @@ description: "Tasks for 001 Accounts, Roles and Admin Linking"
 - [X] T002 [P] Add shadcn components input, input-otp, label, card, dialog, alert-dialog, sheet, dropdown-menu, separator, badge, skeleton, sonner, command, popover into src/components/ui/ with `pnpm dlx shadcn@latest add …`
 - [X] T003 [P] Map `server-only` to an empty stub for tests: create tests/stubs/server-only.ts and add a `resolve.alias` entry in vitest.config.mts
 - [X] T004 [P] Add `SUPABASE_SECRET_KEY` (server-only, never `NEXT_PUBLIC_`) to .env.example and docs/technical-spec.md §15; note in docs/technical-spec.md §5 that join/approve/decline run in Prisma repos behind guards, not the `request_join`/`respond_join` RPCs (research.md R2)
-- [ ] T005 Manual (project owner): apply the dev Supabase dashboard settings and add `SUPABASE_SECRET_KEY` to `.env` as listed in specs/001-auth-roles-linking/quickstart.md §1; confirm when done
+- [X] T005 Manual (project owner): apply the dev Supabase dashboard settings and add `SUPABASE_SECRET_KEY` to `.env` as listed in specs/001-auth-roles-linking/quickstart.md §1; confirm when done
 
 ---
 

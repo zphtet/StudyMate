@@ -11,7 +11,7 @@ Supabase dashboard → dev project:
 | Authentication → Sign In / Providers → Email | Confirm email **on**; minimum password length **8**; required characters **letters and digits** |
 | Authentication → Email (OTP) | OTP length **6**; OTP expiry **3600** s |
 | Authentication → Emails → SMTP | Custom SMTP with Resend: host `smtp.resend.com`, port 465, user `resend`, password = Resend API key, sender from a verified domain |
-| Authentication → Emails → Templates | "Confirm signup" and "Reset password" templates show `{{ .Token }}` and keep the link |
+| Authentication → Emails → Templates | "Confirm signup" shows `{{ .Token }}` and keeps the link; "Reset password" shows `{{ .Token }}` only (the reset screen uses the code; the link would sign in without a new password). Owner confirmed 2026-11-24 |
 | Authentication → Hooks | Customize Access Token (JWT) → Postgres function `public.custom_access_token_hook` |
 | Authentication → URL Configuration | Site URL `http://localhost:3000`; redirect URLs include `http://localhost:3000/**` |
 | Authentication → Providers | Google and Apple stay **off** (FR-001) |
