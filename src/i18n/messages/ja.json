@@ -1292,8 +1292,8 @@
       "offlineWaiting": "オフライン — {count}件の変更はあとで同期されます",
       "offlineAdmin": "オフライン — 保存済みのデータを表示しています",
       "syncing": "同期中{count, plural, =0 {…} other {（#件）…}}",
-      "paused": "変更を同期するにはサインインしてください。",
-      "signIn": "サインイン",
+      "paused": "変更を同期するにはログインしてください。",
+      "signIn": "ログイン",
       "notSaved": "{count}件の変更を保存できませんでした",
       "view": "表示",
       "needsConnection": "編集には接続が必要です"

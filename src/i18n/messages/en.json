@@ -1299,7 +1299,7 @@
       "needsConnection": "Editing needs a connection"
     },
     "dropped": {
-      "title": "{count, plural, one {Not saved} other {Not saved}}",
+      "title": "Not saved",
       "description": "These changes were made offline, but something changed on the server first. The server's version was kept.",
       "overlap": "It overlaps another shift.",
       "copy": "Copy text",

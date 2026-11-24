@@ -55,7 +55,7 @@ export function DroppedChangesSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent className="max-h-[85dvh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{t('title', { count: entries.length })}</SheetTitle>
+          <SheetTitle>{t('title')}</SheetTitle>
           <SheetDescription>{t('description')}</SheetDescription>
         </SheetHeader>
         <ul className="flex flex-col gap-3 px-4">
