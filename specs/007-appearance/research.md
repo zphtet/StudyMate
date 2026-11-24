@@ -53,14 +53,16 @@ Phase 0 decisions for [plan.md](plan.md). Each one records what was chosen, why,
   | --- | --- | --- | --- | --- |
   | Indigo | `#4338ca` (as now) | `#eef2ff` / `#312e81` | `#818cf8` / `#1e1b4b` | `#1e1b4b` / `#e0e7ff` |
   | Ocean | `#0369a1` | `#f0f9ff` / `#0c4a6e` | `#38bdf8` / `#082f49` | `#082f49` / `#e0f2fe` |
-  | Teal | `#0f766e` | `#f0fdfa` / `#134e4a` | `#2dd4bf` / `#042f2e` | `#042f2e` / `#ccfbf1` |
-  | Forest | `#15803d` | `#f0fdf4` / `#14532d` | `#4ade80` / `#052e16` | `#052e16` / `#dcfce7` |
+  | Teal | `#0f766e` | `#f0fdfa` / `#134e4a` | `#14b8a6`* / `#042f2e` | `#042f2e` / `#ccfbf1` |
+  | Forest | `#15803d` | `#f0fdf4` / `#14532d` | `#22c55e`* / `#052e16` | `#052e16` / `#dcfce7` |
   | Sunset | `#c2410c` | `#fff7ed` / `#7c2d12` | `#fb923c` / `#431407` | `#431407` / `#ffedd5` |
   | Rose | `#be123c` | `#fff1f2` / `#881337` | `#fb7185` / `#4c0519` | `#4c0519` / `#ffe4e6` |
   | Sakura | `#be185d` | `#fdf2f8` / `#831843` | `#f472b6` / `#500724` | `#500724` / `#fce7f3` |
   | Lavender | `#6d28d9` | `#f5f3ff` / `#4c1d95` | `#a78bfa` / `#2e1065` | `#2e1065` / `#ede9fe` |
   | Slate | `#334155` | `#f1f5f9` / `#0f172a` | `#94a3b8` / `#020617` | `#1e293b` / `#f1f5f9` |
-  | Mocha | `#92400e` | `#fffbeb` / `#78350f` | `#fbbf24` / `#451a03` | `#451a03` / `#fef3c7` |
+  | Mocha | `#92400e` | `#fffbeb` / `#78350f` | `#d97706`* / `#451a03` | `#451a03` / `#fef3c7` |
+
+  \* Changed in T017 (2026-11-24). The 400 shades (`#2dd4bf`, `#4ade80`, `#fbbf24`) failed one pair: the Progress calendar's `--heat-3` (60% primary on the dark card) under white day numbers, at 4.06, 3.84 and 3.66. Teal and Forest use their 500 shade; Mocha uses amber 600, since amber 500 reached only 4.49. All 20 combinations now pass.
 
   Light `--primary-foreground` is white for every theme. The swatch on the Appearance screen and the Me row is the theme's light primary.
 - **Rationale**: the screenshot keeps neutral surfaces in every theme; six tokens per block keep 20 palettes reviewable and the contrast test small.

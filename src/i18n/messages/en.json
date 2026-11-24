@@ -139,7 +139,7 @@
     "language": "Language",
     "app": "App",
     "appearance": "Appearance",
-    "appearanceValue": "Indigo · Inter · {mode, select, light {Light} dark {Dark} other {Auto}}",
+    "appearanceValue": "{theme} · {font} · {mode, select, light {Light} dark {Dark} other {Auto}}",
     "account": "Account and password",
     "export": "Export my data",
     "study": "Study",
@@ -248,11 +248,27 @@
   },
   "appearance": {
     "title": "Appearance",
+    "preview": "Preview",
     "mode": "Mode",
     "light": "Light",
     "dark": "Dark",
     "auto": "Auto",
-    "more": "More colour themes, fonts and text sizes are coming soon."
+    "colourTheme": "Colour theme · {name}",
+    "themes": {
+      "indigo": "Indigo",
+      "ocean": "Ocean",
+      "teal": "Teal",
+      "forest": "Forest",
+      "sunset": "Sunset",
+      "rose": "Rose",
+      "sakura": "Sakura",
+      "lavender": "Lavender",
+      "slate": "Slate",
+      "mocha": "Mocha"
+    },
+    "previewStreak": "{n}-day streak",
+    "previewLesson": "Particles は vs が",
+    "previewMeta": "JLPT N4 Grammar · 15 min · 私は学生です。"
   },
   "account": {
     "title": "Account and password",

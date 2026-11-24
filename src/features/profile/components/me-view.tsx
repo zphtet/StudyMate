@@ -8,6 +8,7 @@ import { LanguageButtons } from '@/components/shared/language-buttons'
 import { SettingsGroup, SettingsRow, SettingsSection } from '@/components/shared/settings'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/features/auth/actions'
+import { fontName } from '@/lib/appearance'
 import { unsubscribeThisDevice } from '@/lib/push-device'
 import { unwrap } from '@/lib/result'
 import { meQuery } from '../queries'
@@ -85,7 +86,11 @@ export function MeView({
             href={`${base}/appearance`}
             icon={<span className="size-6 rounded-full bg-primary" aria-hidden />}
             label={t('me.appearance')}
-            value={t('me.appearanceValue', { mode: me.colorMode })}
+            value={t('me.appearanceValue', {
+              theme: t(`appearance.themes.${me.themeId}`),
+              font: fontName(me.fontId),
+              mode: me.colorMode,
+            })}
           />
           <SettingsRow href={`${base}/account`} label={t('me.account')} />
           <SettingsRow href="/api/me/export" download label={t('me.export')} />

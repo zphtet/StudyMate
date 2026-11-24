@@ -139,13 +139,13 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T015 [P] [US1] Create the e2e fixtures in tests/e2e/fixtures/appearance.ts:
+- [X] T015 [P] [US1] Create the e2e fixtures in tests/e2e/fixtures/appearance.ts:
   - `setAppearance(userId, look)`: SQL on `profiles` (data-model.md Profile.color_mode, Profile.theme_id, Profile.font_id, Profile.font_scale);
   - `htmlLook(page)`: `data-theme`, `data-font`, `--font-scale`, `.dark`;
   - `primaryOf(page)`: the computed `--primary`.
 
   Reset May to the defaults in `beforeEach` of every appearance spec.
-- [ ] T016 [P] [US1] Write Playwright tests in tests/e2e/us1-themes.spec.ts (390×844 and 1280×800, axe; contracts/ui-routes.md). Cases:
+- [X] T016 [P] [US1] Write Playwright tests in tests/e2e/us1-themes.spec.ts (390×844 and 1280×800, axe; contracts/ui-routes.md). Cases:
   - **scenario 1**: Appearance shows Preview, Mode, "Colour theme · Indigo", Font and Text size, in that order;
   - **scenario 2**: tap Sakura → `data-theme="sakura"`, "Colour theme · Sakura", the swatch is checked, a primary button's background is Sakura's light primary, and the profile row says `sakura`;
   - **scenario 4**: choose Dark → `.dark` with `data-theme="sakura"`, and `--primary` is Sakura's dark primary;
@@ -157,26 +157,26 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Add the 9 × 2 theme blocks to src/app/globals.css after `.dark` (research R4: only the six tokens; values from the R4 table). Adjust a value only where T005 fails, and note any change against research R4. T005 passes for all 20.
-- [ ] T018 [US1] Write the hook src/features/profile/components/use-appearance.ts (research R9; FR-014). It returns the saved look from `meQuery` and `change(partial)`:
+- [X] T017 [US1] Add the 9 × 2 theme blocks to src/app/globals.css after `.dark` (research R4: only the six tokens; values from the R4 table). Adjust a value only where T005 fails, and note any change against research R4. T005 passes for all 20.
+- [X] T018 [US1] Write the hook src/features/profile/components/use-appearance.ts (research R9; FR-014). It returns the saved look from `meQuery` and `change(partial)`:
   - apply at once (`applyAppearance(document, …)`, and `setTheme` for mode);
   - update the `['me']` cache;
   - `useMutation` → `saveAppearance`;
   - on error, re-apply the previous look, restore the cache and `toast.error(errorMessage(error))`.
-- [ ] T019 [US1] Build the components in src/features/profile/components/ (contracts/ui-routes.md › Appearance screen; 12-Appearance.png):
+- [X] T019 [US1] Build the components in src/features/profile/components/ (contracts/ui-routes.md › Appearance screen; 12-Appearance.png):
   - `segmented-choice.tsx`: extracted from today's Mode radiogroup, so Mode and Text size share it; each option can carry a `className` for its label size;
   - `theme-swatches.tsx`: 5-column radiogroup, ≥ 44 px round swatches using each theme's `swatch`, a ring and check on the selected one, the translated name under it;
   - `appearance-preview.tsx` (research R11; FR-011): `useDayPeriod` and `me.displayName`; the card is `role="img"` with an `aria-label`. "Focus 15" and "Mark complete" are styled `span`s, never `<button>` (axe nested-interactive);
   - `appearance-view.tsx`: Preview, Mode, "Colour theme · {name}", via `useAppearance`. Remove the "coming soon" note.
-- [ ] T020 [US1] Update the Me row in src/features/profile/components/me-view.tsx (FR-012; 11-Profile.png): a 20 px swatch as the icon, and the value `t('me.appearanceValue', { theme, font, mode })`, with `font` from `fonts` (not translated). Both roles use this view.
-- [ ] T021 [US1] Add the strings to src/i18n/messages/en.json, my.json and ja.json (FR-013):
+- [X] T020 [US1] Update the Me row in src/features/profile/components/me-view.tsx (FR-012; 11-Profile.png): a 20 px swatch as the icon, and the value `t('me.appearanceValue', { theme, font, mode })`, with `font` from `fonts` (not translated). Both roles use this view.
+- [X] T021 [US1] Add the strings to src/i18n/messages/en.json, my.json and ja.json (FR-013):
   - `appearance.preview`, `appearance.colourTheme` (`"Colour theme · {name}"`) and `appearance.themes.<id>` for all 10;
   - the preview's `previewStreak` (`"{n}-day streak"`), `previewLesson`, `previewMeta`, `focus15` and `markComplete`. The lesson title and meta stay as in the design in every language;
   - change `me.appearanceValue` to `"{theme} · {font} · {mode, select, …}"`;
   - delete `appearance.more`.
 
   No pronouns for students.
-- [ ] T022 [US1] Run src/app/theme-contrast.test.ts (T005) and tests/e2e/us1-themes.spec.ts scenario 2 (T016) with `--grep` on the :3100 build until they pass.
+- [X] T022 [US1] Run src/app/theme-contrast.test.ts (T005) and tests/e2e/us1-themes.spec.ts scenario 2 (T016) with `--grep` on the :3100 build until they pass.
 
 **Checkpoint**: quickstart.md §4 scenarios 1–4 and 13 pass by hand.
 

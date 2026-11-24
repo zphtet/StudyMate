@@ -139,7 +139,7 @@
     "language": "ဘာသာစကား",
     "app": "အက်ပ်",
     "appearance": "အသွင်အပြင်",
-    "appearanceValue": "Indigo · Inter · {mode, select, light {အလင်း} dark {အမှောင်} other {အလိုအလျောက်}}",
+    "appearanceValue": "{theme} · {font} · {mode, select, light {အလင်း} dark {အမှောင်} other {အလိုအလျောက်}}",
     "account": "အကောင့်နှင့် စကားဝှက်",
     "export": "ကျွန်ုပ်၏ ဒေတာ ထုတ်ယူရန်",
     "study": "လေ့လာမှု",
@@ -248,11 +248,27 @@
   },
   "appearance": {
     "title": "အသွင်အပြင်",
+    "preview": "အစမ်းကြည့်ရှုမှု",
     "mode": "မုဒ်",
     "light": "အလင်း",
     "dark": "အမှောင်",
     "auto": "အလိုအလျောက်",
-    "more": "အရောင်အပြင်အဆင်၊ ဖောင့်နှင့် စာလုံးအရွယ်အစားများ မကြာမီ လာမည်။"
+    "colourTheme": "အရောင်အပြင်အဆင် · {name}",
+    "themes": {
+      "indigo": "မဲနယ်",
+      "ocean": "သမုဒ္ဒရာ",
+      "teal": "စိမ်းပြာ",
+      "forest": "သစ်တော",
+      "sunset": "နေဝင်",
+      "rose": "နှင်းဆီ",
+      "sakura": "ဆာကူရာ",
+      "lavender": "လာဗင်ဒါ",
+      "slate": "ကျောက်ပြား",
+      "mocha": "မိုကာ"
+    },
+    "previewStreak": "{n} ရက် ဆက်တိုက်",
+    "previewLesson": "Particles は vs が",
+    "previewMeta": "JLPT N4 Grammar · 15 min · 私は学生です。"
   },
   "account": {
     "title": "အကောင့်နှင့် စကားဝှက်",

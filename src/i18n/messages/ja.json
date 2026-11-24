@@ -139,7 +139,7 @@
     "language": "言語",
     "app": "アプリ",
     "appearance": "外観",
-    "appearanceValue": "インディゴ · Inter · {mode, select, light {ライト} dark {ダーク} other {自動}}",
+    "appearanceValue": "{theme} · {font} · {mode, select, light {ライト} dark {ダーク} other {自動}}",
     "account": "アカウントとパスワード",
     "export": "データをエクスポート",
     "study": "学習",
@@ -248,11 +248,27 @@
   },
   "appearance": {
     "title": "外観",
+    "preview": "プレビュー",
     "mode": "モード",
     "light": "ライト",
     "dark": "ダーク",
     "auto": "自動",
-    "more": "カラーテーマ、フォント、文字サイズは近日公開予定です。"
+    "colourTheme": "カラーテーマ · {name}",
+    "themes": {
+      "indigo": "インディゴ",
+      "ocean": "オーシャン",
+      "teal": "ティール",
+      "forest": "フォレスト",
+      "sunset": "サンセット",
+      "rose": "ローズ",
+      "sakura": "桜",
+      "lavender": "ラベンダー",
+      "slate": "スレート",
+      "mocha": "モカ"
+    },
+    "previewStreak": "{n}日連続",
+    "previewLesson": "Particles は vs が",
+    "previewMeta": "JLPT N4 Grammar · 15 min · 私は学生です。"
   },
   "account": {
     "title": "アカウントとパスワード",

@@ -1,39 +1,23 @@
 'use client'
 
-import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { Palette } from 'lucide-react'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { useTheme } from 'next-themes'
-import { toast } from 'sonner'
+import type { ReactNode } from 'react'
 import type { ColorMode } from '@/lib/appearance'
-import { unwrap } from '@/lib/result'
-import { useErrorMessage } from '@/lib/use-error-message'
-import { cn } from '@/lib/utils'
-import { saveAppearance } from '../actions'
 import { meQuery } from '../queries'
+import { AppearancePreview } from './appearance-preview'
+import { SegmentedChoice } from './segmented-choice'
+import { ThemeSwatches } from './theme-swatches'
+import { useAppearance } from './use-appearance'
 
-// Appearance (screen 12-Appearance). 001 ships Mode only (owner decision 2026-11-20);
-// colour themes, fonts and text size come with feature 007.
+// Appearance (screen 12-Appearance; spec 007 FR-002, contracts/ui-routes.md): the preview card,
+// then Mode, Colour theme, Font and Text size. Every choice applies at once and saves itself.
 export function AppearanceView() {
   const t = useTranslations('appearance')
-  const errorMessage = useErrorMessage()
-  const queryClient = useQueryClient()
   const { data: me } = useSuspenseQuery(meQuery)
-  const { setTheme } = useTheme()
+  const { look, change } = useAppearance()
 
-  const save = useMutation({
-    mutationFn: async (colorMode: ColorMode) => unwrap(await saveAppearance({ colorMode })),
-    onMutate: (colorMode) => {
-      setTheme(colorMode) // apply instantly; the profile keeps it for other devices
-      queryClient.setQueryData(meQuery.queryKey, (old) => (old ? { ...old, colorMode } : old))
-    },
-    onError: (error) => {
-      toast.error(errorMessage(error))
-      queryClient.invalidateQueries({ queryKey: meQuery.queryKey })
-    },
-  })
-
-  const options: { value: ColorMode; label: string }[] = [
+  const modes: { value: ColorMode; label: string }[] = [
     { value: 'light', label: t('light') },
     { value: 'dark', label: t('dark') },
     { value: 'system', label: t('auto') },
@@ -41,40 +25,29 @@ export function AppearanceView() {
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold text-muted-foreground">{t('mode')}</h2>
-        <div
-          role="radiogroup"
-          aria-label={t('mode')}
-          className="grid grid-cols-3 gap-1 rounded-2xl bg-muted p-1.5"
-        >
-          {options.map(({ value, label }) => {
-            const active = me.colorMode === value
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => !active && save.mutate(value)}
-                className={cn(
-                  'min-h-12 rounded-xl text-lg font-medium transition-colors',
-                  active
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      </section>
+      <AppearancePreview name={me.displayName} />
 
-      <p className="flex items-start gap-3 rounded-2xl bg-muted p-4 text-muted-foreground">
-        <Palette className="mt-0.5 size-5 shrink-0" aria-hidden />
-        {t('more')}
-      </p>
+      <Section title={t('mode')}>
+        <SegmentedChoice
+          label={t('mode')}
+          value={look.colorMode}
+          options={modes}
+          onChange={(colorMode) => change({ colorMode })}
+        />
+      </Section>
+
+      <Section title={t('colourTheme', { name: t(`themes.${look.themeId}`) })}>
+        <ThemeSwatches value={look.themeId} onChange={(themeId) => change({ themeId })} />
+      </Section>
     </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-semibold text-muted-foreground">{title}</h2>
+      {children}
+    </section>
   )
 }
