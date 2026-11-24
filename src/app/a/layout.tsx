@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
 import { AppearanceSync } from '@/components/shared/appearance-sync'
 import { MarkReadOnOpen } from '@/features/notifications/components/mark-read-on-open'
+import { InstallPrompt } from '@/features/pwa/components/install-prompt'
 import { toAppearance } from '@/lib/appearance'
 import { requirePageUser } from '@/server/auth/page-guard'
 
@@ -13,6 +14,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <>
       {children}
       <AppearanceSync appearance={toAppearance(me)} />
+      {/* Spec 008 US1. */}
+      <InstallPrompt />
       {/* Spec 006: a tapped notification's ?n=<id>, and the bell after a push. */}
       <Suspense fallback={null}>
         <MarkReadOnOpen />

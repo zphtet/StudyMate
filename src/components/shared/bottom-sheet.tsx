@@ -38,7 +38,8 @@ export function BottomSheetContent({
     <SheetContent
       side="bottom"
       showCloseButton={false}
-      className={cn('rounded-t-3xl', className)}
+      // The home bar's inset when installed (spec 008 R12); 0 in a browser tab.
+      className={cn('rounded-t-3xl pb-[env(safe-area-inset-bottom)]', className)}
       {...props}
     >
       {children}
@@ -60,7 +61,7 @@ export function AdaptiveSheetContent({
       className={
         isWide
           ? 'w-full overflow-y-auto sm:max-w-lg'
-          : 'mx-auto max-h-[92dvh] max-w-xl overflow-y-auto rounded-t-3xl'
+          : 'mx-auto max-h-[92dvh] max-w-xl overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]'
       }
       {...props}
     >

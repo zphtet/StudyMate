@@ -125,13 +125,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Write unit tests in src/features/pwa/install.test.ts (research R12; data-model.md › Browser storage installVisits, installDismissedUntil, installVisitCounted). Cases:
+- [X] T011 [P] [US1] Write unit tests in src/features/pwa/install.test.ts (research R12; data-model.md › Browser storage installVisits, installDismissedUntil, installVisitCounted). Cases:
   - `countVisit()` increments once per session;
   - `shouldOffer({ visits, dismissedUntil, now, isStandalone, platform })` is false on visit 1, true on visit 2, false until `dismissedUntil`, true after it, and false when standalone or `platform: 'none'`;
   - `dismiss(now)` stores `now + 14 d`;
   - `detectPlatform(userAgent, hasPromptEvent)` gives `'prompt'`, `'ios'` (iPhone/iPad Safari, not CriOS/FxiOS) or `'none'`;
   - throwing storage gives "don't offer" without errors.
-- [ ] T012 [P] [US1] Write tests/e2e/us1-install.spec.ts on the production build (spec US1 scenarios 1–3):
+- [X] T012 [P] [US1] Write tests/e2e/us1-install.spec.ts on the production build (spec US1 scenarios 1–3):
   - CDP `Page.getInstallabilityErrors` is empty, and `/manifest.webmanifest` has the icons, `display: standalone` and `id`;
   - 1st visit: no sheet. A new page in the same context after clearing `sessionStorage` (2nd session): "Install StudyMate" sheet. Dispatch a synthetic `beforeinstallprompt` to drive the Chromium path;
   - Not now → gone, and stays gone on a 3rd session. With `installDismissedUntil` in the past → shown;
@@ -139,18 +139,20 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - with `display-mode: standalone` emulated → no sheet; the tab bar's bottom padding includes the safe-area inset (computed style with `env()` emulated through a CSS variable check);
   - axe has no serious violations on the open sheet.
 
+  (Done. The standalone case overrides `matchMedia('(display-mode: standalone)')` in an init script. The safe-area padding check was dropped: Chromium can't emulate `env(safe-area-inset-*)`, so it stays a real-phone check in T059.)
+
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Update src/app/manifest.ts to contracts/service-worker.md › Manifest (`id`, `scope`, `orientation`, the three icons). Replace its comment: 008 FR-001.
-- [ ] T014 [P] [US1] In src/app/layout.tsx, add to the metadata `appleWebApp` (`capable`, `statusBarStyle: 'default'`, `title`) and `icons.apple`, and add `viewportFit: 'cover'` to the viewport (research R12). Keep 007's `ThemeColorMeta`.
-- [ ] T015 [US1] Add safe-area padding (research R12; contracts/ui-routes.md › Accessibility): `pb-[env(safe-area-inset-bottom)]` on the tab bars in src/app/s/(tabs)/layout.tsx and src/app/a/(tabs)/layout.tsx; top inset on the sticky top bars in those layouts (and on the full-screen pages' top bars that don't use them: lesson, shift editor, Admin editors); bottom inset on src/components/shared/bottom-sheet.tsx. Check at 390×844 that nothing moves in the browser (insets are 0 there).
-- [ ] T016 [US1] Write src/features/pwa/install.ts: pure functions plus thin storage wrappers for data-model.md › Browser storage installVisits, installDismissedUntil and installVisitCounted, each `localStorage`/`sessionStorage` access in try/catch. T011 passes.
-- [ ] T017 [US1] Write src/features/pwa/components/install-prompt.tsx (contracts/ui-routes.md › InstallPrompt):
+- [X] T013 [P] [US1] Update src/app/manifest.ts to contracts/service-worker.md › Manifest (`id`, `scope`, `orientation`, the three icons). Replace its comment: 008 FR-001.
+- [X] T014 [P] [US1] In src/app/layout.tsx, add to the metadata `appleWebApp` (`capable`, `statusBarStyle: 'default'`, `title`) and `icons.apple`, and add `viewportFit: 'cover'` to the viewport (research R12). Keep 007's `ThemeColorMeta`.
+- [X] T015 [US1] Add safe-area padding (research R12; contracts/ui-routes.md › Accessibility): `pb-[env(safe-area-inset-bottom)]` on the tab bars in src/app/s/(tabs)/layout.tsx and src/app/a/(tabs)/layout.tsx; top inset on the sticky top bars in those layouts (and on the full-screen pages' top bars that don't use them: lesson, shift editor, Admin editors); bottom inset on src/components/shared/bottom-sheet.tsx. Check at 390×844 that nothing moves in the browser (insets are 0 there). (Done. Already in place from earlier features: the tab bars, AuthShell, Admin welcome and Screen's action bar. Added: the bottom-sheet bottom inset, the four sticky editor headers (shift, rotation, rule, composer), and body inline insets for landscape. Tab-page top bars need nothing: with `statusBarStyle: 'default'`, iOS lays the page out below the status bar.)
+- [X] T016 [US1] Write src/features/pwa/install.ts: pure functions plus thin storage wrappers for data-model.md › Browser storage installVisits, installDismissedUntil and installVisitCounted, each `localStorage`/`sessionStorage` access in try/catch. T011 passes.
+- [X] T017 [US1] Write src/features/pwa/components/install-prompt.tsx (contracts/ui-routes.md › InstallPrompt):
   - capture `beforeinstallprompt` with `preventDefault()`, count the visit on mount, decide with `shouldOffer`;
   - render `BottomSheet` with the Chromium content (Install → `prompt()`, then hide; Not now → `dismiss`) or the iOS steps (lucide `Share`, `SquarePlus`);
   - buttons ≥ 44 px, tokens only.
-- [ ] T018 [US1] Render `<InstallPrompt />` in src/app/s/layout.tsx and src/app/a/layout.tsx (not on auth pages, `/join` or `/~offline`). Add the `pwa.install.*` keys (title, body, install, notNow, iosTitle, iosStep1–3, gotIt) to src/i18n/messages/{en,my,ja}.json; no pronouns.
-- [ ] T019 [US1] Run tests/e2e/us1-install.spec.ts (one `--grep` smoke while iterating) on the production build until green.
+- [X] T018 [US1] Render `<InstallPrompt />` in src/app/s/layout.tsx and src/app/a/layout.tsx (not on auth pages, `/join` or `/~offline`). Add the `pwa.install.*` keys (title, body, install, notNow, iosTitle, iosStep1–3, gotIt) to src/i18n/messages/{en,my,ja}.json; no pronouns.
+- [X] T019 [US1] Run tests/e2e/us1-install.spec.ts (one `--grep` smoke while iterating) on the production build until green. (2026-11-24: 8/8 on mobile and desktop.)
 
 **Checkpoint**: the app installs on both platforms; quickstart.md §4 scenarios 1–4.
 

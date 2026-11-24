@@ -14,6 +14,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: { default: 'StudyMate', template: '%s · StudyMate' },
   description: 'Plan lessons. Study a little every day.',
+  // iPhone and iPad open the Home Screen app full-screen with its own icon (spec 008 US1 scenario 3).
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'StudyMate' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
 }
 
 export const viewport: Viewport = {

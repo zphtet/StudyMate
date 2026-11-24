@@ -203,7 +203,7 @@ function ComposerForm({
 
   return (
     <>
-      <header className="sticky top-0 z-10 -mx-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-background/95 px-3 py-2 backdrop-blur">
+      <header className="sticky top-0 z-10 -mx-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-background/95 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur">
         <Button asChild variant="ghost" size="touch" className="justify-self-start text-primary">
           <Link href={cancelHref}>{t('cancel')}</Link>
         </Button>

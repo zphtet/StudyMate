@@ -1269,6 +1269,17 @@
       "title": "You're offline",
       "body": "Pages you've opened before still work. This one needs a connection.",
       "retry": "Try again"
+    },
+    "install": {
+      "title": "Install StudyMate",
+      "body": "Open it full-screen from your home screen, and keep studying when the connection drops.",
+      "install": "Install",
+      "notNow": "Not now",
+      "iosBody": "Add it to your Home Screen to open it full-screen and keep studying offline.",
+      "iosStep1": "Tap <share></share> Share in Safari's toolbar.",
+      "iosStep2": "Choose <add></add> Add to Home Screen.",
+      "iosStep3": "Tap Add, then open StudyMate from your Home Screen.",
+      "gotIt": "Got it"
     }
   }
 }
