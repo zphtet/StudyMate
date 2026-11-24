@@ -2,14 +2,15 @@
 
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { House } from 'lucide-react'
-import { useNow, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useId, useState, type ReactNode } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { TodayLabel } from '@/components/shared/today-label'
+import { useDayPeriod } from '@/components/shared/use-day-period'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
-import { cityOf, utcToZoned } from '@/lib/time'
+import { cityOf } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { todayQuery } from '../queries'
 import type { TodayItem } from '../types'
@@ -21,14 +22,6 @@ import { DueChip } from './due-chip'
 // in `bottom`; 006's bell in `actions`.
 
 const PAGE = 5
-
-/** morning < 12:00 ≤ afternoon < 18:00 ≤ evening, on the viewer's clock. */
-function useDayPeriod() {
-  const f = useInstantFormat()
-  const now = useNow({ updateInterval: 60_000 })
-  const hour = Number(utcToZoned(now, f.viewerZone).time.slice(0, 2))
-  return hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
-}
 
 export function TodayView({
   name,
