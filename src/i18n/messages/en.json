@@ -1285,7 +1285,6 @@
       "iosStep3": "Tap Add, then open StudyMate from your Home Screen.",
       "gotIt": "Got it"
     },
-    "needsConnection": "Needs a connection",
     "willSync": "Will sync",
     "willSubmit": "Will submit",
     "banner": {
@@ -1296,7 +1295,8 @@
       "paused": "Sign in to sync your changes.",
       "signIn": "Sign in",
       "notSaved": "{count, plural, one {# change wasn't} other {# changes weren't}} saved",
-      "view": "View"
+      "view": "View",
+      "needsConnection": "Editing needs a connection"
     },
     "dropped": {
       "title": "{count, plural, one {Not saved} other {Not saved}}",
@@ -1312,6 +1312,10 @@
       "cancel": "Cancel",
       "confirm": "Sign out"
     },
-    "notOffline": "Not available offline"
+    "notOffline": "Not available offline",
+    "update": {
+      "ready": "Update ready",
+      "reload": "Reload"
+    }
   }
 }

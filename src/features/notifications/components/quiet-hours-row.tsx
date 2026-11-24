@@ -7,6 +7,7 @@ import { useId, useState } from 'react'
 import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { Field, inputClass } from '@/components/shared/field'
 import { Segmented } from '@/components/shared/segmented'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { SettingsRow } from '@/components/shared/settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -80,6 +81,8 @@ function QuietHoursForm({ saved, onSaved }: { saved: Window; onSaved: () => void
   const [start, setStart] = useState(saved?.start ?? SUGGESTED.start)
   const [end, setEnd] = useState(saved?.end ?? SUGGESTED.end)
   const [invalid, setInvalid] = useState<string>()
+  // Saving needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const save = useMutation({
     mutationFn: async (input: Parameters<typeof saveQuietHours>[0]) =>
@@ -91,6 +94,7 @@ function QuietHoursForm({ saved, onSaved }: { saved: Window; onSaved: () => void
   })
 
   const submit = () => {
+    if (connection.disabled) return
     // The actions' schema, so the sheet and the server agree (CLAUDE.md › One source of truth).
     const parsed = saveQuietHoursSchema.safeParse(
       mode === 'none' ? { start: null, end: null } : { start, end },
@@ -151,7 +155,12 @@ function QuietHoursForm({ saved, onSaved }: { saved: Window; onSaved: () => void
           {errorMessage(save.error)}
         </p>
       )}
-      <Button type="submit" size="xl" disabled={save.isPending}>
+      <Button
+        type="submit"
+        size="xl"
+        disabled={connection.disabled || save.isPending}
+        aria-describedby={connection.describedBy}
+      >
         {t('save')}
       </Button>
     </form>

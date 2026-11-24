@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
 import { inputClass } from '@/components/shared/field'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,8 +115,11 @@ export function RotationEditor({
     onError: (e) => setError(errorMessage(e)),
   })
 
+  // Saving and deleting the rotation need the server (spec 008 R14).
+  const connection = useNeedsConnection()
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (connection.disabled) return
     const parsed = saveRotationSchema.safeParse({ sequence, startDate })
     if (!parsed.success) return setError(validation(parsed.error.issues[0]?.message) ?? null)
     setError(null)
@@ -227,7 +231,13 @@ export function RotationEditor({
         {rotation && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" size="xl" disabled={busy}>
+              <Button
+                type="button"
+                variant="destructive"
+                size="xl"
+                disabled={connection.disabled || busy}
+                aria-describedby={connection.describedBy}
+              >
                 <Trash2 aria-hidden />
                 {t('delete')}
               </Button>
@@ -239,7 +249,12 @@ export function RotationEditor({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('keep')}</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => remove.mutate()}>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={connection.disabled}
+                  aria-describedby={connection.describedBy}
+                  onClick={() => remove.mutate()}
+                >
                   {t('delete')}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -249,7 +264,14 @@ export function RotationEditor({
       </form>
 
       <BottomBar>
-        <Button type="submit" form={formId} size="xl" className="flex-1" disabled={busy}>
+        <Button
+          type="submit"
+          form={formId}
+          size="xl"
+          className="flex-1"
+          disabled={connection.disabled || busy}
+          aria-describedby={connection.describedBy}
+        >
           {save.isPending && <Loader2 className="animate-spin" aria-hidden />}
           {t('save')}
         </Button>

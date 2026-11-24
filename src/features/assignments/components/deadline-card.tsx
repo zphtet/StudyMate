@@ -6,6 +6,7 @@ import { GripVertical } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useTimeBoth } from '@/components/shared/time-both'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { cn } from '@/lib/utils'
 import type { DeadlineStatus, PlanCard } from '../types'
 
@@ -47,10 +48,12 @@ export function DeadlineCard({
   const t = useTranslations('deadlines')
   const timeBoth = useTimeBoth()
   const f = useInstantFormat()
+  // Moving a deadline needs the server (spec 008 R14): offline the card still opens, but doesn't move.
+  const connection = useNeedsConnection()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `${card.kind}:${card.id}`,
     data: { card, date },
-    disabled: !card.draggable,
+    disabled: !card.draggable || connection.disabled,
   })
 
   const { status, daysLate } = card.due
@@ -81,6 +84,9 @@ export function DeadlineCard({
         type="button"
         {...attributes}
         {...listeners}
+        aria-describedby={[attributes['aria-describedby'], card.draggable && connection.describedBy]
+          .filter(Boolean)
+          .join(' ')}
         onClick={() => onOpen(card)}
         data-testid="deadline-card"
         className="flex min-h-11 w-full touch-manipulation flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -114,11 +120,14 @@ export function DeadlineCard({
 }
 
 function MoveButton({ label, onClick }: { label: string; onClick: () => void }) {
+  const connection = useNeedsConnection()
   return (
     <button
       type="button"
+      disabled={connection.disabled}
+      aria-describedby={connection.describedBy}
       onClick={onClick}
-      className="min-h-11 rounded-xl bg-warning-foreground px-3 text-sm font-semibold text-warning outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="min-h-11 rounded-xl bg-warning-foreground px-3 text-sm font-semibold text-warning outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
     >
       {label}
     </button>

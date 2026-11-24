@@ -20,6 +20,7 @@ import { BottomBar } from '@/components/layout/screen'
 import { Field, inputClass } from '@/components/shared/field'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { Segmented } from '@/components/shared/segmented'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -125,6 +126,8 @@ function ComposerForm({
   const [choice, setChoice] = useState<Choice>(start.choice)
   const [pick, setPick] = useState(start.pick)
   const [clockChoice, setClockChoice] = useState<Clock>('student')
+  // Offline, sending or saving needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(formSchema),
@@ -190,6 +193,7 @@ function ComposerForm({
     onError: (e) => setError(errorMessage(e)),
   })
   const submit = form.handleSubmit((values) => {
+    if (connection.disabled) return
     setError(null)
     if (!when) return setError(t('pickTimeFirst'))
     save.mutate({ ...values, when })
@@ -437,7 +441,8 @@ function ComposerForm({
           form={`${uid}-form`}
           size="xl"
           className="flex-1"
-          disabled={save.isPending}
+          disabled={connection.disabled || save.isPending}
+          aria-describedby={connection.describedBy}
         >
           {save.isPending && <Loader2 className="animate-spin" aria-hidden />}
           {actionLabel}

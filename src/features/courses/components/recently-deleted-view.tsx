@@ -6,6 +6,7 @@ import { useFormatter, useNow, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-state'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
@@ -24,6 +25,8 @@ export function RecentlyDeletedView() {
   const errorMessage = useErrorMessage()
   const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(recentlyDeletedQuery)
+  // Restoring needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const restore = useMutation({
     mutationFn: async (item: { kind: 'course' | 'lesson'; id: string }) =>
@@ -51,7 +54,8 @@ export function RecentlyDeletedView() {
       variant="outline"
       size="touch"
       aria-label={t('restoreLabel', { title })}
-      disabled={restore.isPending && restore.variables?.id === id}
+      disabled={connection.disabled || (restore.isPending && restore.variables?.id === id)}
+      aria-describedby={connection.describedBy}
       onClick={() => restore.mutate({ kind, id })}
     >
       {t('restore')}

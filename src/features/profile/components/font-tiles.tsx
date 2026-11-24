@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { fonts, type FontId } from '@/lib/appearance'
 import { loadAllLazyFonts } from '@/lib/lazy-fonts'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,8 @@ export function FontTiles({
   onChange: (id: FontId) => void
 }) {
   const showFaces = useWhenIdle()
+  // Each choice saves itself, which needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
   useEffect(() => {
     if (showFaces) void loadAllLazyFonts()
   }, [showFaces])
@@ -33,10 +36,12 @@ export function FontTiles({
             type="button"
             role="radio"
             aria-checked={active}
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
             onClick={() => !active && onChange(id)}
             style={showFaces ? { fontFamily: `var(--font-${id})` } : undefined}
             className={cn(
-              'flex min-h-14 items-center gap-2 rounded-2xl border-2 px-3 py-2 text-left transition-colors',
+              'flex min-h-14 items-center gap-2 rounded-2xl border-2 px-3 py-2 text-left transition-colors disabled:opacity-50',
               active ? 'border-primary bg-accent' : 'border-border bg-card hover:border-input',
             )}
           >

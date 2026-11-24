@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/empty-state'
 import { checkboxClass, checkboxLabelClass } from '@/components/shared/field'
 import { AdaptiveSheetContent } from '@/components/shared/bottom-sheet'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +111,8 @@ function AssignForm({ sheet, onDone }: { sheet: AssignSheetData; onDone: () => v
     notifyNow: false,
   })
   const [isConfirming, setConfirming] = useState(false)
+  // Saving assignments needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const selected = students.filter((s) => rows[s.id].assigned).length
   const leaving = students.filter((s) => s.assigned && !rows[s.id].assigned)
@@ -165,6 +168,7 @@ function AssignForm({ sheet, onDone }: { sheet: AssignSheetData; onDone: () => v
       className="flex flex-col gap-5 px-4 pb-6"
       onSubmit={(e) => {
         e.preventDefault()
+        if (connection.disabled) return
         if (leaving.length > 0) setConfirming(true)
         else save.mutate()
       }}
@@ -209,7 +213,8 @@ function AssignForm({ sheet, onDone }: { sheet: AssignSheetData; onDone: () => v
       <Button
         type="submit"
         size="xl"
-        disabled={save.isPending || (selected === 0 && leaving.length === 0)}
+        disabled={connection.disabled || save.isPending || (selected === 0 && leaving.length === 0)}
+        aria-describedby={connection.describedBy}
       >
         {save.isPending && <Loader2 className="animate-spin" aria-hidden />}
         {t('submit', { count: selected })}
@@ -225,7 +230,12 @@ function AssignForm({ sheet, onDone }: { sheet: AssignSheetData; onDone: () => v
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => save.mutate()}>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={connection.disabled}
+              aria-describedby={connection.describedBy}
+              onClick={() => save.mutate()}
+            >
               {t('confirmAction')}
             </AlertDialogAction>
           </AlertDialogFooter>

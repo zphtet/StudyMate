@@ -38,6 +38,7 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 import { StatusChip } from '@/components/shared/status-chip'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
@@ -348,6 +349,8 @@ function LessonRow({
 }) {
   const t = useTranslations('courseDetail')
   const editUrl = `/a/courses/${courseId}/lessons/${lesson.id}/edit`
+  // Reordering, adding and deleting need the server (spec 008 R14): offline rows don't drag.
+  const connection = useNeedsConnection()
   const {
     attributes,
     listeners,
@@ -356,7 +359,7 @@ function LessonRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: lesson.id })
+  } = useSortable({ id: lesson.id, disabled: connection.disabled })
   const swipe = useSwipeReveal(ACTION_WIDTH * (deleteAction ? 2 : 1))
 
   const meta = [
@@ -404,7 +407,10 @@ function LessonRow({
           {...listeners}
           data-drag-handle
           aria-label={t('reorder', { title: lesson.title })}
-          className="flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing"
+          aria-describedby={[attributes['aria-describedby'], connection.describedBy]
+            .filter(Boolean)
+            .join(' ')}
+          className="flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
         >
           <GripVertical aria-hidden className="size-5" />
         </button>
@@ -429,11 +435,14 @@ function LessonRow({
 /** Delete slot for the swipe actions (US3 passes the button). */
 export function SwipeDeleteButton({ onClick }: { onClick: () => void }) {
   const t = useTranslations('courseDetail')
+  const connection = useNeedsConnection()
   return (
     <button
       type="button"
+      disabled={connection.disabled}
+      aria-describedby={connection.describedBy}
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1 bg-destructive font-medium text-white"
+      className="flex flex-col items-center justify-center gap-1 bg-destructive font-medium text-white disabled:opacity-50"
       style={{ width: ACTION_WIDTH }}
     >
       <Trash2 aria-hidden className="size-5" />
@@ -519,6 +528,7 @@ function AddLesson({ courseId, sectionId }: { courseId: string; sectionId: strin
   const errorMessage = useErrorMessage()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const connection = useNeedsConnection()
   const create = useMutation({
     mutationFn: async () => unwrap(await createLesson({ courseId, sectionId })),
     onSuccess: async ({ id }) => {
@@ -532,7 +542,8 @@ function AddLesson({ courseId, sectionId }: { courseId: string; sectionId: strin
       type="button"
       variant="ghost"
       className="h-14 w-full rounded-none text-base font-semibold text-primary hover:text-primary"
-      disabled={create.isPending}
+      disabled={connection.disabled || create.isPending}
+      aria-describedby={connection.describedBy}
       onClick={() => create.mutate()}
     >
       {create.isPending ? <Loader2 aria-hidden className="animate-spin" /> : <Plus aria-hidden />}
@@ -546,6 +557,7 @@ function AddSection({ courseId }: { courseId: string }) {
   const errorMessage = useErrorMessage()
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
+  const connection = useNeedsConnection()
   const add = useMutation({
     mutationFn: async (title: string) => unwrap(await addSection({ courseId, title })),
     onSuccess: async () => {
@@ -570,6 +582,8 @@ function AddSection({ courseId }: { courseId: string }) {
       type="button"
       variant="outline"
       className="h-14 rounded-3xl border-2 border-dashed bg-transparent text-base font-semibold"
+      disabled={connection.disabled}
+      aria-describedby={connection.describedBy}
       onClick={() => setAdding(true)}
     >
       <Plus aria-hidden /> {t('addSection')}

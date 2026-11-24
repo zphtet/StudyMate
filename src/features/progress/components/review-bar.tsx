@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
 import { useTimeBoth } from '@/components/shared/time-both'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
@@ -24,6 +25,8 @@ export function ReviewBar({ review }: { review: AdminLessonReview }) {
   const timeBoth = useTimeBoth()
   const { student, lesson, progress } = review
   const key = adminProgressKeys.lesson(student.id, lesson.id)
+  // Mark done and Reopen need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const mark = useMutation({
     mutationFn: async (done: boolean) =>
@@ -77,7 +80,8 @@ export function ReviewBar({ review }: { review: AdminLessonReview }) {
             <Button
               variant="outline"
               size="touch"
-              disabled={mark.isPending}
+              disabled={connection.disabled || mark.isPending}
+              aria-describedby={connection.describedBy}
               onClick={() => mark.mutate(false)}
             >
               {t('reopen')}
@@ -87,7 +91,8 @@ export function ReviewBar({ review }: { review: AdminLessonReview }) {
           <Button
             size="xl"
             className="flex-1"
-            disabled={mark.isPending}
+            disabled={connection.disabled || mark.isPending}
+            aria-describedby={connection.describedBy}
             onClick={() => mark.mutate(true)}
           >
             <Check aria-hidden />

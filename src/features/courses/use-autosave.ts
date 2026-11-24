@@ -3,13 +3,15 @@
 import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
+import { useOnline } from '@/components/shared/use-online'
 import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
 import { lessonFieldsSchema, type LessonFields, type LessonFieldsInput } from './schemas'
 
 // Lesson autosave (spec 002 US2 scenario 5, research.md R6). 3 s after the last change every field
 // is saved at once; saves for one lesson run one after another (mutation scope). Pending changes are
 // also saved when the page is hidden, and callers flush before leaving or publishing. While changes
-// are unsaved, closing the tab asks for confirmation.
+// are unsaved, closing the tab asks for confirmation. Offline nothing is sent: changes stay pending
+// and are saved when the connection comes back (spec 008 R14).
 
 export type AutosaveStatus =
   /** everything is stored */
@@ -71,6 +73,7 @@ export function useAutosave({
   const run = useCallback((): Promise<boolean> => {
     clearTimeout(timer.current)
     timer.current = undefined
+    if (!navigator.onLine) return Promise.resolve(false)
     const values = form.getValues()
     if (utf8Bytes(values.contentMd ?? '') > MAX_CONTENT_BYTES) {
       setStatus('paused')
@@ -138,6 +141,12 @@ export function useAutosave({
     })
     return () => subscription.unsubscribe()
   }, [form, delay, run, setStatus])
+
+  // Save what waited while offline as soon as the connection is back.
+  const isOnline = useOnline()
+  useEffect(() => {
+    if (isOnline) void flush()
+  }, [isOnline, flush])
 
   // Save when the page is hidden (tab switch, app switch, screen off).
   useEffect(() => {

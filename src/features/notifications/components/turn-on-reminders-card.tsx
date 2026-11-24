@@ -4,6 +4,7 @@ import { BellRing } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { useDeviceReminders } from '../use-device-reminders'
@@ -17,6 +18,8 @@ export function TurnOnRemindersCard() {
   const errorMessage = useErrorMessage()
   const { state, turnOn, isDismissed, dismiss } = useDeviceReminders()
   const [isGuideOpen, setGuideOpen] = useState(false)
+  // Turning reminders on needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
   if (state === null || state === 'on' || isDismissed) return null
 
   const body =
@@ -49,7 +52,8 @@ export function TurnOnRemindersCard() {
         {state === 'off' && (
           <Button
             size="touch"
-            disabled={turnOn.isPending}
+            disabled={connection.disabled || turnOn.isPending}
+            aria-describedby={connection.describedBy}
             onClick={() =>
               turnOn.mutate(undefined, {
                 onSuccess: () => toast.success(t('turnedOn')),

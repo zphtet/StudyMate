@@ -10,6 +10,7 @@ import type { z } from 'zod'
 import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { ChoiceChip } from '@/components/shared/choice-chip'
 import { Field, inputClass } from '@/components/shared/field'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -79,6 +80,8 @@ function ReminderForm({ reminder, onDone }: { reminder: RuleView | null; onDone:
   const queryClient = useQueryClient()
   const uid = useId()
   const [isConfirmOpen, setConfirmOpen] = useState(false)
+  // Saving and deleting need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(savePersonalReminderSchema),
@@ -112,7 +115,10 @@ function ReminderForm({ reminder, onDone }: { reminder: RuleView | null; onDone:
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((values) => save.mutate(values))}
+      onSubmit={form.handleSubmit((values) => {
+        if (connection.disabled) return
+        save.mutate(values)
+      })}
       className="flex flex-col gap-5 overflow-y-auto px-4 pb-8"
     >
       <Field id={`${uid}-message`} label={t('message')} error={validation(errors.message?.message)}>
@@ -159,7 +165,12 @@ function ReminderForm({ reminder, onDone }: { reminder: RuleView | null; onDone:
           {errorMessage(failed)}
         </p>
       )}
-      <Button type="submit" size="xl" disabled={save.isPending || remove.isPending}>
+      <Button
+        type="submit"
+        size="xl"
+        disabled={connection.disabled || save.isPending || remove.isPending}
+        aria-describedby={connection.describedBy}
+      >
         {t('save')}
       </Button>
       {reminder && (
@@ -170,7 +181,8 @@ function ReminderForm({ reminder, onDone }: { reminder: RuleView | null; onDone:
             size="xl"
             className="text-destructive hover:text-destructive"
             onClick={() => setConfirmOpen(true)}
-            disabled={save.isPending || remove.isPending}
+            disabled={connection.disabled || save.isPending || remove.isPending}
+            aria-describedby={connection.describedBy}
           >
             {t('delete')}
           </Button>
@@ -185,7 +197,8 @@ function ReminderForm({ reminder, onDone }: { reminder: RuleView | null; onDone:
                 <Button
                   variant="destructive"
                   size="touch"
-                  disabled={remove.isPending}
+                  disabled={connection.disabled || remove.isPending}
+                  aria-describedby={connection.describedBy}
                   onClick={() => remove.mutate(reminder.id)}
                 >
                   {t('delete')}

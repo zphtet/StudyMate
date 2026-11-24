@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
 import { StatusChip } from '@/components/shared/status-chip'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { AssignSheet } from '@/features/assignments/components/assign-sheet'
 import { unwrap } from '@/lib/result'
@@ -31,6 +32,8 @@ export function AdminCourseHeader({ detail }: { detail: AdminCourseDetail }) {
   const { course, students } = detail
   const [isAssigning, setAssigning] = useState(false)
   const canAssign = course.status === 'active'
+  // Changing the course status needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const status = useMutation({
     mutationFn: async (next: CourseStatus) =>
@@ -119,7 +122,12 @@ export function AdminCourseHeader({ detail }: { detail: AdminCourseDetail }) {
         <div className="flex items-center gap-3 rounded-2xl bg-accent p-4 text-accent-foreground">
           <EyeOff className="size-5 shrink-0" aria-hidden />
           <p className="flex-1">{t('draftBanner')}</p>
-          <Button size="touch" disabled={status.isPending} onClick={() => status.mutate('active')}>
+          <Button
+            size="touch"
+            disabled={connection.disabled || status.isPending}
+            aria-describedby={connection.describedBy}
+            onClick={() => status.mutate('active')}
+          >
             {t('makeActive')}
           </Button>
         </div>
@@ -131,7 +139,8 @@ export function AdminCourseHeader({ detail }: { detail: AdminCourseDetail }) {
           <Button
             variant="outline"
             size="touch"
-            disabled={status.isPending}
+            disabled={connection.disabled || status.isPending}
+            aria-describedby={connection.describedBy}
             onClick={() => status.mutate('active')}
           >
             {t('unarchive')}

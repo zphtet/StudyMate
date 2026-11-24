@@ -9,6 +9,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Field, inputClass } from '@/components/shared/field'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { TimezonePicker } from '@/components/shared/timezone-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +39,8 @@ export function EditProfileSheet({ me }: { me: MeResponse }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  // Saving the profile needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const form = useForm<Values, unknown, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -70,7 +73,10 @@ export function EditProfileSheet({ me }: { me: MeResponse }) {
         </SheetHeader>
         <form
           noValidate
-          onSubmit={form.handleSubmit((values) => save.mutate(values))}
+          onSubmit={form.handleSubmit((values) => {
+            if (connection.disabled) return
+            save.mutate(values)
+          })}
           className="flex flex-col gap-5 px-4 pb-6"
         >
           <Field id="edit-name" label={t('name')} error={validation(errors.displayName?.message)}>
@@ -92,7 +98,12 @@ export function EditProfileSheet({ me }: { me: MeResponse }) {
               {errorMessage(save.error)}
             </p>
           )}
-          <Button type="submit" size="xl" disabled={save.isPending}>
+          <Button
+            type="submit"
+            size="xl"
+            disabled={connection.disabled || save.isPending}
+            aria-describedby={connection.describedBy}
+          >
             {t('save')}
           </Button>
         </form>

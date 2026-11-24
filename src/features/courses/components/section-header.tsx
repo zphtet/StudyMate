@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { Field, inputClass } from '@/components/shared/field'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -50,6 +51,8 @@ export function SectionHeader({
   const queryClient = useQueryClient()
   const [renaming, setRenaming] = useState(false)
   const keepFocus = useRef(false)
+  // Renaming, moving and deleting sections need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const onSuccess = () => queryClient.invalidateQueries({ queryKey: courseKeys.admin })
   const onError = (error: unknown) => toast.error(errorMessage(error))
@@ -129,6 +132,8 @@ export function SectionHeader({
       >
         <DropdownMenuItem
           className="min-h-11 text-base"
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
           onSelect={() => {
             keepFocus.current = true
             setRenaming(true)
@@ -138,14 +143,16 @@ export function SectionHeader({
         </DropdownMenuItem>
         <DropdownMenuItem
           className="min-h-11 text-base"
-          disabled={isFirst}
+          disabled={connection.disabled || isFirst}
+          aria-describedby={connection.describedBy}
           onSelect={() => move.mutate('up')}
         >
           <ArrowUp aria-hidden /> {t('moveUp')}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="min-h-11 text-base"
-          disabled={isLast}
+          disabled={connection.disabled || isLast}
+          aria-describedby={connection.describedBy}
           onSelect={() => move.mutate('down')}
         >
           <ArrowDown aria-hidden /> {t('moveDown')}
@@ -153,7 +160,8 @@ export function SectionHeader({
         <DropdownMenuItem
           variant="destructive"
           className="min-h-11 text-base"
-          disabled={count > 0}
+          disabled={connection.disabled || count > 0}
+          aria-describedby={connection.describedBy}
           onSelect={() => remove.mutate()}
         >
           <Trash2 aria-hidden />
@@ -202,6 +210,7 @@ export function SectionTitleForm({
   const id = useId()
   const [title, setTitle] = useState(defaultValue)
   const [error, setError] = useState<string>()
+  const connection = useNeedsConnection()
 
   return (
     <form
@@ -209,6 +218,7 @@ export function SectionTitleForm({
       className="flex flex-col gap-3 rounded-3xl border bg-card p-4"
       onSubmit={(event) => {
         event.preventDefault()
+        if (connection.disabled) return
         const parsed = sectionTitleSchema.safeParse(title)
         if (!parsed.success) {
           setError(validation(parsed.error.issues[0]?.message))
@@ -237,7 +247,12 @@ export function SectionTitleForm({
         <Button type="button" variant="ghost" size="touch" onClick={onCancel}>
           {t('cancel')}
         </Button>
-        <Button type="submit" size="touch" disabled={pending}>
+        <Button
+          type="submit"
+          size="touch"
+          disabled={connection.disabled || pending}
+          aria-describedby={connection.describedBy}
+        >
           {submitLabel}
         </Button>
       </div>

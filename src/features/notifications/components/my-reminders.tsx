@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { RuleBadge } from '@/components/shared/rule-badge'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { useRuleText } from '@/components/shared/use-rule-text'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -29,6 +30,8 @@ export function MyReminders({ studentName }: { studentName: string }) {
     reminder: null,
   })
   const admin = data.fromAdmin[0]?.owner.displayName
+  // Adding and switching reminders need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   return (
     <div className="flex flex-col gap-7 pb-8">
@@ -41,6 +44,8 @@ export function MyReminders({ studentName }: { studentName: string }) {
             variant="outline"
             size="touch"
             className="rounded-full"
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
             onClick={() => setSheet({ open: true, reminder: null })}
           >
             <Plus aria-hidden />
@@ -102,6 +107,7 @@ function PersonalRow({
   const queryClient = useQueryClient()
   const errorMessage = useErrorMessage()
   const key = notificationKeys.myReminders
+  const connection = useNeedsConnection()
 
   const toggle = useMutation({
     mutationFn: async (enabled: boolean) => {
@@ -149,6 +155,8 @@ function PersonalRow({
       <span className="flex h-11 w-14 shrink-0 items-center justify-center">
         <Switch
           checked={rule.enabled}
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
           onCheckedChange={(enabled) => toggle.mutate(enabled)}
           aria-label={rule.message}
           className="scale-150"

@@ -6,6 +6,7 @@ import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { StatusChip } from '@/components/shared/status-chip'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,8 @@ export function ScheduledMessageCard({
   const errorMessage = useErrorMessage()
   const { recipients } = message
   const names = format.list(recipients.map((r) => r.student.displayName))
+  // Cancelling a send needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const cancel = useMutation({
     mutationFn: async () => unwrap(await cancelMessage({ id: message.id })),
@@ -107,7 +110,8 @@ export function ScheduledMessageCard({
                 variant="outline"
                 size="touch"
                 className="border-destructive/40 text-destructive"
-                disabled={cancel.isPending}
+                disabled={connection.disabled || cancel.isPending}
+                aria-describedby={connection.describedBy}
               >
                 {t('cancelSend')}
               </Button>
@@ -119,7 +123,12 @@ export function ScheduledMessageCard({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('keep')}</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => cancel.mutate()}>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={connection.disabled}
+                  aria-describedby={connection.describedBy}
+                  onClick={() => cancel.mutate()}
+                >
                   {t('cancelSend')}
                 </AlertDialogAction>
               </AlertDialogFooter>

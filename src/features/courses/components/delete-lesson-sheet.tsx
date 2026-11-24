@@ -5,6 +5,7 @@ import { Info, Loader2, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -48,6 +49,8 @@ export function DeleteLessonSheet({
   const queryClient = useQueryClient()
   const impact = useQuery({ ...lessonImpactQuery(lesson.id), enabled: open })
   const students = impact.data?.students ?? []
+  // Deleting and unpublishing need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const invalidateCourse = () =>
     Promise.all([
@@ -143,14 +146,21 @@ export function DeleteLessonSheet({
           <Button
             size="xl"
             className="bg-destructive text-white hover:bg-destructive/90"
-            disabled={busy}
+            disabled={connection.disabled || busy}
+            aria-describedby={connection.describedBy}
             onClick={() => remove.mutate()}
           >
             {remove.isPending && <Loader2 className="animate-spin" aria-hidden />}
             {t('deleteLesson')}
           </Button>
           {published && (
-            <Button size="xl" variant="outline" disabled={busy} onClick={() => unpublish.mutate()}>
+            <Button
+              size="xl"
+              variant="outline"
+              disabled={connection.disabled || busy}
+              aria-describedby={connection.describedBy}
+              onClick={() => unpublish.mutate()}
+            >
               {unpublish.isPending && <Loader2 className="animate-spin" aria-hidden />}
               {t('unpublishInstead')}
             </Button>

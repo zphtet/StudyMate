@@ -8,6 +8,7 @@ import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import { Markdown } from '@/components/shared/markdown'
 import { useTimeBoth } from '@/components/shared/time-both'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
@@ -196,6 +197,8 @@ function ReviewForm({ review, submissionId }: { review: AdminLessonReview; submi
   const id = useId()
   const [comment, setComment] = useState('')
   const key = adminProgressKeys.lesson(review.student.id, review.lesson.id)
+  // Reviewing needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const decide = useMutation({
     mutationFn: async (status: 'reviewed' | 'needs_redo') =>
@@ -241,13 +244,19 @@ function ReviewForm({ review, submissionId }: { review: AdminLessonReview; submi
           variant="outline"
           size="xl"
           className="border-warning-border text-warning-foreground"
-          disabled={decide.isPending}
+          disabled={connection.disabled || decide.isPending}
+          aria-describedby={connection.describedBy}
           onClick={() => decide.mutate('needs_redo')}
         >
           <RotateCcw aria-hidden />
           {t('needsRedo')}
         </Button>
-        <Button size="xl" disabled={decide.isPending} onClick={() => decide.mutate('reviewed')}>
+        <Button
+          size="xl"
+          disabled={connection.disabled || decide.isPending}
+          aria-describedby={connection.describedBy}
+          onClick={() => decide.mutate('reviewed')}
+        >
           <Check aria-hidden />
           {t('reviewed')}
         </Button>

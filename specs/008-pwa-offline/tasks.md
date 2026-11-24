@@ -221,7 +221,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - an op that throws unexpectedly (mock one `apply`) returns results up to it plus `retry`, and later ops are not applied.
 
   Call the handler with a request built as the existing route tests do.
-- [ ] T029 [P] [US2] Write tests/e2e/fixtures/offline.ts:
+- [X] T029 [P] [US2] Write tests/e2e/fixtures/offline.ts:
   - `goOffline(context)` / `goOnline(context)`;
   - `waitForWorker(page)` (controller set);
   - `outboxRows(page)` (read IndexedDB `studymate.outbox` in the page);
@@ -309,10 +309,12 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - Submit offline → `enqueueSubmit`, with the editor read-only as when submitted and "Will submit";
   - limits from 004 (`MAX_IMAGES`, `MAX_IMAGE_BYTES`).
 - [X] T043 [US2] Write src/features/shifts/overlap.ts (T025 passes) and src/features/shifts/offline.ts (`enqueueShiftSave`/`enqueueShiftDelete`, client-generated id for new shifts, optimistic `shiftKeys` updates, `registerOp` with the shift's local date as label). In src/features/shifts/components/shift-editor.tsx, offline → check `findLocalOverlap` against cached shifts (the same error text as online), then enqueue. Show `SyncPill` on src/features/shifts/components/day-card.tsx and src/features/shifts/components/shift-calendar-row.tsx for pending shifts. (Done. A shift added offline gets a `local:` id: it shows with "Will sync" but isn't linked until it syncs. The student id comes from the sync loop (`outboxUserId`). Found while implementing: offline, a page never opened has no cached copy. So opening Shifts online now also stores the Add shift page and the month's shift pages (`use-keep-shift-pages.ts`); the worker's page cache ignores the query string on a miss; and NewShiftEditor reads `?date=` on the client.)
-- [ ] T044 [US2] Apply `OnlineOnly` to every component in contracts/ui-routes.md › Controls that get `OnlineOnly` (research R14). Disabled controls keep their place, with "Needs a connection" underneath.
+- [X] T044 [US2] Apply `OnlineOnly` to every component in contracts/ui-routes.md › Controls that get `OnlineOnly` (research R14). Disabled controls keep their place, with "Needs a connection" underneath.
   - `use-autosave.ts` (lesson editor) pauses offline and shows the reason instead of failing.
   - Inbox mark-read waits until online.
   - Before committing, re-run `grep -rl useMutation src/features src/components`, and add any component missing from the contract's table to both the table and this change.
+
+  (Done, with a design change. A reason line under each control broke menus, drag handles and button rows, so `useNeedsConnection` disables the control and points `aria-describedby` at the banner's single "Editing needs a connection" sentence (contract and R14 updated). Also covered: the lesson editor's image/audio upload, plan-week dragging, the Turn on reminders card, and the lesson autosave, which holds changes offline and saves them on reconnect (new unit test). Follow-up: the autosave status line still says "Saved hh:mm" while changes wait offline (behaviour predates 008).)
 
   Add tests/e2e/us2-offline.spec.ts › "nothing that can't queue is sent offline": as an Admin and as a student, go offline, visit each tab and each editor screen, and check every control from the table is disabled with its reason. Record `page.on('request')` and check no Server Action POST (`next-action` header) is sent.
 - [X] T045 [US2] Keep courses offline (research R3; data-model.md offlineCourses.*):
@@ -370,13 +372,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T052 [P] Update docs/technical-spec.md:
+- [X] T052 [P] Update docs/technical-spec.md:
   - §10 as built: `@serwist/turbopack` at `/serwist/sw.js`; the R2 cache table; keep-course and eviction; the outbox with coalescing; `/api/sync`; the R7 rules and R8 window; the per-user persisted cache; the update flow; the sign-out wipe;
   - §3: `lib/offline/*`, `features/pwa`, `app/sw.ts`, `app/serwist/[path]/route.ts`, `app/api/sync`, `app/~offline`; remove `public/sw.js`;
   - §7: the Dexie persister instead of `idb-keyval`;
   - §14: the CSP as shipped and why `'unsafe-inline'`;
   - §2: the new packages.
-- [ ] T053 [P] Update docs/data-model.md: `submissions.client_op_id` and `shifts.updated_at` in the model section, and a note that `client_op_id` columns are written by `/api/sync` (008 R7).
+- [X] T053 [P] Update docs/data-model.md: `submissions.client_op_id` and `shifts.updated_at` in the model section, and a note that `client_op_id` columns are written by `/api/sync` (008 R7).
 - [ ] T054 [P] Review the new `my` and `ja` strings (`pwa.*` and the four new `errors.*`) against their `en` meaning, and list them in the commit for the user's review, as 007 did.
 - [ ] T055 At 390×844 and 1280×800, in all 3 languages at Large text (007), check that the banner, install sheet, Not-saved sheet, pills and "Needs a connection" lines fit without clipping, and the tab bar keeps 44 px targets. Fix in the owning component.
 - [ ] T056 Performance (SC-001, SC-002; quickstart.md §5):
@@ -385,7 +387,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - installed cold start with a warm cache under 4× CPU + Slow 4G reaches a usable Today in < 2 s.
 
   Record the numbers here. If restoring the persisted cache delays first render, restore only the `/s` queries for the current route first.
-- [ ] T057 [P] Remove dead code: anything that referenced `public/sw.js`. Check that `useDeviceReminders` has no leftover registration and nothing imports a removed helper.
+- [X] T057 [P] Remove dead code: anything that referenced `public/sw.js`. Check that `useDeviceReminders` has no leftover registration and nothing imports a removed helper.
 - [ ] T058 Gates:
   - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test` and `pnpm test:db`;
   - `rm -rf .next/cache && pnpm build`;

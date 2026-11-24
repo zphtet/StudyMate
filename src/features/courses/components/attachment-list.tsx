@@ -11,6 +11,7 @@ import type { z } from 'zod'
 import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { Field, inputClass } from '@/components/shared/field'
 import { Segmented } from '@/components/shared/segmented'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -66,6 +67,8 @@ export function AttachmentList({
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const uid = useId()
+  // Adding and removing attachments needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const remove = useMutation({
     mutationFn: async (resource: Resource) =>
@@ -110,7 +113,10 @@ export function AttachmentList({
               variant="ghost"
               size="icon-touch"
               aria-label={t('removeAttachment', { name: resource.name })}
-              disabled={remove.isPending && remove.variables?.id === resource.id}
+              disabled={
+                connection.disabled || (remove.isPending && remove.variables?.id === resource.id)
+              }
+              aria-describedby={connection.describedBy}
               onClick={() => remove.mutate(resource)}
             >
               <X aria-hidden />
@@ -124,6 +130,8 @@ export function AttachmentList({
                 type="button"
                 variant="outline"
                 className="h-12 rounded-2xl border-dashed px-4 text-base"
+                disabled={connection.disabled}
+                aria-describedby={connection.describedBy}
               >
                 <Plus aria-hidden /> {t('addAttachment')}
               </Button>
@@ -164,6 +172,7 @@ function AddAttachment({
   const uid = useId()
   const [fileError, setFileError] = useState<string | null>(null)
   const add = useAddResource(lessonId)
+  const connection = useNeedsConnection()
 
   const upload = useMutation({
     mutationFn: async (file: File) =>
@@ -220,7 +229,8 @@ function AddAttachment({
               accept={ALLOWED_MIME_TYPES.join(',')}
               className="sr-only"
               aria-label={t('chooseFile')}
-              disabled={upload.isPending}
+              disabled={connection.disabled || upload.isPending}
+              aria-describedby={connection.describedBy}
               onChange={onFile}
             />
           </label>
@@ -235,12 +245,13 @@ function AddAttachment({
         <form
           noValidate
           className="flex flex-col gap-4"
-          onSubmit={linkForm.handleSubmit((values) =>
+          onSubmit={linkForm.handleSubmit((values) => {
+            if (connection.disabled) return
             add.mutate(values, {
               onSuccess: onDone,
               onError: (error) => toast.error(errorMessage(error)),
-            }),
-          )}
+            })
+          })}
         >
           <Field
             id={`${uid}link-name`}
@@ -265,7 +276,12 @@ function AddAttachment({
               {...linkForm.register('url')}
             />
           </Field>
-          <Button type="submit" size="xl" disabled={add.isPending}>
+          <Button
+            type="submit"
+            size="xl"
+            disabled={connection.disabled || add.isPending}
+            aria-describedby={connection.describedBy}
+          >
             {t('addLink')}
           </Button>
         </form>

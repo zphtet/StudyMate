@@ -222,7 +222,7 @@ Every op carries its `id` (op id), the `base` it was made on and the device time
   - draft save (text and photos) and Submit;
   - focus start, stop and auto-stop;
   - add, edit and delete of a single shift.
-- **Disabled with a reason**: every other write. The button stays visible and disabled, with "Needs a connection" beneath it (`pwa.needsConnection`), through a shared `OnlineOnly` wrapper (`src/components/shared/online-only.tsx`) built on `useOnline`. That covers:
+- **Disabled with a reason**: every other write. The control stays visible and disabled; the banner says "Editing needs a connection" once for the screen, and each control points to it with `aria-describedby` (`useNeedsConnection`, `src/components/shared/use-needs-connection.ts`). A line under every control (the first design) broke menus, drag handles and button rows (T044). That covers:
   - Admin editors and actions;
   - Notes;
   - rotation;

@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { RuleBadge } from '@/components/shared/rule-badge'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { useRuleText } from '@/components/shared/use-rule-text'
 import { Switch } from '@/components/ui/switch'
 import type { RuleView } from '@/lib/notifications/rule-config'
@@ -34,6 +35,8 @@ export function RuleRow({
   const queryClient = useQueryClient()
   const errorMessage = useErrorMessage()
   const listKey = alertKeys.list(scope)
+  // Turning a rule on or off needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const toggle = useMutation({
     mutationFn: async (enabled: boolean) => unwrap(await setRuleEnabled({ id: rule.id, enabled })),
@@ -74,6 +77,8 @@ export function RuleRow({
       <span className="flex h-11 w-14 shrink-0 items-center justify-center">
         <Switch
           checked={rule.enabled}
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
           onCheckedChange={(enabled) => toggle.mutate(enabled)}
           aria-label={title}
           className="scale-150"

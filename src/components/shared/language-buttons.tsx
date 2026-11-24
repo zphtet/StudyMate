@@ -7,6 +7,7 @@ import { useTransition } from 'react'
 import { setLocale } from '@/features/auth/actions'
 import { localeNames, locales, type Locale } from '@/i18n/locales'
 import { cn } from '@/lib/utils'
+import { useNeedsConnection } from './use-needs-connection'
 
 // Language on Me (screen 11-Profile): three buttons, each in its own script.
 export function LanguageButtons({ label }: { label: string }) {
@@ -14,6 +15,8 @@ export function LanguageButtons({ label }: { label: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [pending, startTransition] = useTransition()
+  // The language is saved to the account, which needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const choose = (locale: Locale) => {
     if (locale === current) return
@@ -36,7 +39,8 @@ export function LanguageButtons({ label }: { label: string }) {
             role="radio"
             aria-checked={active}
             lang={locale}
-            disabled={pending}
+            disabled={connection.disabled || pending}
+            aria-describedby={connection.describedBy}
             onClick={() => choose(locale)}
             className={cn(
               'min-h-13 rounded-lg border-2 bg-card px-2 text-lg font-medium transition-colors disabled:opacity-60',

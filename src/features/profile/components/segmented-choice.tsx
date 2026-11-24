@@ -1,5 +1,6 @@
 'use client'
 
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { cn } from '@/lib/utils'
 
 /**
@@ -18,6 +19,8 @@ export function SegmentedChoice<T extends string>({
   options: { value: T; label: string; labelClassName?: string }[]
   onChange: (value: T) => void
 }) {
+  // Each choice saves itself, which needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
   return (
     <div
       role="radiogroup"
@@ -32,11 +35,13 @@ export function SegmentedChoice<T extends string>({
             type="button"
             role="radio"
             aria-checked={active}
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
             onClick={() => !active && onChange(option.value)}
             className={cn(
               // Burmese has no spaces to wrap at, so a long label may break anywhere (spec Edge
               // Cases: wrap, don't overflow, at Large text).
-              'min-h-12 rounded-xl px-2 py-1 text-lg leading-tight font-medium [overflow-wrap:anywhere] transition-colors',
+              'min-h-12 rounded-xl px-2 py-1 text-lg leading-tight font-medium [overflow-wrap:anywhere] transition-colors disabled:opacity-50',
               active
                 ? 'bg-card text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',

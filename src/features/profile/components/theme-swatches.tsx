@@ -2,6 +2,7 @@
 
 import { Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { themes, type ThemeId } from '@/lib/appearance'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +19,8 @@ export function ThemeSwatches({
   onChange: (id: ThemeId) => void
 }) {
   const t = useTranslations('appearance')
+  // Each choice saves itself, which needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
   return (
     <div
       role="radiogroup"
@@ -32,8 +35,10 @@ export function ThemeSwatches({
             type="button"
             role="radio"
             aria-checked={active}
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
             onClick={() => !active && onChange(id)}
-            className="group flex min-w-0 flex-col items-center gap-2 rounded-xl py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group flex min-w-0 flex-col items-center gap-2 rounded-xl py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
             <span
               className={cn(

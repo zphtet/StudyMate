@@ -7,6 +7,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { Field, inputClass } from '@/components/shared/field'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -89,6 +90,8 @@ function SettingsForm({ settings, onDone }: { settings: ShiftSettings; onDone: (
     wakingEnd: settings.wakingEnd,
   }))
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Saving settings needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const save = useMutation({
     mutationFn: async () => unwrap(await saveShiftSettings(form)),
@@ -102,6 +105,7 @@ function SettingsForm({ settings, onDone }: { settings: ShiftSettings; onDone: (
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (connection.disabled) return
     const found = fieldErrors(form)
     setErrors(found)
     if (Object.keys(found).length === 0) save.mutate()
@@ -196,7 +200,12 @@ function SettingsForm({ settings, onDone }: { settings: ShiftSettings; onDone: (
         </div>
       </fieldset>
 
-      <Button type="submit" size="xl" disabled={save.isPending}>
+      <Button
+        type="submit"
+        size="xl"
+        disabled={connection.disabled || save.isPending}
+        aria-describedby={connection.describedBy}
+      >
         {save.isPending && <Loader2 className="animate-spin" aria-hidden />}
         {t('save')}
       </Button>

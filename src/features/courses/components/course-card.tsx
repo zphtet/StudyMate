@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { InitialAvatar } from '@/components/shared/initial-avatar'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -35,6 +36,8 @@ export function CourseCard({
   const errorMessage = useErrorMessage()
   const router = useRouter()
   const queryClient = useQueryClient()
+  // Duplicating needs the server (spec 008 R14); Open and Edit stay available.
+  const connection = useNeedsConnection()
 
   const duplicate = useMutation({
     mutationFn: async () => unwrap(await duplicateCourse({ sourceId: course.id })),
@@ -105,7 +108,12 @@ export function CourseCard({
               <Pencil aria-hidden /> {t('edit')}
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11 text-base" onSelect={() => duplicate.mutate()}>
+          <DropdownMenuItem
+            className="min-h-11 text-base"
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
+            onSelect={() => duplicate.mutate()}
+          >
             <Copy aria-hidden /> {t('duplicate')}
           </DropdownMenuItem>
           {extraItems}

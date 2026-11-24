@@ -8,6 +8,7 @@ import { Markdown } from '@/components/shared/markdown'
 import { MdTextarea } from '@/components/shared/md-textarea'
 import { Segmented } from '@/components/shared/segmented'
 import { useMediaQuery } from '@/components/shared/use-media-query'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
 import { useErrorMessage } from '@/lib/use-error-message'
@@ -49,6 +50,8 @@ export function LessonEditor({
   const wide = useMediaQuery('(min-width: 1024px)')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
   const [uploading, setUploading] = useState<'image' | 'audio' | null>(null)
+  // Uploads need the server (spec 008 R14).
+  const connection = useNeedsConnection()
   const area = useRef<HTMLDivElement>(null)
   const imageInput = useRef<HTMLInputElement>(null)
   const audioInput = useRef<HTMLInputElement>(null)
@@ -144,7 +147,8 @@ export function LessonEditor({
               size="icon-touch"
               aria-label={t('insertImage')}
               title={t('insertImage')}
-              disabled={toolsDisabled || uploading !== null}
+              disabled={toolsDisabled || uploading !== null || connection.disabled}
+              aria-describedby={connection.describedBy}
               onClick={() => imageInput.current?.click()}
             >
               {uploading === 'image' ? (
@@ -159,7 +163,8 @@ export function LessonEditor({
               size="icon-touch"
               aria-label={t('insertAudio')}
               title={t('insertAudio')}
-              disabled={toolsDisabled || uploading !== null}
+              disabled={toolsDisabled || uploading !== null || connection.disabled}
+              aria-describedby={connection.describedBy}
               onClick={() => audioInput.current?.click()}
             >
               {uploading === 'audio' ? (

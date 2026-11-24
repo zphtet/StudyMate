@@ -5,6 +5,7 @@ import { CalendarCheck } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
@@ -28,6 +29,8 @@ export function WeekCheckCard() {
   const queryClient = useQueryClient()
   const now = useMinuteClock()
   const { data } = useQuery(shiftsTodayQuery)
+  // Both answers store the confirmation, which needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const confirm = useMutation({
     mutationFn: async () => unwrap(await confirmShiftWeek({})),
@@ -78,11 +81,19 @@ export function WeekCheckCard() {
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" size="touch" onClick={() => confirm.mutate(check.week)}>
+        <Button
+          variant="outline"
+          size="touch"
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
+          onClick={() => confirm.mutate(check.week)}
+        >
           {t('confirm')}
         </Button>
         <Button
           size="touch"
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
           onClick={() => {
             confirm.mutate(check.week)
             router.push(`/s/shifts?month=${check.week.slice(0, 7)}&day=${check.week}`)

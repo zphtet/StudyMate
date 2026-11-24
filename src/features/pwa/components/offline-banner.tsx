@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { NEEDS_CONNECTION_ID } from '@/components/shared/use-needs-connection'
 import { useOnline } from '@/components/shared/use-online'
 import { useOutboxState } from '@/lib/offline/sync'
 import { DroppedChangesSheet } from './dropped-changes-sheet'
@@ -60,7 +61,16 @@ export function OfflineBanner({ userId, role }: { userId: string; role: 'student
           ) : (
             <CloudOff className="size-4 shrink-0" aria-hidden />
           )}
-          <span>{message}</span>
+          <span>
+            {message}
+            {/* Why other writes are disabled (R14): said once, pointed to by each control. */}
+            {!isOnline && !isPaused && (
+              <>
+                {' · '}
+                <span id={NEEDS_CONNECTION_ID}>{t('needsConnection')}</span>
+              </>
+            )}
+          </span>
           {isPaused && (
             <Link
               href={`/sign-in?next=${encodeURIComponent(pathname)}`}

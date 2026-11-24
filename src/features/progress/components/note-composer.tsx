@@ -5,6 +5,7 @@ import { Send } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useId, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { unwrap } from '@/lib/result'
@@ -40,6 +41,8 @@ export function NoteComposer({
   const id = useId()
   const [body, setBody] = useState('')
   const notesKey = lessonWorkKeys.notes(lessonId, studentId)
+  // Posting a note needs the server (spec 008 R14); typing stays possible.
+  const connection = useNeedsConnection()
 
   const post = useMutation({
     mutationFn: async (text: string) =>
@@ -75,6 +78,7 @@ export function NoteComposer({
   const valid = commentBodySchema.safeParse(body).success
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
+    if (connection.disabled) return
     if (valid) post.mutate(body)
   }
 
@@ -98,7 +102,12 @@ export function NoteComposer({
             {t('counter', { count: body.length, max: MAX })}
           </span>
         )}
-        <Button type="submit" size="touch" disabled={!valid || post.isPending}>
+        <Button
+          type="submit"
+          size="touch"
+          disabled={connection.disabled || !valid || post.isPending}
+          aria-describedby={connection.describedBy}
+        >
           <Send aria-hidden />
           {t('send')}
         </Button>

@@ -1285,7 +1285,6 @@
       "iosStep3": "「追加」をタップし、ホーム画面からStudyMateを開きます。",
       "gotIt": "わかりました"
     },
-    "needsConnection": "接続が必要です",
     "willSync": "あとで同期",
     "willSubmit": "あとで提出",
     "banner": {
@@ -1296,7 +1295,8 @@
       "paused": "変更を同期するにはサインインしてください。",
       "signIn": "サインイン",
       "notSaved": "{count}件の変更を保存できませんでした",
-      "view": "表示"
+      "view": "表示",
+      "needsConnection": "編集には接続が必要です"
     },
     "dropped": {
       "title": "保存できませんでした",
@@ -1312,6 +1312,10 @@
       "cancel": "キャンセル",
       "confirm": "ログアウト"
     },
-    "notOffline": "オフラインでは開けません"
+    "notOffline": "オフラインでは開けません",
+    "update": {
+      "ready": "アップデートの準備ができました",
+      "reload": "再読み込み"
+    }
   }
 }

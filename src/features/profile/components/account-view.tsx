@@ -10,6 +10,7 @@ import type { z } from 'zod'
 import { Field, inputClass } from '@/components/shared/field'
 import { PasswordChecks } from '@/components/shared/password-checks'
 import { PasswordInput } from '@/components/shared/password-input'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -52,6 +53,8 @@ function ChangePasswordForm() {
   })
   const newPassword = useWatch({ control: form.control, name: 'newPassword' })
   const { errors } = form.formState
+  // Changing the password and deleting the account need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const save = useMutation({
     mutationFn: async (values: z.output<typeof changePasswordSchema>) =>
@@ -67,7 +70,10 @@ function ChangePasswordForm() {
       <h2 className="text-lg font-semibold">{t('changePassword')}</h2>
       <form
         noValidate
-        onSubmit={form.handleSubmit((values) => save.mutate(values))}
+        onSubmit={form.handleSubmit((values) => {
+          if (connection.disabled) return
+          save.mutate(values)
+        })}
         className="flex flex-col gap-4 rounded-2xl border bg-card p-4"
       >
         <Field
@@ -96,7 +102,12 @@ function ChangePasswordForm() {
             {errorMessage(save.error)}
           </p>
         )}
-        <Button type="submit" size="xl" disabled={save.isPending}>
+        <Button
+          type="submit"
+          size="xl"
+          disabled={connection.disabled || save.isPending}
+          aria-describedby={connection.describedBy}
+        >
           {save.isPending ? tc('loading') : t('save')}
         </Button>
       </form>
@@ -110,6 +121,7 @@ function DeleteAccount() {
   const errorMessage = useErrorMessage()
   const { data: me } = useSuspenseQuery(meQuery)
   const [confirm, setConfirm] = useState('')
+  const connection = useNeedsConnection()
 
   const remove = useMutation({
     mutationFn: async () => unwrap(await deleteAccount({ confirm })),
@@ -129,6 +141,8 @@ function DeleteAccount() {
             variant="outline"
             size="xl"
             className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+            disabled={connection.disabled}
+            aria-describedby={connection.describedBy}
           >
             {t('deleteButton')}
           </Button>
@@ -156,7 +170,8 @@ function DeleteAccount() {
             <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
             <Button
               variant="destructive"
-              disabled={confirm !== 'DELETE' || remove.isPending}
+              disabled={connection.disabled || confirm !== 'DELETE' || remove.isPending}
+              aria-describedby={connection.describedBy}
               onClick={() => remove.mutate()}
             >
               {t('confirmAction')}

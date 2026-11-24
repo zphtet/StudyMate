@@ -26,11 +26,16 @@ export function SettingsRow({
   icon,
   label,
   value,
+  disabled,
+  describedBy,
 }: {
   /** A link row, or with `onClick` a button row (e.g. one that opens a sheet). */
   href?: string
   onClick?: () => void
   download?: boolean
+  /** Button rows only, e.g. a write that needs a connection (spec 008 R14). */
+  disabled?: boolean
+  describedBy?: string
   icon?: ReactNode
   label: string
   value?: ReactNode
@@ -58,7 +63,13 @@ export function SettingsRow({
   const className = 'flex min-h-15 items-center gap-3 px-4 py-3 hover:bg-muted/50'
   if (!href) {
     return (
-      <button type="button" onClick={onClick} className={`${className} w-full text-left`}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-describedby={describedBy}
+        className={`${className} w-full text-left disabled:opacity-50`}
+      >
         {content}
       </button>
     )

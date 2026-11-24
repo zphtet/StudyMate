@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
@@ -23,6 +24,8 @@ export function CourseLifecycleItems({
   const t = useTranslations('courses')
   const errorMessage = useErrorMessage()
   const queryClient = useQueryClient()
+  // Archiving and deleting need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const status = useMutation({
     mutationFn: async (next: 'active' | 'archived') =>
@@ -37,17 +40,33 @@ export function CourseLifecycleItems({
   return (
     <>
       {course.status === 'active' && (
-        <DropdownMenuItem className="min-h-11 text-base" onSelect={() => status.mutate('archived')}>
+        <DropdownMenuItem
+          className="min-h-11 text-base"
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
+          onSelect={() => status.mutate('archived')}
+        >
           <Archive aria-hidden /> {t('archive')}
         </DropdownMenuItem>
       )}
       {course.status === 'archived' && (
-        <DropdownMenuItem className="min-h-11 text-base" onSelect={() => status.mutate('active')}>
+        <DropdownMenuItem
+          className="min-h-11 text-base"
+          disabled={connection.disabled}
+          aria-describedby={connection.describedBy}
+          onSelect={() => status.mutate('active')}
+        >
           <ArchiveRestore aria-hidden /> {t('unarchive')}
         </DropdownMenuItem>
       )}
       <DropdownMenuSeparator />
-      <DropdownMenuItem variant="destructive" className="min-h-11 text-base" onSelect={onDelete}>
+      <DropdownMenuItem
+        variant="destructive"
+        className="min-h-11 text-base"
+        disabled={connection.disabled}
+        aria-describedby={connection.describedBy}
+        onSelect={onDelete}
+      >
         <Trash2 aria-hidden /> {t('deleteCourse')}
       </DropdownMenuItem>
     </>

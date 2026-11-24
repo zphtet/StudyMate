@@ -184,6 +184,28 @@ describe('useAutosave', () => {
     expect(result.current.autosave.status).toBe('saved')
   })
 
+  test('offline, keeps changes pending and saves them when the connection is back', async () => {
+    const { save, calls } = deferredSave()
+    const { result } = setup(save)
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    act(() => window.dispatchEvent(new Event('offline')))
+    act(() => result.current.form.setValue('title', 'Written offline'))
+    await advance(3000)
+    expect(save).not.toHaveBeenCalled()
+    expect(result.current.autosave.status).toBe('pending')
+    expect(result.current.autosave.unsaved).toBe(true)
+
+    onLine.mockReturnValue(true)
+    await act(async () => {
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(calls[0].values.title).toBe('Written offline')
+    await act(async () => calls[0].resolve('2026-11-21T04:05:00.000Z'))
+    expect(result.current.autosave.status).toBe('saved')
+    onLine.mockRestore()
+  })
+
   test('warns before unload while changes are unsaved', async () => {
     const { save, calls } = deferredSave()
     const { result } = setup(save)

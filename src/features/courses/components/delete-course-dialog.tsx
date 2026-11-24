@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -40,6 +41,8 @@ export function DeleteCourseDialog({
   const queryClient = useQueryClient()
   const inputId = useId()
   const [typed, setTyped] = useState('')
+  // Deleting needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const remove = useMutation({
     mutationFn: async (target: { id: string; title: string }) =>
@@ -91,7 +94,8 @@ export function DeleteCourseDialog({
           <Button
             size="touch"
             className="bg-destructive text-white hover:bg-destructive/90"
-            disabled={!matches || remove.isPending}
+            disabled={connection.disabled || !matches || remove.isPending}
+            aria-describedby={connection.describedBy}
             onClick={() => course && remove.mutate(course)}
           >
             {remove.isPending && <Loader2 className="animate-spin" aria-hidden />}

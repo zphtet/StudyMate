@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { SettingsRow } from '@/components/shared/settings'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -28,6 +29,10 @@ export function DeviceRemindersRow() {
   const { state, turnOn, turnOff } = useDeviceReminders()
   const [isGuideOpen, setGuideOpen] = useState(false)
   const [isConfirmOpen, setConfirmOpen] = useState(false)
+  // Turning reminders on or off needs the server (spec 008 R14); the install guide and the
+  // "blocked" explanation don't.
+  const connection = useNeedsConnection()
+  const isWrite = state === 'on' || state === 'off'
 
   const value =
     state === 'on'
@@ -57,6 +62,8 @@ export function DeviceRemindersRow() {
     <>
       <SettingsRow
         onClick={onClick}
+        disabled={isWrite && connection.disabled}
+        describedBy={isWrite ? connection.describedBy : undefined}
         icon={<BellRing className="size-5 text-primary" aria-hidden />}
         label={t('row')}
         value={value}
@@ -72,7 +79,8 @@ export function DeviceRemindersRow() {
             <AlertDialogCancel size="touch">{t('cancel')}</AlertDialogCancel>
             <Button
               size="touch"
-              disabled={turnOff.isPending}
+              disabled={connection.disabled || turnOff.isPending}
+              aria-describedby={connection.describedBy}
               onClick={() =>
                 turnOff.mutate(undefined, {
                   onSuccess: () => setConfirmOpen(false),

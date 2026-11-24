@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
 import { checkboxClass, checkboxLabelClass, Field, inputClass } from '@/components/shared/field'
 import { Segmented } from '@/components/shared/segmented'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -61,6 +62,8 @@ export function CourseForm(props: Props) {
   const queryClient = useQueryClient()
   const editing = props.mode === 'edit' ? props.course : null
   const archived = editing?.status === 'archived'
+  // Creating or saving a course needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const [start, setStart] = useState<'blank' | 'copy'>('blank')
   // Hidden copies of recent screens stay in the page (Next), so ids are per instance.
@@ -107,7 +110,10 @@ export function CourseForm(props: Props) {
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((values) => save.mutate(values))}
+      onSubmit={form.handleSubmit((values) => {
+        if (connection.disabled) return
+        save.mutate(values)
+      })}
       className="flex flex-col gap-6"
     >
       <header className="grid grid-cols-[1fr_auto_1fr] items-center pt-5 pb-1">
@@ -282,7 +288,8 @@ export function CourseForm(props: Props) {
           type="submit"
           size="xl"
           className="w-full"
-          disabled={save.isPending || copyNotChosen}
+          disabled={connection.disabled || save.isPending || copyNotChosen}
+          aria-describedby={connection.describedBy}
         >
           {editing ? t('save') : t('create')}
         </Button>

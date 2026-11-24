@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { BottomSheetContent } from '@/components/shared/bottom-sheet'
 import { SettingsRow } from '@/components/shared/settings'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { progressKeys } from '@/features/progress/queries'
@@ -28,6 +29,8 @@ export function WeeklyGoalSheet({ days }: { days: number }) {
   const queryClient = useQueryClient()
   const errorMessage = useErrorMessage()
   const [open, setOpen] = useState(false)
+  // Choosing a goal saves it at once, which needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   const save = useMutation({
     mutationFn: async (next: number) => unwrap(await setWeeklyGoal({ days: next })),
@@ -80,6 +83,8 @@ export function WeeklyGoalSheet({ days }: { days: number }) {
                 variant={n === days ? 'default' : 'outline'}
                 size="touch"
                 className={cn('px-0 text-base tabular-nums', n === days && 'font-semibold')}
+                disabled={connection.disabled}
+                aria-describedby={connection.describedBy}
                 onClick={() => save.mutate(n)}
               >
                 {n}

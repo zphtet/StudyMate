@@ -11,6 +11,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
 import { checkboxClass, checkboxLabelClass, Field, inputClass } from '@/components/shared/field'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -160,6 +161,8 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
   }
 
   const busy = status.isPending
+  // Saving, publishing and deleting need the server (spec 008 R14); autosave waits on its own.
+  const connection = useNeedsConnection()
   const previous = lesson.previousLesson
 
   return (
@@ -349,7 +352,8 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
           size="icon-touch"
           className="size-13 rounded-xl text-destructive"
           aria-label={tDelete('deleteLesson')}
-          disabled={busy}
+          disabled={connection.disabled || busy}
+          aria-describedby={connection.describedBy}
           onClick={() => setDeleting(true)}
         >
           <Trash2 aria-hidden />
@@ -361,7 +365,8 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
               variant="outline"
               size="xl"
               className="flex-1"
-              disabled={busy}
+              disabled={connection.disabled || busy}
+              aria-describedby={connection.describedBy}
               onClick={() => void saveAndLeave()}
             >
               {t('saveDraft')}
@@ -370,7 +375,8 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
               type="button"
               size="xl"
               className="flex-1"
-              disabled={busy}
+              disabled={connection.disabled || busy}
+              aria-describedby={connection.describedBy}
               onClick={() => void changeStatus('published')}
             >
               {t('publish')}
@@ -383,7 +389,8 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
               variant="outline"
               size="xl"
               className="flex-1"
-              disabled={busy}
+              disabled={connection.disabled || busy}
+              aria-describedby={connection.describedBy}
               onClick={() => void changeStatus('draft')}
             >
               {t('unpublish')}
@@ -392,7 +399,8 @@ export function LessonEditForm({ lessonId }: { lessonId: string }) {
               type="button"
               size="xl"
               className="flex-1"
-              disabled={busy}
+              disabled={connection.disabled || busy}
+              aria-describedby={connection.describedBy}
               onClick={() => void saveAndLeave()}
             >
               {t('save')}

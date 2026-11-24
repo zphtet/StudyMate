@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
 import { checkboxClass, checkboxLabelClass, Field, inputClass } from '@/components/shared/field'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -183,6 +184,8 @@ function RuleForm({
     onError: (e) => setError(errorMessage(e)),
   })
   const busy = save.isPending || test.isPending || remove.isPending
+  // Saving, testing and deleting need the server (spec 008 R14).
+  const connection = useNeedsConnection()
 
   return (
     <>
@@ -197,7 +200,8 @@ function RuleForm({
           variant="ghost"
           size="touch"
           className="font-semibold text-primary"
-          disabled={busy}
+          disabled={connection.disabled || busy}
+          aria-describedby={connection.describedBy}
         >
           {save.isPending && <Loader2 className="animate-spin" aria-hidden />}
           {t('save')}
@@ -208,6 +212,7 @@ function RuleForm({
         id={formId}
         noValidate
         onSubmit={form.handleSubmit((values) => {
+          if (connection.disabled) return
           setError(null)
           save.mutate(values)
         })}
@@ -317,7 +322,13 @@ function RuleForm({
         {rule && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" size="xl" disabled={busy}>
+              <Button
+                type="button"
+                variant="destructive"
+                size="xl"
+                disabled={connection.disabled || busy}
+                aria-describedby={connection.describedBy}
+              >
                 <Trash2 aria-hidden />
                 {t('delete')}
               </Button>
@@ -329,7 +340,12 @@ function RuleForm({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('keep')}</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={() => remove.mutate(rule.id)}>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={connection.disabled}
+                  aria-describedby={connection.describedBy}
+                  onClick={() => remove.mutate(rule.id)}
+                >
                   {t('delete')}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -344,7 +360,8 @@ function RuleForm({
           variant="outline"
           size="xl"
           className="flex-1"
-          disabled={busy}
+          disabled={connection.disabled || busy}
+          aria-describedby={connection.describedBy}
           onClick={form.handleSubmit((values) => test.mutate(values))}
         >
           {test.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Send aria-hidden />}

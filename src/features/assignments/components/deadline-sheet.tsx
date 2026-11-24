@@ -7,6 +7,7 @@ import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import { inputClass } from '@/components/shared/field'
 import { AdaptiveSheetContent } from '@/components/shared/bottom-sheet'
+import { useNeedsConnection } from '@/components/shared/use-needs-connection'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -103,6 +104,8 @@ function DeadlineForm({
   const t = useTranslations('plan')
   const id = useId()
   const save = useSetDeadline(student.id)
+  // Setting or removing a deadline needs the server (spec 008 R14).
+  const connection = useNeedsConnection()
   const [courseId, setCourseId] = useState(editing?.courseId ?? courses[0]?.id ?? '')
   const [target, setTarget] = useState(editing?.kind === 'lesson' ? editing.id : WHOLE_COURSE)
   const course = courses.find((c) => c.id === courseId)
@@ -134,6 +137,7 @@ function DeadlineForm({
       className="flex flex-col gap-4 px-4 pb-6"
       onSubmit={(e) => {
         e.preventDefault()
+        if (connection.disabled) return
         if (value) submit(value, t('saved'))
       }}
     >
@@ -190,7 +194,12 @@ function DeadlineForm({
         courseDueAt={lesson ? course?.dueAt : undefined}
       />
 
-      <Button type="submit" size="xl" disabled={!value || save.isPending}>
+      <Button
+        type="submit"
+        size="xl"
+        disabled={connection.disabled || !value || save.isPending}
+        aria-describedby={connection.describedBy}
+      >
         {save.isPending && <Loader2 className="animate-spin" aria-hidden />}
         {t('save')}
       </Button>
@@ -200,7 +209,8 @@ function DeadlineForm({
           variant="ghost"
           size="touch"
           className="text-destructive"
-          disabled={save.isPending}
+          disabled={connection.disabled || save.isPending}
+          aria-describedby={connection.describedBy}
           onClick={() => submit(null, t('removed'))}
         >
           {t('remove')}

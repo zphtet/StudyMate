@@ -104,7 +104,7 @@ Existing: TanStack Query 5, next-intl, Zod 4, Sonner, shadcn/ui, supabase-js (St
 | Upload a queued draft photo | ✓ own folder | – | Storage RLS `submission_files_rw` (004), path checked again by `isOwnSubmissionPath` in `submission.save` |
 | Read cached data offline | ✓ own | ✓ own | Data was fetched through the guarded Route Handlers. The device copy is keyed by user id and wiped on sign-out |
 | Install, banner, update toast | ✓ | ✓ | none (no data) |
-| Any other write offline | – (disabled) | – (disabled) | `OnlineOnly`; online paths unchanged |
+| Any other write offline | – (disabled) | – (disabled) | `useNeedsConnection`; online paths unchanged |
 
 ## Project Structure
 
@@ -149,7 +149,7 @@ src/
 ├── features/pwa/components/offline-runtime.tsx  # client: deleteOtherUsers + startSync for students (layouts are server)
 ├── lib/push-device.ts                         # SERVICE_WORKER_URL → /serwist/sw.js
 ├── components/shared/
-│   ├── online-only.tsx                        # disabled + "Needs a connection"
+│   ├── use-needs-connection.ts                # disabled offline; reason in the banner
 │   ├── sync-pill.tsx                          # "Will sync" / "Will submit"; used by progress and shifts
 │   └── bottom-sheet.tsx · tab bar             # safe-area padding
 ├── features/pwa/                              # used only by the two layouts
@@ -159,16 +159,16 @@ src/
 │   ├── sync-ops.ts (+ .test)                  # progress.*, submission.*, focus.* schemas + apply
 │   ├── repo.ts                                # opId/base/accepted time params; client_op_id writes
 │   ├── offline.ts                             # client: enqueue + optimistic cache for complete, draft, submit, focus
-│   └── use-focus-timer.ts · components/*      # offline branches, pills, "Not available offline", Notes OnlineOnly
+│   └── use-focus-timer.ts · components/*      # offline branches, pills, "Not available offline", Notes useNeedsConnection
 ├── features/courses/use-keep-course-offline.ts  # runs lib/offline/keep-course on the student course page
 ├── features/shifts/
 │   ├── sync-ops.ts (+ .test)                  # shift.save, shift.delete
 │   ├── overlap.ts (+ .test)                   # findLocalOverlap (pure)
 │   ├── offline.ts                             # client enqueue + optimistic cache
-│   └── repo.ts · components/*                 # client_op_id / base checks; rotation + settings OnlineOnly
+│   └── repo.ts · components/*                 # client_op_id / base checks; rotation + settings useNeedsConnection
 ├── features/profile/components/me-view.tsx    # sign-out confirm + wipe
 ├── features/notifications/use-device-reminders.ts  # waits for the registered worker
-├── features/{admin,assignments,alerts,courses,…}/components  # OnlineOnly on write controls
+├── features/{admin,assignments,alerts,courses,…}/components  # useNeedsConnection on write controls
 └── i18n/messages/{en,my,ja}.json              # pwa.*, offline errors.*
 
 public/icons/ icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png
@@ -187,7 +187,7 @@ tests/e2e/fixtures/offline.ts                  # go offline/online, read Indexed
   - `app/api/sync/route.ts` composes the server parts, as every Route Handler composes features.
   - The sync loop gets op labels and cache updates through a small registry each feature's `offline.ts` fills, so `lib` stays feature-free.
 - **`features/pwa`**: the banner, install sheet, update toast and Not-saved sheet are used only by the two layouts, so they form their own small feature.
-- **Shared components**: `OnlineOnly` and `SyncPill` are used by several features, so they are shared from the start. The third-copy rule is already met: `OnlineOnly` alone has more than ten users.
+- **Shared components**: `useNeedsConnection` and `SyncPill` are used by several features, so they are shared from the start. The third-copy rule is already met: `useNeedsConnection` alone has more than ten users.
 - **The keep-offline hook lives in `features/courses`**: it runs on the student course page, which `features/courses` owns.
 
 **Documentation updates in this feature**:
