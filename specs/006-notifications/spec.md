@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-notifications`
 **Created**: 2026-11-20
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "006-notifications" (the draft spec written at project setup, refined)
 **Screens**: Admin `24-AdminNotify.png` (Alerts), `26-AdminRule.png` (rule editor), `25-AdminMessage.png` (composer); Student `04-Today.png` (bell), `11-Profile.png` (Quiet hours, My reminders)
 

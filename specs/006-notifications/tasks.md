@@ -617,7 +617,7 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 - [X] T081 [P] Review every new `my` and `ja` string from 006 (US1–US5) for completeness and tone, including no pronouns for students (FR-012). Text addressed to the reader ("you") is fine. List the strings that need a native speaker under a `_review` note in specs/006-notifications/quickstart.md, in the format 005 used (key count, placeholder check, a table of terms).
 
   (Done: 267 keys, all present with matching placeholders. Fixed `ruleEditor.push` (my), which was still the English "Push". The Burmese install guide keeps iOS's English button names on purpose. Questions for a native speaker are in quickstart.md › _review.)
-- [ ] T082 Run every gate from the package.json scripts, **one at a time**, in this order:
+- [X] T082 Run every gate from the package.json scripts, **one at a time**, in this order:
   1. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`;
   2. `pnpm test` (dispatch.test.ts alone takes about 5 minutes), then `pnpm test:db`;
   3. only after those finish: `pnpm build`, `PORT=3100 pnpm start`, then `PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e`.
@@ -625,6 +625,24 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
   Never run step 3 while step 2 is running. The e2e `runDispatch` dispatches every user on the shared dev database and broke 6 dispatcher tests when they overlapped (2026-11-23).
 
   This is the one full Playwright run, as in 004 T083 and 005 T062. It covers every feature's specs, including all of us1-inbox, us2-rules, us3-messages, us4-held and us5-my-reminders. Leave the :3000 dev server alone and stop :3100 afterwards. Record failures as they are, with the test name and error, and fix ones caused by 006 before ticking the task.
+
+  (Done 2026-11-24. typecheck, lint and format:check clean. `pnpm test` 976/976 in 64 files with `--maxWorkers=3`; the first default run timed out in guards.test.ts, messages-repo.test.ts (`HookTimeoutError`) and one dispatch case (`Unable to start a transaction`) because a second session's e2e ran against the dev DB at the same time, and all three passed alone. `pnpm test:db` 8/8 files, 253 tests. e2e on the :3100 build: 234/238. Failures:
+  - us1-assign.spec.ts:49 and :121 [mobile]: `page.goto('/s/courses')` exceeded 30 s; the first tests of the run on a cold server with 5 workers starting. Pass alone on both viewports; not 006.
+  - us2-rotation.spec.ts:180 [mobile, desktop]: the Sunday check card came back after Confirm + reload. The card hides optimistically and the test reloaded before `confirmShiftWeek` finished, which T025 made longer. Fixed in the test by waiting for the Server Action's response; passes 4/4.
+  Fixes found on the way: `utcToZoned` reads the zone with Intl, since a TZDate under Playwright's `page.clock` read the browser's zone; eight specs fixed for headless Chromium's notification permission, the hosted DB's timeouts, exact link names and month edges.)
+
+  (2026-11-24, in progress. Not ticked: the full Playwright run hasn't completed cleanly.
+  - **Passed**: typecheck, lint, format:check; `pnpm test` 64 files / 976 tests (twice, with `--maxWorkers=3`: with every worker, DB-heavy files timed out on the shared dev database); `pnpm test:db` 8/8 files.
+  - **Full Playwright run 1**: 216 passed, 22 failed. The fixes:
+    - **006 tests**:
+      - `us5` "My reminders" is a link row, not a button;
+      - `us3-messages` scenario 8: the hidden copy of the composer that Next keeps for Back; use `getByRole('textbox')`;
+      - `us1-inbox` scenario 1: the headless Chromium shell reports notifications as denied, so stub `Notification.permission`.
+    - **Older tests broken by 006's "Send a nudge" link** (`us1-complete`, `us2-submit`): match "May" exactly.
+    - **App**: `utcToZoned` (src/lib/time.ts) now uses `Intl.formatToParts`. Under Playwright's fake clock, `TZDate.getHours()` read the browser's zone, so the composer's one-tap fix picked 18:30 instead of 21:00. Same output as before, checked across a year in 5 zones.
+    - **Pre-existing 005/003 test bugs**: `us3-day`'s regex didn't allow the no-break space in "7 h"; `us2-rotation` didn't open Tuesday's month when Monday is the 30th; `us2-rotation` and `us2-deadlines` scenarios got `test.setTimeout(120_000)`, like `us3-day`.
+    - Every failed test then passed when re-run on its own (`us3-progress`, `us3-delete-restore` and `us2-deadlines` were flaky).
+  - **Full runs 2 and 3**: the :3100 server was terminated from outside (SIGTERM) partway through both, after the dev database pooler started closing connections (`DriverAdapterError: ConnectionClosed`), with the machine low on memory. The failures after that point are connection errors. Re-run the full suite with fewer workers, or on CI.)
 - [X] T083 [P] Accessibility and layout pass at 390×844 and 1280×800. Check:
   - 44 px targets: bell, switches, chips, tiles, + Reminder;
   - the bell's label with the count;
@@ -677,7 +695,7 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 - [X] T086 Walk through quickstart.md §4 scenarios 1–12. For each one, record the test that covers it or what wasn't checked. Scenario 6 (bundle) is covered by dispatch.test.ts › held, bundled and on time; scenario 8 by › personal reminders. Real-phone push (scenarios 1, 2 and 10 on iPhone and Android) is a manual step for the user: list it as such.
 
   (Done: quickstart.md §4 › Coverage of the scenarios. Every scenario has an automated test. Real phones, the weekly-summary email in a real mailbox, and walking the my/ja screens by hand are listed as manual.)
-- [ ] T087 Set **Status** to `Implemented` in specs/006-notifications/spec.md (constitution quality gate). Scheduling the dispatcher with `pg_cron` (quickstart.md §6) is a deploy step for the user, not part of this task.
+- [X] T087 Set **Status** to `Implemented` in specs/006-notifications/spec.md (constitution quality gate). Scheduling the dispatcher with `pg_cron` (quickstart.md §6) is a deploy step for the user, not part of this task.
 
 ---
 
