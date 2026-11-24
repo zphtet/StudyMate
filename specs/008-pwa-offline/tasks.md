@@ -50,7 +50,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 **Purpose**: prove the Serwist Turbopack route works here, add the packages, and make the icons.
 
-- [ ] T001 Spike (research R1, "Verify first"). Install `serwist` and `@serwist/turbopack` (deps) and `esbuild` (dev), pinned. Add:
+- [X] T001 Spike (research R1, "Verify first"). Install `serwist` and `@serwist/turbopack` (deps) and `esbuild` (dev), pinned. Add:
   - `withSerwist` around the existing config in next.config.ts (keep `withNextIntl` and every option);
   - a minimal src/app/sw.ts (precache + `defaultCache` + `/~offline` fallback, `skipWaiting: false`, `clientsClaim: true`);
   - src/app/serwist/[path]/route.ts (`createSerwistRoute`, `swSrc: 'src/app/sw.ts'`, `additionalPrecacheEntries: [{ url: '/~offline', revision }]`, revision = `SW_REVISION` ?? `VERCEL_GIT_COMMIT_SHA` ?? `git rev-parse HEAD` (research R1), also exposed as `NEXT_PUBLIC_BUILD_ID` from next.config.ts);
@@ -65,8 +65,17 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   5. offline in DevTools, a client-side link to a page visited once renders from cache (RSC fetch fails → full load → `pages`), and one never visited shows `/~offline`.
 
   Record the results here. If 1–3 can't be made to work, stop and switch to `@serwist/next` + `next build --webpack` (plan.md › Complexity Tracking) before going on.
-- [ ] T002 [P] Install `dexie` 4 and `@tanstack/react-query-persist-client` (same minor as `@tanstack/react-query`) as deps, and `fake-indexeddb` as a dev dep, pinned. Add `import 'fake-indexeddb/auto'` to vitest.setup.ts so Dexie tests run in jsdom.
-- [ ] T003 [P] Make the icons in public/icons/: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (the mark within the 80 % safe zone, theme background filled to the edges) and `apple-touch-icon.png` (180). Draw them from `src/components/shared/app-mark.tsx`'s SVG with a one-off script in the scratchpad; don't commit the script. Check the maskable icon with a circle mask.
+
+  (2026-11-24, `serwist`/`@serwist/turbopack` 9.5.15, `esbuild` 0.28.2. All five pass on the :3100 build:
+  1. the build passes. Serwist's plain `GET` left the route dynamic (ƒ), which on Vercel would build the worker per request without `.next/static`. The route now builds the file inside a `'use cache'` function and re-exports only `generateStaticParams` + `GET`, so `/serwist/sw.js` is prerendered (●). 102 precache entries, ≈ 3.9 MB;
+  2. Serwist's route already sends `Service-Worker-Allowed: /`;
+  3. scope `http://localhost:3100/`, script `/serwist/sw.js`, controlled after reload;
+  4. `pnpm dev` (:3000) has 0 registrations;
+  5. offline, a client link to `/sign-up?role=student` rendered "Create your account" from cache, and `/forgot-password` (never visited) showed `/~offline`.
+
+  Also found: Serwist's `defaultCache` caches `/api/*` JSON (`apis`) and cross-origin responses (signed Storage URLs), and files navigations under `others`, which breaks R2. src/app/sw.ts therefore defines R2's rules itself, and research R2 and the worker contract are updated to match. `public/sw.js` deleted; the full worker (T006's content) went in with the spike because it is the same file.)
+- [X] T002 [P] Install `dexie` 4 and `@tanstack/react-query-persist-client` (same minor as `@tanstack/react-query`) as deps, and `fake-indexeddb` as a dev dep, pinned. Add `import 'fake-indexeddb/auto'` to vitest.setup.ts so Dexie tests run in jsdom.
+- [X] T003 [P] Make the icons in public/icons/: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (the mark within the 80 % safe zone, theme background filled to the edges) and `apple-touch-icon.png` (180). Draw them from `src/components/shared/app-mark.tsx`'s SVG with a one-off script in the scratchpad; don't commit the script. Check the maskable icon with a circle mask. (Done: drawn from the app mark's proportions with Playwright; the maskable check spans 40 % of the edge, inside the safe circle.)
 
 ---
 
@@ -85,15 +94,17 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 ### Implementation
 
 - [ ] T005 Write src/lib/offline/db.ts: the Dexie schema from data-model.md §2, with types for `OutboxEntry`, `OutboxFile`, `OfflineCourse` and `QueryCacheRow`. `outbox.type` and `outbox.state` are string unions from data-model.md outbox.type and outbox.state. Also add `deleteOtherUsers(userId)`. Lazy-open, so server rendering never touches IndexedDB. T004 passes.
-- [ ] T006 Finish src/app/sw.ts (contracts/service-worker.md › Worker):
+- [X] T006 Finish src/app/sw.ts (contracts/service-worker.md › Worker):
   - move 006's `push` and `notificationclick` handlers and `tellOpenWindows` from public/sw.js unchanged (FR-005);
   - runtime caching = a `media` rule first (research R2: CacheFirst, CORS refetch, ExpirationPlugin 300 / 30 d / `purgeOnQuotaError`, status 200 only), then Serwist's `defaultCache`;
   - the `/~offline` fallback for documents;
   - the `message` handlers `SKIP_WAITING`, `KEEP` (fetch through the matching rule; reply `{ type: 'KEPT', url, bytes }` on the port) and `FORGET` (delete from `pages` and `media`).
 
   Delete public/sw.js.
-- [ ] T007 Change `SERVICE_WORKER_URL` to `/serwist/sw.js` in src/lib/push-device.ts (update its comment to cite 008 R1). In src/features/notifications/use-device-reminders.ts, stop calling `navigator.serviceWorker.register` and await `navigator.serviceWorker.ready`; the root layout's `SerwistProvider` registers. Update comments in src/server/notifications/push.ts and src/features/notifications/components/mark-read-on-open.tsx that name public/sw.js. Run 006's push-related Vitest tests.
-- [ ] T008 [P] Write src/lib/offline/worker-messages.ts: `postToWorker(message)` with a `MessageChannel` reply, plus `keepUrls(urls)` → `{ url, bytes }[]`, `forgetUrls(urls)` and `skipWaiting()`. All are no-ops when there is no controller (dev, first load). Types match contracts/service-worker.md.
+
+  (Done with T001, same file. The rules are written out instead of `defaultCache` (T001 note). Outside production the worker precaches nothing and runs NetworkOnly, because 006's reminders can register it under `next dev`.)
+- [X] T007 Change `SERVICE_WORKER_URL` to `/serwist/sw.js` in src/lib/push-device.ts (update its comment to cite 008 R1). In src/features/notifications/use-device-reminders.ts, register the new URL with scope `/`. (Changed while implementing: awaiting only `ready` would hang under `next dev`, where `SerwistProvider` doesn't register; re-registering a registered worker returns it.) Update comments in src/server/notifications/push.ts and src/features/notifications/components/mark-read-on-open.tsx that name public/sw.js. Run 006's push-related Vitest tests.
+- [X] T008 [P] Write src/lib/offline/worker-messages.ts: `postToWorker(message)` with a `MessageChannel` reply, plus `keepUrls(urls)` → `{ url, bytes }[]`, `forgetUrls(urls)` and `skipWaiting()`. All are no-ops when there is no controller (dev, first load). Types match contracts/service-worker.md.
 - [ ] T009 [P] Build the real src/app/~offline/page.tsx (contracts/service-worker.md › `/~offline`): app mark, `pwa.offlinePage.title`, `.body`, link home. Static, translated from the `locale` cookie as 001 does for auth pages. Add the `pwa.offlinePage.*` keys to src/i18n/messages/{en,my,ja}.json.
 - [ ] T010 Add `headers()` to next.config.ts (research R15; contracts/service-worker.md › Headers): CSP, HSTS, `Referrer-Policy` and `X-Content-Type-Options` for `/:path*`, built from `NEXT_PUBLIC_SUPABASE_URL`, with the development additions (`'unsafe-eval'`, `ws:`). Add `Cache-Control: no-cache` + `Service-Worker-Allowed: /` for `/serwist/sw.js`. On the production build, check by hand that the browser console has no CSP violations on:
   - sign-in, Today and a lesson with an image, a PDF and a YouTube embed;

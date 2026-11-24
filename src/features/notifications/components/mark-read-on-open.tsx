@@ -8,7 +8,7 @@ import { unwrap } from '@/lib/result'
 import { markNotificationRead } from '../actions'
 import { notificationKeys } from '../queries'
 
-// A tapped phone notification opens its page with `?n=<id>` (public/sw.js): mark that item read and
+// A tapped phone notification opens its page with `?n=<id>` (src/app/sw.ts): mark that item read and
 // drop the parameter (FR-007; research R9). Also refreshes the bell when the service worker reports a
 // push to an open window. Mounted once per role layout.
 

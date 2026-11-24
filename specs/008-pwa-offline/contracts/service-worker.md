@@ -8,7 +8,7 @@ Built and served by `src/app/serwist/[path]/route.ts` (`createSerwistRoute`, res
 | --- | --- |
 | Precache | `self.__SW_MANIFEST` plus `/~offline` (revision = `SW_REVISION` ?? `VERCEL_GIT_COMMIT_SHA` ?? git SHA; research R1) |
 | Lifecycle | `skipWaiting: false`, `clientsClaim: true`, `navigationPreload: true` |
-| Runtime caching | research R2 table: Serwist `defaultCache` rules for pages and RSC (NetworkFirst, 3 s), plus a `media` rule placed before them |
+| Runtime caching | research R2 table, own rules in order: `media`; `/api/*` and cross-origin NetworkOnly; RSC prefetch and RSC NetworkFirst 3 s (`pages-rsc-prefetch`, `pages-rsc`, 64 entries / 7 d); documents NetworkFirst 3 s (`pages`, 300 / 30 d); other static files CacheFirst (`assets`). Serwist's `defaultCache` is not used (T001) |
 | `media` rule | matches same-origin `GET /api/lesson-files/*` and `/api/submissions/*/files/*`. CacheFirst. Network fetch is `new Request(url, { mode: 'cors', credentials: 'same-origin' })`; only status 200 is cached; ExpirationPlugin `maxEntries: 300`, `maxAgeSeconds: 30 d`, `purgeOnQuotaError: true` |
 | Not cached | other `/api/*`, cross-origin requests, non-GET |
 | Fallback | a `document` request with no network and no cached copy → `/~offline` |

@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import {
   currentPushSubscription,
+  SERVICE_WORKER_SCOPE,
   SERVICE_WORKER_URL,
   unsubscribeThisDevice,
 } from '@/lib/push-device'
@@ -77,7 +78,9 @@ export function useDeviceReminders() {
       // Ask first, inside the tap: Safari only shows the prompt for a user gesture.
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') return
-      await navigator.serviceWorker.register(SERVICE_WORKER_URL)
+      // The root layout registers it in production; in `next dev` nothing else does (spec 008 R1),
+      // and registering an already registered worker just returns it.
+      await navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: SERVICE_WORKER_SCOPE })
       const registration = await navigator.serviceWorker.ready
       const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
       const subscription = await registration.pushManager.subscribe({

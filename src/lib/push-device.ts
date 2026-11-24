@@ -4,13 +4,15 @@
 // off; sign-out on Me removes it too, so the next person who signs in on this device starts with
 // reminders off (FR-014). Shared, so it lives here.
 
-/** The service worker that shows pushes (public/sw.js; 008 replaces it). */
-export const SERVICE_WORKER_URL = '/sw.js'
+/** The app's service worker (spec 008 research R1): it shows pushes and keeps the app offline. */
+export const SERVICE_WORKER_URL = '/serwist/sw.js'
+/** Scope `/`, the same as 006's worker had, so existing push subscriptions stay with it. */
+export const SERVICE_WORKER_SCOPE = '/'
 
 /** This browser's push subscription, if it has one. */
 export async function currentPushSubscription() {
   if (!('serviceWorker' in navigator)) return null
-  const registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_URL)
+  const registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_SCOPE)
   return (await registration?.pushManager?.getSubscription()) ?? null
 }
 

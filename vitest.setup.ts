@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom/vitest'
+// IndexedDB for the offline modules' tests (spec 008: Dexie outbox, persister, kept courses).
+import 'fake-indexeddb/auto'
 import { cleanup } from '@testing-library/react'
 import { config } from 'dotenv'
 import { afterEach } from 'vitest'

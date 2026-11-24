@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { ThemeProvider } from 'next-themes'
+import { SerwistProvider } from '@serwist/turbopack/react'
 import { Suspense, type ReactNode } from 'react'
 import { LazyFontLoader } from '@/components/shared/lazy-font-loader'
 import { ThemeColorMeta } from '@/components/shared/theme-color-meta'
@@ -47,11 +48,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           disableTransitionOnChange
         >
           {/* Everything below reads the session or locale (cookies), so it renders per request. */}
-          <Suspense fallback={null}>
-            <NextIntlClientProvider>
-              <QueryProvider>{children}</QueryProvider>
-            </NextIntlClientProvider>
-          </Suspense>
+          {/* The service worker (spec 008 research R1): production only, scope / so it controls
+              /s and /a and keeps 006's push subscriptions on the same registration. */}
+          <SerwistProvider
+            swUrl="/serwist/sw.js"
+            disable={process.env.NODE_ENV === 'development'}
+            options={{ scope: '/' }}
+          >
+            <Suspense fallback={null}>
+              <NextIntlClientProvider>
+                <QueryProvider>{children}</QueryProvider>
+              </NextIntlClientProvider>
+            </Suspense>
+          </SerwistProvider>
           <Toaster position="top-center" />
           <ThemeColorMeta />
           <LazyFontLoader />

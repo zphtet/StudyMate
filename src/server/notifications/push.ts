@@ -7,7 +7,7 @@ import { sendNotification, WebPushError } from 'web-push'
 /** One device: a push_subscriptions row. */
 export type PushTarget = { endpoint: string; p256dh: string; auth: string }
 
-/** What public/sw.js shows. `tag` makes the phone replace, not stack, a repeated notification. */
+/** What the service worker (src/app/sw.ts) shows. `tag` makes the phone replace, not stack, a repeated notification. */
 export type PushPayload = { title: string; body: string; url: string; tag: string }
 
 /**

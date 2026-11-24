@@ -45,7 +45,7 @@ Phase 0 decisions for [plan.md](plan.md). Each records what was chosen, why, and
 | Request | Strategy | Cache | Why |
 | --- | --- | --- | --- |
 | Build assets (`/_next/static/*`), fonts, `/~offline`, icons | precache (`self.__SW_MANIFEST`) | serwist precache | App shell opens with no network (SC-002). |
-| Navigations (HTML) and RSC payloads | NetworkFirst, 3 s timeout, from Serwist's `defaultCache` | `pages`, `pages-rsc`, `pages-rsc-prefetch` | Fresh when online. The last copy when offline. |
+| Navigations (HTML) and RSC payloads | NetworkFirst, 3 s timeout (own rules: Serwist's `defaultCache` also caches `/api` JSON and cross-origin responses, so it isn't used; T001) | `pages`, `pages-rsc`, `pages-rsc-prefetch` | Fresh when online. The last copy when offline. |
 | `/api/lesson-files/*`, `/api/submissions/*/files/*` | CacheFirst, keyed by the stable URL, fetched in CORS mode | `media` (ExpirationPlugin: 300 entries, 30 days) | Lesson images and attachments offline (US2 scenario 1). |
 | All other `/api/*` JSON | network only | – | The persisted query cache owns data (R4). |
 | Supabase, YouTube, everything cross-origin | network only | – | Signed URLs change hourly. Video is not offline. |
