@@ -44,3 +44,35 @@ Run Playwright against a production build on :3100 (`pnpm build && PORT=3100 pnp
 | 13 | As Zin, `/a/me/appearance` at 390 and 1280 | Same screen; Admin screens follow the theme (Students, Plan, Alerts) |
 | 14 | Pick Light or Dark on an installed phone app | Status bar matches the app background, not the theme colour (FR-015) |
 | 15 | Switch to မြန်မာ and 日本語 | Theme names, headings and size labels translated; font names unchanged (FR-013) |
+
+## _review: strings for a native speaker (T035)
+
+007 adds 25 keys and changes one (`me.appearanceValue`); all exist in `my` and `ja` with the same placeholders as `en` (`messages.test.ts` passes). The sample lesson (`appearance.previewLesson`, `appearance.previewMeta`) stays as in the design in every language, to show Japanese in the chosen font (spec Assumptions). Font names are never translated (FR-013). No string refers to a student with a pronoun.
+
+| Idea | Burmese | Japanese | Note |
+| --- | --- | --- | --- |
+| Appearance | အသွင်အပြင် | 外観 | from 001 |
+| Preview (the sample card's label) | အစမ်းကြည့်ရှုမှု | プレビュー | |
+| Colour theme | အရောင်အပြင်အဆင် | カラーテーマ | |
+| Font | ဖောင့် | フォント | |
+| Text size: Small / Default / Large | စာလုံးအရွယ်အစား: သေး / ပုံမှန် / ကြီး | 文字サイズ: 小 / 標準 / 大 | |
+| "{n}-day streak" | {n} ရက် ဆက်တိုက် | {n}日連続 | |
+
+**Theme names need a native speaker most.** Japanese uses the usual loanwords, with 桜 for Sakura. The Burmese names are a first draft; please check that they read as colour names, not as the things themselves:
+
+| Theme | Burmese | Japanese |
+| --- | --- | --- |
+| Indigo | မဲနယ် | インディゴ |
+| Ocean | သမုဒ္ဒရာ | オーシャン |
+| Teal | စိမ်းပြာ | ティール |
+| Forest | သစ်တော | フォレスト |
+| Sunset | နေဝင် | サンセット |
+| Rose | နှင်းဆီ | ローズ |
+| Sakura | ဆာကူရာ | 桜 |
+| Lavender | လာဗင်ဒါ | ラベンダー |
+| Slate | ကျောက်ပြား | スレート |
+| Mocha | မိုကာ | モカ |
+
+Questions:
+- Is မဲနယ် (indigo dye) understood as the colour, or should it be a transliteration (အင်ဒီဂို)?
+- Does a two-line Burmese "Auto" (အလိုအ / လျောက်) in the Mode control read naturally at Large text, or is a shorter word better?

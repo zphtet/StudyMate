@@ -104,7 +104,9 @@ studymate/
 │  │  ├─ manifest.ts                   # Web App Manifest (spec 006: the minimum for iOS push)
 │  │  ├─ sw.ts                         # Serwist service worker source (spec 008; until then
 │  │  │                                #   public/sw.js has 006's push and notificationclick)
-│  │  ├─ layout.tsx                    # <html>, fonts, ThemeProvider, NextIntlClientProvider
+│  │  ├─ layout.tsx                    # <html> with every font variable, the pre-paint `lang` and
+│  │  │                                #   appearance scripts, ThemeProvider, ThemeColorMeta, next-intl
+│  │  ├─ fonts.ts                      # spec 007: the 10 UI fonts + Noto JP / Myanmar (next/font)
 │  │  └─ globals.css                   # Tailwind v4 + theme tokens (10 themes × light/dark)
 │  ├─ features/                        # one folder per spec
 │  │  ├─ auth/        (actions.ts, schemas.ts, components/)
@@ -128,16 +130,21 @@ studymate/
 │  │  ├─ alerts/      (spec 006, Admin: actions.ts, queries.ts, repo.ts [rules, Alerts],
 │  │  │               messages-repo.ts [scheduled messages, availability], quick-times.ts;
 │  │  │               components/ [AlertsView, RuleEditor, Composer, ScheduledMessageCard])
-│  │  ├─ appearance/
+│  │  ├─ profile/     (Me, Account; spec 007 Appearance: actions.ts [saveAppearance], repo.ts
+│  │  │               [getMe, saveAppearance], schemas.ts, components/ [AppearanceView,
+│  │  │               AppearancePreview, ThemeSwatches, FontTiles, SegmentedChoice, use-appearance.ts])
 │  ├─ components/
 │  │  ├─ ui/                           # shadcn/ui generated
 │  │  ├─ layout/ (BottomNav, SideNav, PageHeader)
 │  │  └─ shared/ (Markdown, MdTextarea, CalendarMonth, DayBar, TimeBoth, StatusChip, ProgressBar,
-│  │             WeekBars, EmptyState; spec 006: RuleBadge, ChoiceChip, useRuleText)
+│  │             WeekBars, EmptyState; spec 006: RuleBadge, ChoiceChip, useRuleText; spec 007:
+│  │             AppearanceSync, ThemeColorMeta, useDayPeriod)
 │  ├─ lib/
 │  │  ├─ prisma.ts                     # PrismaClient singleton (adapter-pg, pooler URL)
 │  │  ├─ supabase/ (server.ts, client.ts)  # auth, storage, realtime
 │  │  ├─ time.ts                       # tz helpers, overnight math (unit-tested)
+│  │  ├─ appearance.ts                 # spec 007: theme / font / size lists, the `appearance` cookie,
+│  │  │                                #   applyAppearance, the pre-paint script (unit-tested)
 │  │  ├─ availability.ts               # pure: busy_segments() rows → Shift / Sleep (`night` = Sleep,
 │  │  │                                #   `quiet` ignored: it only delays notifications), free gaps,
 │  │  │                                #   clashAt, suggestSlot ("Move to …", spec 003 FR-009)
@@ -378,14 +385,19 @@ Every delivery is a `notifications` row (docs/data-model.md › Notifications): 
 
 ## 11. Theming, fonts, language (spec 007)
 
-- **Tokens**: shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--primary-foreground`, `--muted`, `--border`, `--ring`, `--chart-1…5`, etc.) defined in `globals.css`.
-- **10 themes**: `[data-theme="indigo"] { --primary: …; }` and `.dark[data-theme="indigo"] { … }` for each of indigo, ocean, teal, forest, sunset, rose, sakura, lavender, slate, mocha. Status colours (success/warning/danger) shared.
-- **Dark mode**: `next-themes` `ThemeProvider attribute="class" defaultTheme="system"`.
-- **Theme attribute**: `data-theme` set on `<html>` server-side from a `theme` cookie (synced from `profiles.theme_id`) — no flash.
-- **Fonts**: 10 families via `next/font/google` with `preload: false` and `variable: '--font-<id>'`; `<html>` gets the chosen font's class from a `font` cookie; CSS: `font-family: var(--font-active), 'Noto Sans JP', 'Noto Sans Myanmar', system-ui`. Noto Sans JP and Noto Sans Myanmar always loaded with `display: swap` and subset by unicode-range.
-- **Text size**: `--font-scale` on `<html>` (0.93 / 1 / 1.13) → root `font-size`.
+- **Tokens**: shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--primary-foreground`, `--muted`, `--border`, `--ring`, `--chart-1…5`, etc.) defined in `globals.css`. `:root` / `.dark` hold Indigo plus every neutral and status token.
+- **10 themes (as built in 007)**: `src/lib/appearance.ts` lists them (indigo, ocean, teal, forest, sunset, rose, sakura, lavender, slate, mocha). Each theme other than Indigo has `[data-theme='<id>']` and `.dark[data-theme='<id>']` blocks after `.dark`, which set **only six accent tokens**: `--primary`, `--primary-foreground`, `--accent`, `--accent-foreground`, `--ring`, `--chart-1` (spec 007 research R4). Neutral, status, shift, course and tint tokens never change with the theme. `--heat-*` and `--avail-shift` follow `--primary` by themselves. Indigo has no `data-theme`.
+- **The device's look**: one cookie, `appearance=<mode>.<theme>.<font>.<size>` (e.g. `dark.sakura.nunito.large`; not `HttpOnly`). A pre-paint script in `<head>` (`appearanceScript`, beside 001's `lang` script) reads it and sets `data-theme`, `data-font` and `--font-scale` on `<html>`. When there is a cookie, it also copies the mode into `localStorage.theme` for `next-themes`. Reading the cookie in the root layout instead would make every page request-bound under Cache Components (research R1). Writers:
+  - the server, on sign-in, code verification and `saveAppearance`;
+  - the browser, via `AppearanceSync`, when the account's look (from the `/s` and `/a` layouts) differs from the cookie, i.e. it was changed on another device: one switch on that open (R3).
+
+  Sign-in and code verification apply the cookie themselves before their client-side navigation (`useApplySavedLook`). Signing out keeps the cookie.
+- **Dark mode**: `next-themes` `ThemeProvider attribute="class" defaultTheme="system"`. `ThemeColorMeta` sets both `theme-color` tags to the resolved mode's background (`barColor`), so the browser bar follows Light or Dark, never the theme (FR-015).
+- **Fonts**: `src/app/fonts.ts` loads the 10 families with `next/font/google`: `preload: false`, `display: 'swap'`, `variable: '--font-<id>'`; static families get 400/500/(600)/700. All the variable classes go on `<html>`, and `[data-font='<id>'] { --font-active: var(--font-<id>) }` picks one. `--font-sans` = `var(--font-active, var(--font-inter))`, then Noto Sans JP, Noto Sans Myanmar, system. Browsers download only faces that rendered text uses, so outside Appearance a page fetches one Latin family. Inter is no longer preloaded.
+- **Text size**: `--font-scale` on `<html>` (0.93 / 1 / 1.13, stored as `profiles.font_scale`, API `textSize` small / default / large) → `html { font-size: calc(100% * var(--font-scale)) }`. Tailwind's `--spacing` is held at its Default size below 1 (`calc(0.25rem / min(1, var(--font-scale)))`), so Small keeps 44 px targets, while Large grows text and spacing together (R7).
+- **Build cache**: after changing `globals.css`, `rm -rf .next/cache` before `pnpm build`; Turbopack has shipped a stale compiled stylesheet (2026-11-24).
 - **i18n**: `next-intl` without locale prefix; locale from `locale` cookie (synced from profile, default from `Accept-Language`). Messages in `src/i18n/messages/{en,my,ja}.json`. Dates/numbers through `next-intl` formatters with the user's timezone.
-- **Contrast check**: a Vitest test computes contrast for every theme × mode token pair (≥ 4.5:1).
+- **Contrast check**: `src/app/theme-contrast.test.ts` merges tokens as the cascade does (`:root` + theme block; `:root` + `.dark` + dark theme block) and checks every text pair and heat shade at ≥ 4.5:1 for all 20 theme × mode combinations. It also checks that each theme block sets exactly the six accent tokens, and that every font has its `[data-font]` line.
 - **Spec 003 tokens**: `--destructive-soft` (late chips and cards, a hex value per mode so the contrast test checks it against `--destructive`); `--avail-shift` (= `--primary`), `--avail-sleep` and `--avail-free` (`color-mix` of `--muted-foreground` / `--success` with `--card`, so every theme and mode gets them; graphics, not text).
 - **Spec 005 tokens**: `--shift-day`, `--shift-evening`, `--shift-night`, `--shift-custom`, each with a `-foreground` (research R5): fixed hex values per mode (not per theme, so a shift type keeps its colour when the theme changes), Tailwind `bg-shift-*` / `text-shift-*-foreground`. Calendar chips, type tiles, swatches and Today's banner use them; Off uses `--muted`. The contrast test checks each pair at 4.5:1.
 - **Spec 004 tokens**: `--heat-1..4` for the Progress calendar shades (research R5): `color-mix(in srgb, var(--primary) N%, var(--card))` at 18 %, 35 % and 60 %, then `--primary`, so every theme and mode gets them. Tailwind classes `bg-heat-1..4`. Day numbers are `--foreground` on levels 1–3 and `--primary-foreground` on 4; the contrast test mixes the tokens the same way and checks them at 4.5:1. `heatLevel(seconds)` (`progress/heat.ts`) picks the level: none, < 15 min, < 30, < 60, ≥ 60.

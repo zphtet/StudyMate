@@ -264,11 +264,11 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 **Purpose**: docs, translations, the gates, accessibility, screenshots, performance and the status.
 
-- [ ] T034 [P] Update the project docs to match what was built (plan.md › Documentation updates):
+- [X] T034 [P] Update the project docs to match what was built (plan.md › Documentation updates):
   - docs/technical-spec.md §11: the `appearance` cookie and pre-paint script instead of server-rendered `data-theme`; accent-only theme blocks (six tokens); `[data-font]` with `--font-active` and no Inter preload; `--font-scale` with the `--spacing` hold; `AppearanceSync` and the theme-color meta;
   - docs/technical-spec.md §3: `lib/appearance.ts`, `app/fonts.ts`, `components/shared/appearance-sync.tsx` and `use-day-period.ts`;
   - docs/data-model.md: the profiles row (the allowed theme, font and scale values) and the CHECK list (`profiles_theme_id_check`, `profiles_font_id_check`, `profiles_font_scale_check`).
-- [ ] T035 [P] Review every new `my` and `ja` string from 007 for completeness and tone, with no pronouns for students. List the strings that need a native speaker under a `_review` note in specs/007-appearance/quickstart.md, in the format 005 and 006 used (key count, placeholder check, a table of terms).
+- [X] T035 [P] Review every new `my` and `ja` string from 007 for completeness and tone, with no pronouns for students. List the strings that need a native speaker under a `_review` note in specs/007-appearance/quickstart.md, in the format 005 and 006 used (key count, placeholder check, a table of terms).
 - [ ] T036 Run every gate from the package.json scripts, **one at a time**, after checking that no other session is running tests or a :3100 server:
   1. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`;
   2. `pnpm test`, then `pnpm test:db`;
