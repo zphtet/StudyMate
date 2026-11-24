@@ -1,5 +1,5 @@
-import { spawnSync } from 'node:child_process'
 import { createSerwistRoute } from '@serwist/turbopack'
+import { buildRevision } from '@/lib/build-revision'
 
 // Builds and serves the service worker (src/app/sw.ts) at /serwist/sw.js (spec 008 research R1).
 // Cache Components forbids the segment-config exports Serwist returns (`dynamic`, `revalidate`,
@@ -7,16 +7,10 @@ import { createSerwistRoute } from '@serwist/turbopack'
 // on Vercel a request-time build has no .next/static to list for the precache. So the file is built
 // inside `'use cache'`, which prerenders each generated path at build time.
 
-/** Changes the worker's bytes on every deploy, so browsers find the update (R1, R13). */
-const revision =
-  process.env.SW_REVISION ??
-  process.env.VERCEL_GIT_COMMIT_SHA ??
-  (spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf-8' }).stdout?.trim() || 'unversioned')
-
 const serwist = createSerwistRoute({
   swSrc: 'src/app/sw.ts',
   useNativeEsbuild: true,
-  additionalPrecacheEntries: [{ url: '/~offline', revision }],
+  additionalPrecacheEntries: [{ url: '/~offline', revision: buildRevision() }],
 })
 
 export const generateStaticParams = serwist.generateStaticParams

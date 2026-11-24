@@ -7,7 +7,8 @@ export function makeQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 30_000,
-        gcTime: 24 * 60 * 60 * 1000,
+        // Kept as long as the persisted copy (spec 008 research R4), so restored data isn't collected.
+        gcTime: 7 * 24 * 60 * 60 * 1000,
         // Don't retry answers that won't change (401/403/404/400).
         retry: (failures, error) =>
           !(error instanceof ApiError && error.status >= 400 && error.status < 500) && failures < 2,

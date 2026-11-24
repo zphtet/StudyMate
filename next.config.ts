@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next'
 import { withSerwist } from '@serwist/turbopack'
 import createNextIntlPlugin from 'next-intl/plugin'
+import { buildRevision } from './src/lib/build-revision'
 
 // next-intl without i18n routing: locale from a cookie (src/i18n/request.ts, research R8).
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
@@ -34,6 +35,8 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Busts the persisted query cache on every deploy (spec 008 research R4).
+  env: { NEXT_PUBLIC_BUILD_ID: buildRevision() },
   async headers() {
     return [
       {

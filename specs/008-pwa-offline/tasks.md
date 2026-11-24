@@ -177,7 +177,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - `serverNow` when `at` is invalid.
 
   Add a property test with fast-check: the result is never after `serverNow` and never before `min(serverNow, max(serverNow − 14 d, base))`.
-- [ ] T022 [P] [US2] Write src/lib/offline/outbox.test.ts (research R5; data-model.md outbox.recordKey, outbox.state, outbox.base, outbox.at, › State transitions and Coalescing). Cases:
+- [X] T022 [P] [US2] Write src/lib/offline/outbox.test.ts (research R5; data-model.md outbox.recordKey, outbox.state, outbox.base, outbox.at, › State transitions and Coalescing). Cases:
   - enqueue sets `state: 'pending'`, `createdAt` and the user id;
   - save after save on the same `recordKey` replaces the payload and keeps `id`, `base` and `at`;
   - submit after save → one `submission.submit` with the newer `at`;
@@ -189,7 +189,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - after `applied` with a `version`, later pending entries with the same `recordKey` get `base.updatedAt = version`;
   - `recoverSyncing()` turns `syncing` back into `pending` on start;
   - `pendingCount(userId)` and `droppedEntries(userId)`.
-- [ ] T023 [P] [US2] Write src/lib/offline/persister.test.ts (research R4; data-model.md queryCache.client): `createDexiePersister(userId)` persists, restores and removes one `PersistedClient` per user, and another user's restore returns undefined.
+- [X] T023 [P] [US2] Write src/lib/offline/persister.test.ts (research R4; data-model.md queryCache.client): `createDexiePersister(userId)` persists, restores and removes one `PersistedClient` per user, and another user's restore returns undefined.
 - [ ] T024 [P] [US2] Write src/lib/offline/keep-course.test.ts for the pure parts (research R3; data-model.md offlineCourses.bytes, offlineCourses.openedAt). Cases:
   - `pickMedia(resources, budget = 20 MB)` keeps lesson order and skips files that would cross the budget (later smaller ones still fit);
   - `pickEviction(courses, currentCourseId, estimate)` returns the least recently opened course other than the current one while usage > 80 % of quota, and nothing below that;
@@ -275,8 +275,8 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Implementation for User Story 2: device
 
-- [ ] T037 [US2] Write src/lib/offline/outbox.ts (research R5; data-model.md outbox.*, › Coalescing) and src/lib/offline/registry.ts (`registerOp(type, { label, onApplied, onDropped })`; types only, no feature imports). T022 passes.
-- [ ] T038 [US2] Write src/lib/offline/persister.ts (Dexie persister; data-model.md queryCache.client) and src/lib/query/persist-queries.tsx (research R4):
+- [X] T037 [US2] Write src/lib/offline/outbox.ts (research R5; data-model.md outbox.*, › Coalescing) and src/lib/offline/registry.ts (`registerOp(type, { label, onApplied, onDropped })`; types only, no feature imports). T022 passes.
+- [X] T038 [US2] Write src/lib/offline/persister.ts (Dexie persister; data-model.md queryCache.client) and src/lib/query/persist-queries.tsx (research R4):
   - a client `PersistQueries({ userId, children })` rendering `PersistQueryClientProvider` over `getBrowserQueryClient()`, with `buster` = `process.env.NEXT_PUBLIC_BUILD_ID` (T001), `maxAge` 7 d, and successful queries only;
   - leave src/lib/query/provider.tsx and the root layout's `QueryProvider` unchanged;
   - raise `gcTime` in src/lib/query/client.ts to 7 d (cite R4);
@@ -284,13 +284,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - write src/features/pwa/components/offline-runtime.tsx, a client `OfflineRuntime({ userId, role })` that calls `deleteOtherUsers(userId)` once on mount (R10), and render it in both layouts. T039 adds sync to it.
 
   T023 passes; Today still renders its server-prefetched data on first paint.
-- [ ] T039 [US2] Write src/lib/offline/sync.ts (research R5, R9, R10):
+- [X] T039 [US2] Write src/lib/offline/sync.ts (research R5, R9, R10):
   - `startSync(userId)` runs on `online`, on `visibilitychange` → visible, on start (after `recoverSyncing`), after each enqueue while online, and every 60 s while non-empty;
   - one run at a time; upload `outboxFiles` for the batch first with `uploadSubmissionImage`'s Storage call, an "already exists" answer counting as done; then POST `/api/sync`;
   - `resolve` the results and call the registry's `onApplied`/`onDropped`;
   - network errors back off from 5 s to 60 s; a 401 sets a `paused` flag the banner reads.
 
-  Start it from `OfflineRuntime` for students (T038). Expose `useOutboxState()` (pending count, dropped entries, paused, syncing) with Dexie `liveQuery`. Add src/lib/offline/sync.test.ts with a mocked `fetch`: order kept, upload before the op, 401 pauses without deleting, `retry` backs off.
+  Start it from `OfflineRuntime` for students (T038). (Done. Photo uploads run through a registry `prepare` hook, so `lib/offline` imports no feature. A 400 drops the whole batch as `invalid_input` instead of retrying forever. An entry that was sent once is never merged into (it may already be applied under its id); a later change gets its own entry and is rebased.) Expose `useOutboxState()` (pending count, dropped entries, paused, syncing) with Dexie `liveQuery`. Add src/lib/offline/sync.test.ts with a mocked `fetch`: order kept, upload before the op, 401 pauses without deleting, `retry` backs off.
 - [ ] T040 [P] [US2] Write src/components/shared/online-only.tsx (contracts/ui-routes.md › Shared pieces) and src/components/shared/sync-pill.tsx ("Will sync" / "Will submit", reading the outbox by `recordKey`). Add the `pwa.needsConnection`, `pwa.willSync` and `pwa.willSubmit` keys in all 3 message files.
 - [ ] T041 [US2] Write src/features/progress/offline.ts:
   - `enqueueComplete`/`enqueueUndo` with `base: { wasDone }`, `enqueueDraft`/`enqueueSubmit` with `base: { updatedAt }` from the cached `lessonWorkKeys.work` data, and `enqueueFocusRecord`/`enqueueFocusStop`;
