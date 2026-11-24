@@ -1,9 +1,10 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Suspense, type ReactNode } from 'react'
-import { ThemeSync } from '@/components/shared/theme-sync'
+import { AppearanceSync } from '@/components/shared/appearance-sync'
 import { MarkReadOnOpen } from '@/features/notifications/components/mark-read-on-open'
 import { hasActiveLink } from '@/features/links/repo'
+import { toAppearance } from '@/lib/appearance'
 import { requirePageUser } from '@/server/auth/page-guard'
 
 // Student area (contracts/ui-routes.md); the tab bar lives in (tabs)/layout.tsx (spec 002).
@@ -18,7 +19,7 @@ export default async function StudentLayout({ children }: { children: ReactNode 
   return (
     <>
       {children}
-      <ThemeSync mode={me.colorMode} />
+      <AppearanceSync appearance={toAppearance(me)} />
       {/* Spec 006: a tapped notification's ?n=<id>, and the bell after a push. */}
       <Suspense fallback={null}>
         <MarkReadOnOpen />

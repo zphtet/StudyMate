@@ -225,7 +225,7 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T029 [P] [US3] Write Playwright tests in tests/e2e/us3-first-paint.spec.ts (390×844 and 1280×800; research R13). An `addInitScript` records every change to `<html>`'s `class`, `data-theme`, `data-font` and `style`, with `performance.now()`, and compares them with the `first-contentful-paint` entry. Cases:
+- [X] T029 [P] [US3] Write Playwright tests in tests/e2e/us3-first-paint.spec.ts (390×844 and 1280×800; research R13). An `addInitScript` records every change to `<html>`'s `class`, `data-theme`, `data-font` and `style`, with `performance.now()`, and compares them with the `first-contentful-paint` entry. Cases:
   - **scenario 1**: after choosing Dark + Forest + Nunito + Large, reloading Today and Courses shows no change after FCP, and the attributes match;
   - **scenario 2**: after signing out, sign-in shows the same look before FCP;
   - **scenario 3**: a new context signs in → the first screen after sign-in has the look before FCP;
@@ -234,12 +234,14 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Create src/components/shared/appearance-sync.tsx to replace theme-sync.tsx, which is deleted (research R3, R10). Props: the profile's four values. On mount and when they change:
+- [X] T030 [US3] Create src/components/shared/appearance-sync.tsx to replace theme-sync.tsx, which is deleted (research R3, R10). Props: the profile's four values. On mount and when they change:
   - compare with `parseAppearanceCookie(document.cookie)`; when they differ, write the cookie, `applyAppearance` and `setTheme(mode)` once;
   - whenever `resolvedTheme` changes, set the `content` of **both** `<meta name="theme-color">` tags (the light-scheme and the dark-scheme one from `viewport.themeColor`) to the resolved mode's background (research R10).
 
   Render it in src/app/s/layout.tsx and src/app/a/layout.tsx with `me`'s values.
-- [ ] T031 [US3] Run tests/e2e/us3-first-paint.spec.ts (T029) with `--grep "scenario 1"` and `--grep "scenario 5"` on the :3100 build until they pass. If first paint is late on sign-in or sign-up, check that the cookie is in the action's response before navigation (T012).
+- [X] T031 [US3] Run tests/e2e/us3-first-paint.spec.ts (T029) with `--grep "scenario 1"` and `--grep "scenario 5"` on the :3100 build until they pass. If first paint is late on sign-in or sign-up, check that the cookie is in the action's response before navigation (T012).
+
+  (Done 2026-11-24: scenarios 1, 3, 5 and FR-015 pass on the :3100 build. Two fixes in the test, not the app. First, the recorder observed `document.documentElement`, which doesn't exist yet when an init script runs, so it recorded nothing; it now watches `document` with `subtree`. Second, `chooseLook` navigated while Next was still running the queued saves, and a full page load cancelled them; it now waits for the profile row. On the open after a change elsewhere, AppearanceSync switched at 645 ms with first paint at 648 ms, so the one switch (Q4) landed before anything was painted.)
 
 **Checkpoint**: quickstart.md §4 scenarios 8–10, 12 and 14 pass by hand.
 

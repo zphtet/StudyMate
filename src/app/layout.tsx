@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { ThemeProvider } from 'next-themes'
 import { Suspense, type ReactNode } from 'react'
+import { ThemeColorMeta } from '@/components/shared/theme-color-meta'
 import { Toaster } from '@/components/ui/sonner'
-import { appearanceScript } from '@/lib/appearance'
+import { appearanceScript, barColor } from '@/lib/appearance'
 import { QueryProvider } from '@/lib/query/provider'
 import { fontVariables } from './fonts'
 import './globals.css'
@@ -17,9 +18,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  // Right for Auto; ThemeColorMeta overrides both for an explicit Light or Dark (spec 007 FR-015).
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fafaf9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0a09' },
+    { media: '(prefers-color-scheme: light)', color: barColor.light },
+    { media: '(prefers-color-scheme: dark)', color: barColor.dark },
   ],
 }
 
@@ -50,6 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </NextIntlClientProvider>
           </Suspense>
           <Toaster position="top-center" />
+          <ThemeColorMeta />
         </ThemeProvider>
       </body>
     </html>

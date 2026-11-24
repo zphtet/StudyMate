@@ -112,6 +112,12 @@ export function toAppearance(row: {
   }
 }
 
+/**
+ * The page background per mode (globals.css --background), for the browser and status bar: it
+ * follows Light or Dark, never the colour theme (FR-015, research R10).
+ */
+export const barColor = { light: '#fafaf9', dark: '#0c0a09' } as const
+
 // ── The device's copy: the `appearance` cookie (data-model.md › Device state) ────────────────
 
 export const APPEARANCE_COOKIE = 'appearance'
