@@ -60,6 +60,24 @@ Run `pnpm dev`, open http://localhost:3000 in a phone-sized window. Use real inb
 | 13 | US3 | Export my data | A JSON file with profile and links downloads |
 | 14 | US3 | Admin deletes account (types DELETE) | Admin is signed out; linked student sees the "admin closed their account" notice on Join |
 
+## _review: strings for a native speaker (T065, 2026-11-24)
+
+001's namespaces (`common`, `nav`, `auth`, `verify`, `reset`, `join`, `welcome`, `invite`, `students`, `account`, `me`, its `errors.*` codes and `validation.*` keys): 231 keys plus 30 error and validation keys, all in `my` and `ja`. A script check found every placeholder (`{name}`, `{count}`, `{email}`…) and rich tag (`<b>`) the same in all three languages, across the whole message files. No string refers to a person with a pronoun; names carry さん in Japanese.
+
+Fixed in this review:
+- `auth.password.letterDigit` (en): "Has a letter and a number", as in 29-ResetPassword.
+- `reset.backToSignIn` (my): ဝင်ရန်, as on the sign-in screen and in 008's review, not အကောင့်ဝင်ရန်.
+- `reset.send` (my): ပြန်သတ်မှတ်ရန် ကုဒ် ပို့ရန် ("send reset code"); it said only "send code".
+- `auth.timezone.empty` (my): "no time zone found", not just "not found".
+- `errors.wrong_code` (ja): 残り#回です。 with the full stop the other branch has.
+
+Terms used throughout: Admin 管理者 / အက်ဒမင်; Student 学生 / ကျောင်းသား; link, join つながる・参加 / ချိတ်ဆက်; invite code 招待コード / ဖိတ်ကြားကုဒ်; sign in ログイン / ဝင်ရန်; sign out ログアウト / ထွက်ရန်; course コース / သင်တန်း.
+
+Questions:
+- `verify.spam` (my) keeps "spam" and "promotions" in English, as Gmail shows them. Right for Burmese readers, or are there words they'd look for?
+- `students.decline` is the Decline button's screen-reader label. Japanese says {name}さんを承認しない ("don't approve"), softer than 拒否する. Is that the right tone?
+- Leave admin is 解除する in Japanese and ထွက် ("leave") in Burmese; Remove student is 外す / ဖယ်ရှား. Do these read as the same relationship ending, seen from each side?
+
 ## 5. Done when
 
 CLAUDE.md "Done means": Playwright scenarios for US1–US5 pass, `pnpm test:db` and guard tests pass, typecheck and lint are clean, and each screen matches its screenshot at 390×844.

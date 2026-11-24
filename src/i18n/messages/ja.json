@@ -156,7 +156,7 @@
     "weak_password": "英字と数字を含む8文字以上にしてください。",
     "cooldown": "次のコードを請求するまで{seconds}秒お待ちください。",
     "too_many_sends": "送信回数が多すぎます。{minutes}分後にもう一度お試しください。",
-    "wrong_code": "コードが正しくありません。{attemptsLeft, plural, =0 {新しいコードを請求してください。} other {残り#回}}",
+    "wrong_code": "コードが正しくありません。{attemptsLeft, plural, =0 {新しいコードを請求してください。} other {残り#回です。}}",
     "too_many_attempts": "間違いが多すぎます。新しいコードを請求してください。",
     "code_expired": "このコードは期限切れです。新しいコードを送ってください。",
     "invalid_credentials": "メールアドレスまたはパスワードが正しくありません。",

@@ -184,7 +184,7 @@ As built (2026-11-24, no tests run yet by the owner's decision): actions, both s
 - [X] T060 [US3] Actions in src/features/profile/actions.ts with schemas in src/features/profile/schemas.ts: `updateProfile` (data-model.md Profile.displayName, Profile.timezone, Profile.locale; refresh the `locale` cookie), `deleteAccount` (for admins first insert a notification per linked student using data-model.md Notification.sourceType, Notification.occurrenceKey, Notification.url; then `deleteAuthUser`; then sign out); `changePassword` in src/features/auth/actions.ts (re-check current password, research.md R13)
 - [X] T061 [US3] Export: `getExport(userId)` in src/features/profile/repo.ts and GET src/app/api/me/export/route.ts (`requireUser`, attachment filename, shape per contracts/route-handlers.md `Export`)
 - [X] T062 [US3] Me pages src/app/s/me/page.tsx and src/app/a/me/page.tsx matching screenshots/11-Profile.png (001 rows only) using ProfileCard (InitialAvatar, name, "Student · reports to {admin}" or "Admin"), EditProfileSheet (name, TimezonePicker) and LanguageSegmented in src/features/profile/components/; "Export my data"; Sign out
-- [ ] T063 [US3] Account pages src/app/s/me/account/page.tsx and src/app/a/me/account/page.tsx: change-password form; "Leave admin" with confirm (students, calls `leaveAdmin`); "Delete account" AlertDialog requiring DELETE
+- [X] T063 [US3] Account pages src/app/s/me/account/page.tsx and src/app/a/me/account/page.tsx: change-password form; "Leave admin" with confirm (students, calls `leaveAdmin`); "Delete account" AlertDialog requiring DELETE
 - [X] T071 [US3] Light / Dark / Auto on Appearance (spec 007 User Story 1 scenario 1 and FR-001, pulled into 001 by owner decision 2026-11-20): `setColorMode` in src/features/profile/actions.ts (data-model.md Profile.colorMode = light | dark | system), ThemeSync in src/components/shared/theme-sync.tsx, pages src/app/s/me/appearance/page.tsx and src/app/a/(tabs)/me/appearance/page.tsx; Me row "Appearance · Indigo · Inter · {mode}"
 - [ ] T064 [US3] Add `me` strings to src/i18n/messages/{en,my,ja}.json; T059 passes
 
@@ -194,7 +194,7 @@ As built (2026-11-24, no tests run yet by the owner's decision): actions, both s
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T065 [P] Review every `my` and `ja` string for completeness and tone; add a `_review` note listing strings for a native speaker in specs/001-auth-roles-linking/quickstart.md
+- [X] T065 [P] Review every `my` and `ja` string for completeness and tone; add a `_review` note listing strings for a native speaker in specs/001-auth-roles-linking/quickstart.md
 - [ ] T066 [P] Accessibility and layout pass at 390×844 and 1280×800 (44 px targets, labels, focus order, `aria-label` on icon buttons); fix findings in src/components/ and src/features/*/components/
 - [ ] T067 Compare each screen in src/app/(auth)/, src/app/join/, src/app/s/ and src/app/a/ with screenshots/01, 02, 03, 11, 13, 14, 15, 16, 27, 28, 29 at 390×844 and fix layout, hierarchy and copy differences
 - [ ] T068 Run every gate from package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e`, `pnpm build`; Lighthouse performance on `/sign-in` (mobile) ≥ 90

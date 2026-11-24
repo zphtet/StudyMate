@@ -65,7 +65,7 @@
       "show": "Show password",
       "hide": "Hide password",
       "length": "At least 8 characters",
-      "letterDigit": "A letter and a number",
+      "letterDigit": "Has a letter and a number",
       "match": "Passwords match"
     },
     "timezone": {
