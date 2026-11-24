@@ -56,6 +56,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SerwistProvider
             swUrl="/serwist/sw.js"
             disable={process.env.NODE_ENV === 'development'}
+            // Never reload by itself: coming back online syncs instead (R5), and an update waits
+            // for the student's Reload (R13; spec US3 "nothing reloads mid-edit").
+            reloadOnOnline={false}
             options={{ scope: '/' }}
           >
             <Suspense fallback={null}>

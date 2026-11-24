@@ -5,6 +5,7 @@ import { MarkReadOnOpen } from '@/features/notifications/components/mark-read-on
 import { InstallPrompt } from '@/features/pwa/components/install-prompt'
 import { OfflineBanner } from '@/features/pwa/components/offline-banner'
 import { OfflineRuntime } from '@/features/pwa/components/offline-runtime'
+import { UpdateToast } from '@/features/pwa/components/update-toast'
 import { toAppearance } from '@/lib/appearance'
 import { PersistQueries } from '@/lib/query/persist-queries'
 import { requirePageUser } from '@/server/auth/page-guard'
@@ -20,8 +21,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       {children}
       <OfflineRuntime userId={me.id} role="admin" />
       <AppearanceSync appearance={toAppearance(me)} />
-      {/* Spec 008 US1. */}
+      {/* Spec 008 US1 and US3. */}
       <InstallPrompt />
+      <UpdateToast />
       {/* Spec 006: a tapped notification's ?n=<id>, and the bell after a push. */}
       <Suspense fallback={null}>
         <MarkReadOnOpen />
