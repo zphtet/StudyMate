@@ -5,8 +5,9 @@ import {
   newPasswordSchema,
   timezoneSchema,
 } from '@/features/auth/schemas'
+import { colorModes, fontIds, textSizes, themeIds } from '@/lib/appearance'
 
-// Profile and account forms (spec 001 User Story 3) + colour mode (spec 007 FR-001, pulled forward).
+// Profile and account forms (spec 001 User Story 3) + appearance (spec 007).
 
 export const updateProfileSchema = z
   .object({
@@ -17,9 +18,19 @@ export const updateProfileSchema = z
   .refine((v) => Object.values(v).some((x) => x !== undefined), { error: 'invalid_input' })
 export type UpdateProfileInput = z.input<typeof updateProfileSchema>
 
-export const colorModes = ['light', 'dark', 'system'] as const
-export type ColorMode = (typeof colorModes)[number]
-export const colorModeSchema = z.object({ colorMode: z.enum(colorModes) })
+/**
+ * Spec 007 contracts/server-actions.md › saveAppearance: any of mode, theme, font and text size, at
+ * least one (data-model.md Profile.color_mode, Profile.theme_id, Profile.font_id, Profile.font_scale).
+ */
+export const saveAppearanceSchema = z
+  .object({
+    colorMode: z.enum(colorModes).optional(),
+    themeId: z.enum(themeIds).optional(),
+    fontId: z.enum(fontIds).optional(),
+    textSize: z.enum(textSizes).optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), { error: 'invalid_input' })
+export type SaveAppearanceInput = z.input<typeof saveAppearanceSchema>
 
 /** Spec 004 FR-008; data-model.md Profile.weekly_goal_days (database CHECK 1..7). */
 export const weeklyGoalSchema = z.object({ days: z.number().int().min(1).max(7) })

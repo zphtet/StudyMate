@@ -5,12 +5,12 @@ import { Palette } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
+import type { ColorMode } from '@/lib/appearance'
 import { unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { cn } from '@/lib/utils'
-import { setColorMode } from '../actions'
+import { saveAppearance } from '../actions'
 import { meQuery } from '../queries'
-import type { ColorMode } from '../schemas'
 
 // Appearance (screen 12-Appearance). 001 ships Mode only (owner decision 2026-11-20);
 // colour themes, fonts and text size come with feature 007.
@@ -22,7 +22,7 @@ export function AppearanceView() {
   const { setTheme } = useTheme()
 
   const save = useMutation({
-    mutationFn: async (colorMode: ColorMode) => unwrap(await setColorMode({ colorMode })),
+    mutationFn: async (colorMode: ColorMode) => unwrap(await saveAppearance({ colorMode })),
     onMutate: (colorMode) => {
       setTheme(colorMode) // apply instantly; the profile keeps it for other devices
       queryClient.setQueryData(meQuery.queryKey, (old) => (old ? { ...old, colorMode } : old))

@@ -1,6 +1,8 @@
 import 'server-only'
 import { hasLocale } from '@/i18n/locales'
+import { toAppearance, toFontScale, type Appearance } from '@/lib/appearance'
 import { prisma } from '@/lib/prisma'
+import type { SaveAppearanceInput } from './schemas'
 import type { MeResponse } from './types'
 
 // Read side for the signed-in user. Callers MUST have run requireUser(); every query is scoped to
@@ -17,7 +19,30 @@ type Me = {
   timezone: string
   locale: string
   colorMode: string
+  themeId: string
+  fontId: string
+  fontScale: number | { toString(): string }
   weeklyGoalDays: number
+}
+
+const appearanceColumns = { colorMode: true, themeId: true, fontId: true, fontScale: true } as const
+
+/**
+ * Spec 007 contracts/server-actions.md › saveAppearance: writes only the fields given, on the
+ * caller's own row, and returns the whole look (data-model.md Profile.color_mode, Profile.theme_id,
+ * Profile.font_id, Profile.font_scale). Last write wins.
+ */
+export async function saveAppearance(
+  userId: string,
+  input: SaveAppearanceInput,
+): Promise<Appearance> {
+  const { textSize, ...rest } = input
+  const row = await prisma.profile.update({
+    where: { id: userId },
+    data: { ...rest, ...(textSize && { fontScale: toFontScale(textSize) }) },
+    select: appearanceColumns,
+  })
+  return toAppearance(row)
 }
 
 export async function getMe(me: Me): Promise<MeResponse> {
@@ -57,7 +82,7 @@ export async function getMe(me: Me): Promise<MeResponse> {
     displayName: me.displayName,
     timezone: me.timezone,
     locale: hasLocale(me.locale) ? me.locale : 'en',
-    colorMode: me.colorMode === 'light' || me.colorMode === 'dark' ? me.colorMode : 'system',
+    ...toAppearance(me),
     weeklyGoalDays: me.weeklyGoalDays,
     link:
       link && (link.status === 'pending' || link.status === 'active')

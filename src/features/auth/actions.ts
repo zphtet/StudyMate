@@ -9,6 +9,7 @@ import { requireUser } from '@/server/auth/guards'
 import { changePasswordSchema } from '@/features/profile/schemas'
 import { checkVerify, decideSend, recordFailedAttempt } from './limits'
 import { clearLimit, getLimit, saveLimit } from './limits-repo'
+import { toAppearance } from '@/lib/appearance'
 import { setPreferenceCookies } from './preferences'
 import {
   emailOnlySchema,
@@ -113,10 +114,18 @@ export const verifyEmailCode = publicAction(verifyEmailSchema, async ({ email, c
   await clearLimit(email, 'signup')
   const profile = await prisma.profile.findUnique({
     where: { id: data.user.id },
-    select: { role: true, locale: true, timezone: true },
+    select: {
+      role: true,
+      locale: true,
+      timezone: true,
+      colorMode: true,
+      themeId: true,
+      fontId: true,
+      fontScale: true,
+    },
   })
   if (!profile) fail('unexpected')
-  await setPreferenceCookies(profile)
+  await setPreferenceCookies({ ...profile, appearance: toAppearance(profile) })
   return { home: profile.role === 'admin' ? '/a/welcome' : '/join' }
 })
 
@@ -139,10 +148,18 @@ export const signIn = publicAction(signInSchema, async ({ role, email, password 
 
   const profile = await prisma.profile.findUnique({
     where: { id: data.user.id },
-    select: { role: true, locale: true, timezone: true },
+    select: {
+      role: true,
+      locale: true,
+      timezone: true,
+      colorMode: true,
+      themeId: true,
+      fontId: true,
+      fontScale: true,
+    },
   })
   if (!profile) fail('unexpected')
-  await setPreferenceCookies(profile)
+  await setPreferenceCookies({ ...profile, appearance: toAppearance(profile) })
   // Never changes the stored role (FR-002); a different pick only changes the message.
   return {
     verify: false as const,

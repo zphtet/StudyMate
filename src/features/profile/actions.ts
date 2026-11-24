@@ -6,9 +6,10 @@ import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 import { requireRole, requireUser } from '@/server/auth/guards'
 import { deleteAuthUser } from '@/server/supabase-admin'
+import { saveAppearance as saveAppearanceRow } from './repo'
 import {
-  colorModeSchema,
   deleteAccountSchema,
+  saveAppearanceSchema,
   updateProfileSchema,
   weeklyGoalSchema,
 } from './schemas'
@@ -27,11 +28,15 @@ export const updateProfile = action(updateProfileSchema, async (input) => {
   return profile
 })
 
-/** Light / Dark / Auto (spec 007 FR-001, pulled into 001): saved so other devices follow. */
-export const setColorMode = action(colorModeSchema, async ({ colorMode }) => {
+/**
+ * Spec 007 contracts/server-actions.md › saveAppearance: mode, theme, font or text size, saved to
+ * the account so other devices follow, and to this device's `appearance` cookie (research R9).
+ */
+export const saveAppearance = action(saveAppearanceSchema, async (input) => {
   const me = await requireUser()
-  await prisma.profile.update({ where: { id: me.id }, data: { colorMode } })
-  return { colorMode }
+  const appearance = await saveAppearanceRow(me.id, input)
+  await setPreferenceCookies({ appearance })
+  return appearance
 })
 
 /** Spec 004 FR-008: the student's weekly goal ("{n} of {goal}" on Today and Progress). */

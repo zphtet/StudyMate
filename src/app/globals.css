@@ -11,9 +11,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Spec 007 research R6: the chosen font ([data-font] below), then Japanese and Burmese
+     fallbacks (constitution VI). */
   --font-sans:
-    var(--font-inter), var(--font-noto-jp), var(--font-noto-my), ui-sans-serif, system-ui,
-    sans-serif;
+    var(--font-active, var(--font-inter)), var(--font-noto-jp), var(--font-noto-my), ui-sans-serif,
+    system-ui, sans-serif;
   --font-heading: var(--font-sans);
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -246,7 +248,45 @@
   html {
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
+    /* Spec 007 research R7: text size (--font-scale 0.93 / 1 / 1.13, set on <html> by the pre-paint
+       script) scales every rem. Tailwind's spacing is held at its Default size when the scale is
+       below 1, so Small text keeps 44 px tap targets; at Large, spacing grows with the text so
+       fixed-height controls never clip it. */
+    font-size: calc(100% * var(--font-scale, 1));
+    --spacing: calc(0.25rem / min(1, var(--font-scale, 1)));
   }
+}
+
+/* Spec 007 research R6: data-font on <html> (src/lib/appearance.ts fontIds) picks the UI font. */
+[data-font='inter'] {
+  --font-active: var(--font-inter);
+}
+[data-font='nunito'] {
+  --font-active: var(--font-nunito);
+}
+[data-font='poppins'] {
+  --font-active: var(--font-poppins);
+}
+[data-font='dm-sans'] {
+  --font-active: var(--font-dm-sans);
+}
+[data-font='manrope'] {
+  --font-active: var(--font-manrope);
+}
+[data-font='roboto'] {
+  --font-active: var(--font-roboto);
+}
+[data-font='atkinson'] {
+  --font-active: var(--font-atkinson);
+}
+[data-font='merriweather'] {
+  --font-active: var(--font-merriweather);
+}
+[data-font='m-plus-rounded'] {
+  --font-active: var(--font-m-plus-rounded);
+}
+[data-font='zen-maru'] {
+  --font-active: var(--font-zen-maru);
 }
 
 /* Lesson Markdown (spec 002 research R4): theme tokens only; tall line-height so Burmese stacked

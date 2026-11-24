@@ -20,6 +20,7 @@ import { useErrorMessage, useValidationMessage } from '@/lib/use-error-message'
 import { signIn } from '../actions'
 import { signInSchema, type Role } from '../schemas'
 import { RoleCards } from './role-cards'
+import { useApplySavedLook } from './use-apply-saved-look'
 
 type Values = z.input<typeof signInSchema>
 
@@ -33,6 +34,7 @@ export function SignInForm() {
   const params = useSearchParams()
   const next = safeNext(params.get('next'))
   const [mismatch, setMismatch] = useState<{ role: Role; home: string } | null>(null)
+  const applySavedLook = useApplySavedLook()
 
   const form = useForm<Values, unknown, z.output<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -54,6 +56,7 @@ export function SignInForm() {
         router.push(`/verify-email?${q}`)
         return
       }
+      applySavedLook()
       if (result.roleMismatch) {
         setMismatch({ role: result.roleMismatch, home: result.home })
         return

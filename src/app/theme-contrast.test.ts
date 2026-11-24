@@ -1,18 +1,48 @@
 // @vitest-environment node
 // Constitution V / technical spec §11: every text token on its background reaches 4.5:1 (WCAG AA),
-// in light and dark. 001 ships the indigo theme only; feature 007 extends this to all 10 themes.
+// in light and dark, for all 10 themes (spec 007 FR-005, SC-002; research R4, R13). A theme block
+// overrides only the six accent tokens; everything else comes from :root / .dark, as in the cascade.
 import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
+import { fontIds, themeIds } from '@/lib/appearance'
 
 const css = readFileSync(new URL('./globals.css', import.meta.url), 'utf8')
 
-function tokens(selector: string): Record<string, string> {
-  const start = css.indexOf(`${selector} {`)
-  if (start === -1) throw new Error(`No "${selector} {" block in globals.css`)
-  const block = css.slice(start, css.indexOf('}', start))
+/** The hex tokens of the block whose selector starts a line, or null when there's no such block. */
+function block(selector: string): Record<string, string> | null {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, `['"]`)
+  const match = new RegExp(`(^|\\n)${escaped} \\{`).exec(css)
+  if (!match) return null
+  const start = match.index
+  const body = css.slice(start, css.indexOf('}', start))
   return Object.fromEntries(
-    [...block.matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map((m) => [m[1], m[2]]),
+    [...body.matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map((m) => [m[1], m[2]]),
   )
+}
+
+function tokens(selector: string): Record<string, string> {
+  const found = block(selector)
+  if (!found) throw new Error(`No "${selector} {" block in globals.css`)
+  return found
+}
+
+/** Spec 007 research R4: the only tokens a theme block may set. */
+const accentTokens = [
+  'primary',
+  'primary-foreground',
+  'accent',
+  'accent-foreground',
+  'ring',
+  'chart-1',
+].sort()
+
+/** Tokens of a theme in a mode, merged the way the cascade merges them on <html>. */
+function themeTokens(theme: string, mode: 'light' | 'dark'): Record<string, string> {
+  const root = tokens(':root')
+  const base = mode === 'light' ? root : { ...root, ...tokens('.dark') }
+  if (theme === 'indigo') return base
+  const selector = mode === 'light' ? `[data-theme='${theme}']` : `.dark[data-theme='${theme}']`
+  return { ...base, ...tokens(selector) }
 }
 
 function luminance(hex: string) {
@@ -95,21 +125,41 @@ const heatPairs: [string, string][] = [
   ['primary-foreground', 'heat-4'],
 ]
 
-describe.each([
-  ['light', ':root'],
-  ['dark', '.dark'],
-])('indigo theme, %s', (_, selector) => {
-  const t = tokens(selector)
+const combinations = themeIds.flatMap((theme) =>
+  (['light', 'dark'] as const).map((mode) => [theme, mode] as const),
+)
 
+describe.each(combinations)('%s theme, %s', (theme, mode) => {
+  // Looked up inside each test, so a missing theme block fails its own tests, not the whole file.
   test.each(heatPairs)('%s on %s (Progress calendar day) ≥ 4.5:1', (fg, bg) => {
+    const t = themeTokens(theme, mode)
     const heat = heatTokens(t)
     expect(heat[bg], `--${bg} missing`).toBeDefined()
     expect(contrast(t[fg], heat[bg])).toBeGreaterThanOrEqual(4.5)
   })
 
   test.each(pairs)('%s on %s ≥ 4.5:1', (fg, bg) => {
+    const t = themeTokens(theme, mode)
     expect(t[fg], `--${fg} missing`).toBeDefined()
     expect(t[bg], `--${bg} missing`).toBeDefined()
     expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(4.5)
   })
+})
+
+describe.each(themeIds.filter((id) => id !== 'indigo'))('%s theme blocks', (theme) => {
+  test.each([
+    ['light', `[data-theme='${theme}']`],
+    ['dark', `.dark[data-theme='${theme}']`],
+  ])('the %s block sets exactly the six accent tokens', (_, selector) => {
+    const found = block(selector)
+    expect(found, `no "${selector} {" block`).not.toBeNull()
+    expect(Object.keys(found ?? {}).sort()).toEqual(accentTokens)
+  })
+})
+
+test.each([...fontIds])('font %s has a [data-font] line', (font) => {
+  const line = new RegExp(
+    `\\[data-font=['"]${font}['"]\\]\\s*\\{\\s*--font-active:\\s*var\\(--font-${font}\\);?\\s*\\}`,
+  )
+  expect(css).toMatch(line)
 })

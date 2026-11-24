@@ -12,6 +12,7 @@ import { ActionResultError, unwrap } from '@/lib/result'
 import { safeNext } from '@/lib/safe-next'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { resendSignupCode, verifyEmailCode } from '../actions'
+import { useApplySavedLook } from './use-apply-saved-look'
 
 const COOLDOWN_MS = 60_000
 const LIFETIME_MS = 60 * 60_000
@@ -55,6 +56,7 @@ export function VerifyEmailForm() {
   const [notice, setNotice] = useState<string | null>(null)
   const now = useNow()
   const emailApp = useEmailAppLink()
+  const applySavedLook = useApplySavedLook()
 
   const cooldownLeft = Math.max(0, Math.ceil((sentAt + COOLDOWN_MS - now) / 1000))
   const minutesLeft = Math.max(0, Math.ceil((sentAt + LIFETIME_MS - now) / 60_000))
@@ -62,6 +64,7 @@ export function VerifyEmailForm() {
   const verify = useMutation({
     mutationFn: async (value: string) => unwrap(await verifyEmailCode({ email, code: value })),
     onSuccess: ({ home }) => {
+      applySavedLook()
       // Invite links keep their `next` (/join/CODE) through sign-up and confirmation.
       router.replace(home === '/join' && next?.startsWith('/join') ? next : home)
     },
