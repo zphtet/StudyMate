@@ -5,8 +5,8 @@ import { waitForWorker } from './fixtures/offline'
 import { createConfirmedUser, signIn, type TestUser } from './fixtures/users'
 
 // Spec 008 User Story 3 – Updates (research R13; contracts/ui-routes.md › UpdateToast). A deploy
-// changes the worker's bytes; here the test serves the same worker with one more line, which the
-// browser's update check treats the same way. Needs a production build.
+// gives the browser a worker it hasn't seen, which waits; the test registers one on the same scope.
+// Needs a production build.
 
 let zin: TestUser
 let may: TestUser
@@ -27,7 +27,6 @@ test.beforeEach(async () => {
 
 test('scenario 1: a new version shows "Update ready"; nothing reloads mid-edit; Reload updates', async ({
   page,
-  context,
 }) => {
   await signIn(page, may)
   await waitForWorker(page)
@@ -38,12 +37,12 @@ test('scenario 1: a new version shows "Update ready"; nothing reloads mid-edit; 
     ;(window as Window & { beforeUpdate?: boolean }).beforeUpdate = true
   })
 
-  // The next deploy.
-  await context.route('**/serwist/sw.js', async (route) => {
-    const response = await route.fetch()
-    await route.fulfill({ response, body: `${await response.text()}\n// next version\n` })
-  })
-  await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update())
+  // The next deploy: a worker the browser hasn't seen installs and waits. (Playwright can't route
+  // the browser's own fetch of the worker script, so a new script URL on the same scope stands in
+  // for new bytes; the browser treats both as an update.)
+  await page.evaluate(() =>
+    navigator.serviceWorker.register('/serwist/sw.js?next', { scope: '/', type: 'module' }),
+  )
 
   const toast = page.getByRole('status').or(page.locator('[data-sonner-toast]')).filter({
     hasText: 'Update ready',
@@ -57,10 +56,13 @@ test('scenario 1: a new version shows "Update ready"; nothing reloads mid-edit; 
   ).toBe(true)
   await expect(answer).toHaveValue('半分だけ書いた')
 
-  await toast.getByRole('button', { name: 'Reload' }).click()
-  await expect
-    .poll(() => page.evaluate(() => (window as Window & { beforeUpdate?: boolean }).beforeUpdate))
-    .toBeUndefined()
+  await Promise.all([
+    page.waitForEvent('load'),
+    toast.getByRole('button', { name: 'Reload' }).click(),
+  ])
+  expect(
+    await page.evaluate(() => (window as Window & { beforeUpdate?: boolean }).beforeUpdate),
+  ).toBeUndefined()
   expect(
     await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting),
   ).toBeNull()

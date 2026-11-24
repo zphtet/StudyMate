@@ -123,21 +123,22 @@ test('scenarios 1–4: a kept course reads offline; complete, a draft with a pho
   // Scenario 2: complete → "Will sync".
   await bottomBar(page).getByRole('button', { name: 'Mark complete' }).click()
   const completedAt = Date.now()
-  await expect(bottomBar(page).getByText('Will sync')).toBeVisible()
+  await expect(bottomBar(page).getByText('Will sync', { exact: true })).toBeVisible()
 
   // A draft with a photo, kept on the device.
   await page.goto(`/s/lessons/${lessonIds[1]}?tab=assignment`)
   await answer(page).fill('食べて、飲んで、寝ます。')
   await page.getByLabel('Add photo').setInputFiles(path.join(FILES, 'notebook.png'))
   await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(1)
-  await expect(page.getByText('Will sync').first()).toBeVisible()
+  await expect(page.getByText('Will sync', { exact: true }).first()).toBeVisible()
+  await expect.poll(async () => (await outboxRows(page)).length).toBe(2)
 
   // Scenario 3: Submit offline → "Will submit".
   await page.goto(`/s/lessons/${lessonIds[2]}?tab=assignment`)
   await answer(page).fill('My room is small but bright.')
   await page.getByRole('button', { name: 'Submit' }).click()
   const submittedAt = Date.now()
-  await expect(page.getByText('Will submit')).toBeVisible()
+  await expect(page.getByText('Will submit', { exact: true })).toBeVisible()
 
   // Scenario 4: the banner says what will happen.
   await expect(banner(page)).toContainText('3 changes will sync')
@@ -180,7 +181,8 @@ test('a draft changed elsewhere meanwhile is not saved, and the student can copy
 
   await goOffline(context)
   await answer(page).fill('written on the train')
-  await expect(page.getByText('Will sync')).toBeVisible()
+  await expect(page.getByText('Will sync', { exact: true })).toBeVisible()
+  await expect.poll(async () => (await outboxRows(page)).length).toBe(1)
   // Meanwhile, on another device.
   await sql(
     `update submissions set body_md = 'from the phone', updated_at = now() where student_id = $1 and lesson_id = $2`,
@@ -229,19 +231,24 @@ test('shifts offline: a new shift, an edit and a delete sync; rotation needs a c
 
   // Rotation can't be queued.
   await page.reload()
-  const save = page.getByRole('button', { name: 'Save' })
-  await expect(save).toBeDisabled()
-  await expect(save).toHaveAttribute('aria-describedby', 'needs-connection')
+  const saves = page.getByRole('button', { name: 'Save' })
+  await expect(saves.first()).toBeVisible()
+  for (const save of await saves.all()) {
+    await expect(save).toBeDisabled()
+    await expect(save).toHaveAttribute('aria-describedby', 'needs-connection')
+  }
   await expect(banner(page)).toContainText('Editing needs a connection')
 
   // A new shift.
   await page.goto(`/s/shifts/new?date=${day(3)}`)
-  await page.getByRole('button', { name: 'Save' }).click()
-  await expect(page.getByText('Will sync').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Save' }).first().click()
+  await expect(page.getByText('Will sync', { exact: true }).first()).toBeVisible()
   // An edit and a delete of shifts saved online.
   await page.goto(`/s/shifts/${edited}`)
   await page.getByRole('radio', { name: 'Night' }).click()
-  await page.getByRole('button', { name: 'Save' }).click()
+  await page.getByRole('button', { name: 'Save' }).first().click()
+  // Queued: the editor goes back to the month, as it does online.
+  await expect(page).toHaveURL(/\/s\/shifts\?/)
   await page.goto(`/s/shifts/${removed}`)
   await page.getByRole('button', { name: 'Delete' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
@@ -325,7 +332,7 @@ test('sign-out with a change not synced asks first, then wipes this device', asy
   await page.goto(`/s/lessons/${lessonIds[0]}`)
   await goOffline(context)
   await bottomBar(page).getByRole('button', { name: 'Mark complete' }).click()
-  await expect(bottomBar(page).getByText('Will sync')).toBeVisible()
+  await expect(bottomBar(page).getByText('Will sync', { exact: true })).toBeVisible()
 
   await page.goto('/s/me')
   await page.getByRole('button', { name: 'Sign out' }).click()

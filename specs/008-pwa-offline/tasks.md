@@ -227,7 +227,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - `outboxRows(page)` (read IndexedDB `studymate.outbox` in the page);
   - `waitForSynced(page)` (outbox empty and banner gone);
   - `cacheNames(page)`.
-- [ ] T030 [US2] Write tests/e2e/us2-offline.spec.ts on the production build (spec US2 scenarios 1–4, Edge Cases; quickstart.md §4 scenarios 5–12). Seed a student linked to an Admin, a course with 3 lessons (one image via `uploadLessonFile`, one PDF, one assignment prompt) and a shift week. Then:
+- [X] T030 [US2] Write tests/e2e/us2-offline.spec.ts on the production build (spec US2 scenarios 1–4, Edge Cases; quickstart.md §4 scenarios 5–12). Seed a student linked to an Admin, a course with 3 lessons (one image via `uploadLessonFile`, one PDF, one assignment prompt) and a shift week. Then:
   - open the course online and wait for keep-offline (the `offlineCourses` row);
   - go offline, then set the page clock 10 minutes behind real time (`page.clock.setSystemTime`), so the device times differ from the sync time but stay inside research R8's window;
   - open each lesson, see the image and the PDF link working, and the YouTube placeholder;
@@ -330,7 +330,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - in src/features/profile/components/me-view.tsx, Sign out first counts pending entries. If any, show a confirm (`AlertDialog` or `BottomSheet`) "{n} changes not synced yet — sign out anyway?" with Cancel / Sign out. Then wipe, then the existing push unsubscribe + `signOut`. Offline: the wipe, the push unsubscribe, then supabase-js `auth.signOut({ scope: 'local' })` and `router.replace('/sign-in')` (research R11 › Offline sign-out).
 
   Add the `pwa.signOutPending.*` keys. (Done. The persister stops saving first, so a throttled save can't recreate the database after it is deleted.)
-- [ ] T048 [US2] Run tests/e2e/us2-offline.spec.ts (smoke with `--grep` while iterating) on the production build until green. Fix whatever it finds in the task that owns the file.
+- [X] T048 [US2] Run tests/e2e/us2-offline.spec.ts (smoke with `--grep` while iterating) on the production build until green. Fix whatever it finds in the task that owns the file. (2026-11-24: 6/6 on mobile. The fixes were in the tests: exact "Will sync" matching (the banner's "changes will sync" matched case-insensitively), waiting for the outbox entry before going online, and waiting for the editor to return before navigating.)
 
 **Checkpoint**: quickstart.md §4 scenarios 5–12 pass by hand on the production build.
 
@@ -344,11 +344,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Tests for User Story 3
 
-- [ ] T049 [P] [US3] Write tests/e2e/us3-update.spec.ts on the production build (spec US3 scenario 1; research R13). Open a lesson's assignment editor and type a draft. Then make the waiting worker either by:
+- [X] T049 [P] [US3] Write tests/e2e/us3-update.spec.ts on the production build (spec US3 scenario 1; research R13). Open a lesson's assignment editor and type a draft. Then make the waiting worker either by:
   - rebuilding with a new `SW_REVISION` (T001) and restarting the :3100 server, which changes the worker's `/~offline` revision and so its bytes (research R1), or
   - if the rebuild takes over 2 minutes, a second production build made beforehand with another `SW_REVISION` in a copied `.next`, swapped in before the restart.
 
   Never use a test-only route in production code.
+
+  (Done differently: Playwright can't route the browser's own fetch of the worker script, and a rebuild under a running server breaks it. The test registers the same scope with a new script URL (`/serwist/sw.js?next`), which the browser treats as an update: a new worker installs and waits, as after a deploy.)
 
   Check:
   - the "Update ready" toast appears and stays;
@@ -357,14 +359,14 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Implementation for User Story 3
 
-- [ ] T050 [US3] Write src/features/pwa/components/update-toast.tsx (contracts/ui-routes.md › UpdateToast):
+- [X] T050 [US3] Write src/features/pwa/components/update-toast.tsx (contracts/ui-routes.md › UpdateToast):
   - watch `navigator.serviceWorker.getRegistration()` for `waiting`, and `updatefound` → `installed` while a controller exists;
   - check for updates on `visibilitychange` → visible (`registration.update()`);
   - show a Sonner toast with `duration: Infinity` and a Reload action;
   - Reload: `await` one sync run (≤ 5 s, via `lib/offline/sync.ts`), then `skipWaiting()` from worker-messages, then `location.reload()` on `controllerchange`.
 
   Render it in src/app/s/layout.tsx and src/app/a/layout.tsx. Add the `pwa.update.ready` and `pwa.update.reload` keys.
-- [ ] T051 [US3] Run tests/e2e/us3-update.spec.ts on the production build until green.
+- [X] T051 [US3] Run tests/e2e/us3-update.spec.ts on the production build until green. (2/2, mobile and desktop.)
 
 **Checkpoint**: quickstart.md §4 scenario 13.
 
