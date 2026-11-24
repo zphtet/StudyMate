@@ -17,6 +17,8 @@ export type ShiftView = {
   /** pattern_id is set: a rotation generated this shift. */
   fromRotation: boolean
   overridden: boolean
+  /** The version an offline edit or delete is made on (spec 008 research R7). */
+  updatedAt: string
 }
 
 /** busy_segments rows, merged and disjoint (lib/availability.ts mergeSegments). */

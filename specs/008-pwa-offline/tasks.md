@@ -166,11 +166,11 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T020 [P] [US2] Write pgTAP tests in supabase/tests/008_offline_versions.test.sql (data-model.md › pgTAP). Use `begin … rollback`, switching users as 005_shift_policies.test.sql does. Cases:
+- [X] T020 [P] [US2] Write pgTAP tests in supabase/tests/008_offline_versions.test.sql (data-model.md › pgTAP). Use `begin … rollback`, switching users as 005_shift_policies.test.sql does. Cases:
   - data-model.md submissions.client_op_id: the column exists and is unique (a second row with the same value fails);
   - data-model.md shifts.updated_at: the column exists, is not null and has a default;
   - as one student, updating another student's submission and shift with `client_op_id` set changes 0 rows.
-- [ ] T021 [P] [US2] Write src/lib/offline/accepted-time.test.ts (research R8; data-model.md › Validation rules FR-003c). `acceptedTime({ at, serverNow, base })` returns:
+- [X] T021 [P] [US2] Write src/lib/offline/accepted-time.test.ts (research R8; data-model.md › Validation rules FR-003c). `acceptedTime({ at, serverNow, base })` returns:
   - `at` inside [serverNow − 14 d, serverNow];
   - `serverNow` for `at` up to 2 min in the future;
   - `serverNow` beyond 2 min, older than 14 days, or before `base`;
@@ -194,8 +194,8 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - `pickMedia(resources, budget = 20 MB)` keeps lesson order and skips files that would cross the budget (later smaller ones still fit);
   - `pickEviction(courses, currentCourseId, estimate)` returns the least recently opened course other than the current one while usage > 80 % of quota, and nothing below that;
   - `changedSince(kept, lessons)` lists only lessons and URLs not stored yet.
-- [ ] T025 [P] [US2] Write src/features/shifts/overlap.test.ts: `findLocalOverlap(shifts, { start, end, exceptId })` matches the repo rule (working shifts only, `start < other.end && end > other.start`, the edited shift excluded), including a night shift across midnight and an Off day (never clashes).
-- [ ] T026 [P] [US2] Write src/features/progress/sync-ops.test.ts against the dev DB, as src/features/progress/repo.test.ts does. Fixtures: two students, an Admin, a course with lessons (one with a prompt). Cover every progress, submission and focus row of research R7:
+- [X] T025 [P] [US2] Write src/features/shifts/overlap.test.ts: `findLocalOverlap(shifts, { start, end, exceptId })` matches the repo rule (working shifts only, `start < other.end && end > other.start`, the edited shift excluded), including a night shift across midnight and an Off day (never clashes).
+- [X] T026 [P] [US2] Write src/features/progress/sync-ops.test.ts against the dev DB, as src/features/progress/repo.test.ts does. Fixtures: two students, an Admin, a course with lessons (one with a prompt). Cover every progress, submission and focus row of research R7:
   - `progress.complete`: applied with `completed_at` = accepted `at` and `client_op_id` = op id (data-model.md lesson_progress.client_op_id); duplicate on the same id; applied as a no-op when already done elsewhere; dropped `changed_on_server` when `wasDone: true` but the Admin reopened; dropped `lesson_unavailable` after `softDeleteLesson`; `lesson_locked`; `submission_required`;
   - `progress.undo`: the mirror cases;
   - `submission.save`: applied for a new row (`base.updatedAt: null`) and a matching base, returning the new `updated_at` as `version` (data-model.md submissions.client_op_id); duplicate; dropped `changed_on_server` when `updated_at` differs or the status is Submitted/Reviewed; `file_missing` when an attachment path isn't in Storage; a path in another student's folder → `invalid_input`;
@@ -203,7 +203,9 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - `focus.record`: inserted with `client_op_id` (data-model.md study_sessions.client_op_id) and lesson In progress; duplicate; `focus_overlap`; length over the plan → `invalid_input`;
   - `focus.stop`: `ended_at` = least(accepted `at`, cap); already ended → returns its count; unknown → `session_not_found`;
   - another student's lesson id → `lesson_unavailable`, with no row changed.
-- [ ] T027 [P] [US2] Write src/features/shifts/sync-ops.test.ts against the dev DB (research R7, shift rows; data-model.md shifts.updated_at, shifts.client_op_id). Cases:
+
+  (Done: 19 cases. Progress has no reachable `changed_on_server`. A complete always starts from `wasDone: false`, because coalescing removes complete-after-undo, so a lesson done elsewhere is an applied no-op, as R7's note says.)
+- [X] T027 [P] [US2] Write src/features/shifts/sync-ops.test.ts against the dev DB (research R7, shift rows; data-model.md shifts.updated_at, shifts.client_op_id). Cases:
   - new `shift.save` creates with `client_op_id`; a duplicate id returns the same shift;
   - an overnight shift is one record (constitution IV);
   - an edit with a matching `updated_at` applies and bumps `updated_at`;
@@ -211,7 +213,9 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - an overlap → `shift_overlap`;
   - a delete applies; a delete of a shift already gone → `duplicate`; a delete of a rotation shift turns it Off with `client_op_id`;
   - another student's shift id → `shift_not_found`, unchanged.
-- [ ] T028 [P] [US2] Write src/app/api/sync/route.test.ts against the dev DB (contracts/sync-route.md › Errors, Permissions, Tests). Cases:
+
+  (Done. The form's fields travel under `shift`, because 005's form has its own `type` (contract updated). `ShiftView` gains `updatedAt`, the version an offline edit is made on.)
+- [X] T028 [P] [US2] Write src/app/api/sync/route.test.ts against the dev DB (contracts/sync-route.md › Errors, Permissions, Tests). Cases:
   - signed out → 401; Admin → 403; a malformed body or 51 ops → 400 with nothing applied;
   - a batch applied + dropped + applied returns three results in order and applies both good ops;
   - an op that throws unexpectedly (mock one `apply`) returns results up to it plus `retry`, and later ops are not applied.
@@ -241,12 +245,12 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
 
 ### Implementation for User Story 2: server
 
-- [ ] T031 [US2] Schema and migration (data-model.md › Migration; docs/data-model.md §7):
+- [X] T031 [US2] Schema and migration (data-model.md › Migration; docs/data-model.md §7):
   - add `clientOpId` to `Submission` (data-model.md submissions.client_op_id) and `updatedAt` to `Shift` (data-model.md shifts.updated_at) in prisma/schema.prisma;
   - generate prisma/migrations/<UTC timestamp>_offline_versions/migration.sql by diffing against git, and check it matches the expected SQL and drops nothing;
   - `pnpm prisma migrate deploy`, `pnpm prisma generate`, `pnpm test:db` (T020 passes).
-- [ ] T032 [P] [US2] Write src/lib/offline/accepted-time.ts (pure, no Dexie import; cite R8). T021 passes.
-- [ ] T033 [US2] Extend the progress repo for replay (research R7, R8) in src/features/progress/repo.ts. Keep the existing online signatures working:
+- [X] T032 [P] [US2] Write src/lib/offline/accepted-time.ts (pure, no Dexie import; cite R8). T021 passes.
+- [X] T033 [US2] Extend the progress repo for replay (research R7, R8) in src/features/progress/repo.ts. Keep the existing online signatures working:
   - `completeLesson` / `undoCompletion` take an optional `{ opId, wasDone, at }`, check duplicate and done-state, and write data-model.md lesson_progress.client_op_id;
   - `saveDraft` / `submitAssignment` take an optional `{ opId, baseUpdatedAt, at }`, check duplicate and base, and write data-model.md submissions.client_op_id. Versions stay server time; only `submitted_at` takes the accepted time;
   - add `recordFocus(student, { opId, lessonId, minutes, startedAt, endedAt })`: insert finished with data-model.md study_sessions.client_op_id (`on conflict (client_op_id) do nothing`), overlap check, lesson → In progress as `startFocus` does;
@@ -254,13 +258,13 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - add `file_missing` through `findSubmissionFile`'s Storage check for each attachment path.
 
   The existing src/features/progress/repo.test.ts must still pass.
-- [ ] T034 [US2] Write src/features/progress/sync-ops.ts (server-only; contracts/sync-route.md):
+- [X] T034 [US2] Write src/features/progress/sync-ops.ts (server-only; contracts/sync-route.md):
   - Zod op schemas for `progress.*`, `submission.*` and `focus.*`, extending `completeLessonSchema`, `saveDraftSchema`, `startFocusSchema` and `stopFocusSchema` with `id`, `type`, `at` and `base`;
   - `apply(me, op, serverNow)` for each: `requireLessonReader` (`AuthError` 404 → `lesson_unavailable`), `acceptedTime`, the repo call, and mapping `ActionFailure` to `dropped`.
 
   T026 passes.
-- [ ] T035 [US2] Extend the shifts repo (research R7) in src/features/shifts/repo.ts: `saveShift` and `deleteShift` take an optional `{ opId, baseUpdatedAt }`. Add the duplicate check and creation with data-model.md shifts.client_op_id, the base check against data-model.md shifts.updated_at (`changed_on_server`), and delete of a missing shift as `duplicate`. Then write src/features/shifts/sync-ops.ts (op schemas extending `saveShiftSchema`/`deleteShiftSchema`, plus `apply`). T027 passes; the existing shifts repo tests still pass.
-- [ ] T036 [US2] Write src/app/api/sync/route.ts (contracts/sync-route.md):
+- [X] T035 [US2] Extend the shifts repo (research R7) in src/features/shifts/repo.ts: `saveShift` and `deleteShift` take an optional `{ opId, baseUpdatedAt }`. Add the duplicate check and creation with data-model.md shifts.client_op_id, the base check against data-model.md shifts.updated_at (`changed_on_server`), and delete of a missing shift as `duplicate`. Then write src/features/shifts/sync-ops.ts (op schemas extending `saveShiftSchema`/`deleteShiftSchema`, plus `apply`). T027 passes; the existing shifts repo tests still pass.
+- [X] T036 [US2] Write src/app/api/sync/route.ts (contracts/sync-route.md):
   - `handle()` + `requireRole('student')`;
   - build `z.discriminatedUnion('type', …)` from both features' op schemas; `ops` 1..50;
   - one `serverNow` per request (`select now()`);

@@ -42,6 +42,11 @@ import type {
 
 type Student = { id: string; timezone: string }
 type Admin = { id: string }
+/**
+ * A change the student made offline, replayed by /api/sync (spec 008 research R7, R8): its op id
+ * (kept as client_op_id) and the accepted time the student acted. Versions stay server time.
+ */
+export type ReplayedOp = { opId: string; at: Date }
 type Reviewer = { id: string; displayName: string }
 
 /** 002's place and lock check, as an action error code (lesson_locked, lesson_not_found). */
@@ -99,8 +104,16 @@ const key = (studentId: string, lessonId: string) => ({
   studentId_lessonId: { studentId, lessonId },
 })
 
-/** US1 scenario 1: the student marks a lesson complete. Completing a done lesson changes nothing. */
-export async function completeLesson(student: Student, lessonId: string, now = new Date()) {
+/**
+ * US1 scenario 1: the student marks a lesson complete. Completing a done lesson changes nothing.
+ * Replayed offline (spec 008), `completed_at` is when the student tapped it.
+ */
+export async function completeLesson(
+  student: Student,
+  lessonId: string,
+  now = new Date(),
+  op?: ReplayedOp,
+) {
   const place = await placeForAction(student, lessonId)
   const facts = await lessonFacts(student.id, lessonId)
   const block = completionBlock({
@@ -118,21 +131,29 @@ export async function completeLesson(student: Student, lessonId: string, now = n
       nextLessonId: place.nextLessonId,
     }
   }
-  const data = doneData(facts, student.id, now)
+  const data = {
+    ...doneData(facts, student.id, now),
+    ...(op && { completedAt: op.at, clientOpId: op.opId }),
+  }
   await prisma.lessonProgress.upsert({
     where: key(student.id, lessonId),
     create: { studentId: student.id, lessonId, ...data },
     update: data,
   })
-  return { completedAt: now.toISOString(), nextLessonId: place.nextLessonId }
+  return { completedAt: data.completedAt.toISOString(), nextLessonId: place.nextLessonId }
 }
 
 /** US1 scenario 3: back to not done; later lessons are untouched (spec Edge Cases). */
-export async function undoCompletion(student: Student, lessonId: string, now = new Date()) {
+export async function undoCompletion(
+  student: Student,
+  lessonId: string,
+  now = new Date(),
+  op?: ReplayedOp,
+) {
   const place = await placeForAction(student, lessonId)
   if (place.courseStatus !== 'active') fail('course_not_active')
   const facts = await lessonFacts(student.id, lessonId)
-  const data = notDoneData(facts, now)
+  const data = { ...notDoneData(facts, now), ...(op && { clientOpId: op.opId }) }
   if (facts.progress?.status === 'done') {
     await prisma.lessonProgress.update({ where: key(student.id, lessonId), data })
   }
@@ -188,6 +209,15 @@ export async function setLessonDone(
     ])
   }
   return { done }
+}
+
+/** The last offline op applied to this lesson's progress (spec 008 research R7: duplicates). */
+export async function progressOpId(studentId: string, lessonId: string) {
+  const row = await prisma.lessonProgress.findUnique({
+    where: key(studentId, lessonId),
+    select: { clientOpId: true },
+  })
+  return row?.clientOpId ?? null
 }
 
 /** Counted focus seconds of one student on one lesson. */
@@ -322,22 +352,30 @@ function checkAttachments(student: Student, lessonId: string, attachments: Attac
   }
 }
 
+/** A draft or submit replayed offline, made on the version the student saw (spec 008 R7). */
+export type ReplayedAnswer = ReplayedOp & { baseUpdatedAt: Date | null }
+
 /**
  * Writes the student's answer when the status allows it (research.md R7): a new row, or an update
  * that only applies while the stored status is still Draft or Needs redo, so a review that lands in
- * between can't be overwritten.
+ * between can't be overwritten. A replayed answer also needs the row unchanged since the student saw
+ * it: the server wins (spec 008 FR-003b).
  */
 async function writeAnswer(
   student: Student,
   { lessonId, bodyMd, attachments }: SaveDraftInput,
   move: 'save' | 'submit',
   now: Date,
+  op?: ReplayedAnswer,
 ) {
   checkAttachments(student, lessonId, attachments)
   const existing = await prisma.submission.findUnique({
     where: key(student.id, lessonId),
-    select: { status: true },
+    select: { status: true, updatedAt: true },
   })
+  if (op && (existing?.updatedAt.getTime() ?? null) !== (op.baseUpdatedAt?.getTime() ?? null)) {
+    fail('changed_on_server')
+  }
   const status = studentNext(existing?.status ?? null, move)
   if (!status) fail('submission_locked')
   const data = {
@@ -345,7 +383,8 @@ async function writeAnswer(
     attachments,
     status,
     updatedAt: now,
-    ...(move === 'submit' && { submittedAt: now, reviewedAt: null }),
+    ...(move === 'submit' && { submittedAt: op?.at ?? now, reviewedAt: null }),
+    ...(op && { clientOpId: op.opId }),
   }
   if (!existing) {
     return prisma.submission.create({
@@ -366,19 +405,32 @@ async function writeAnswer(
 }
 
 /** Autosave (US2 scenario 1). A new answer is a Draft; Needs redo stays Needs redo. */
-export async function saveDraft(student: Student, input: SaveDraftInput, now = new Date()) {
+export async function saveDraft(
+  student: Student,
+  input: SaveDraftInput,
+  now = new Date(),
+  op?: ReplayedAnswer,
+) {
   await assignmentLesson(student, input.lessonId)
-  const row = await writeAnswer(student, input, 'save', now)
+  const row = await writeAnswer(student, input, 'save', now, op)
   // writeAnswer only saves from an editable status, so this narrows without failing.
   if (row.status !== 'draft' && row.status !== 'needs_redo') fail('submission_locked')
   return { submissionId: row.id, status: row.status, updatedAt: now.toISOString() }
 }
 
-/** US2 scenarios 2 and 4: Submitted, with a notice for each actively linked Admin (FR-009). */
-export async function submitAssignment(student: Student, input: SaveDraftInput, now = new Date()) {
+/**
+ * US2 scenarios 2 and 4: Submitted, with a notice for each actively linked Admin (FR-009). Replayed
+ * offline (spec 008 US2 scenario 3), `submitted_at` is when the student pressed Submit.
+ */
+export async function submitAssignment(
+  student: Student,
+  input: SaveDraftInput,
+  now = new Date(),
+  op?: ReplayedAnswer,
+) {
   const lesson = await assignmentLesson(student, input.lessonId)
   if (input.bodyMd.trim() === '' && input.attachments.length === 0) fail('submission_empty')
-  const row = await writeAnswer(student, input, 'submit', now)
+  const row = await writeAnswer(student, input, 'submit', now, op)
 
   const profile = await prisma.profile.findUniqueOrThrow({
     where: { id: student.id },
@@ -400,7 +452,19 @@ export async function submitAssignment(student: Student, input: SaveDraftInput, 
       }),
     ),
   )
-  return { submissionId: row.id, submittedAt: now.toISOString() }
+  return {
+    submissionId: row.id,
+    submittedAt: (op?.at ?? now).toISOString(),
+    updatedAt: now.toISOString(),
+  }
+}
+
+/** The stored answer's version and last offline op (spec 008 research R7). */
+export function submissionVersion(studentId: string, lessonId: string) {
+  return prisma.submission.findUnique({
+    where: key(studentId, lessonId),
+    select: { updatedAt: true, clientOpId: true },
+  })
 }
 
 /**
@@ -752,10 +816,16 @@ export async function startFocus(student: Student, { lessonId, minutes }: StartF
 /**
  * US4: Stop, or the countdown reaching 0. Ends the session at most at its plan; under a minute it is
  * deleted and counts 0 (FR-007). Stopping a session that already ended returns what it counted.
+ * Stopped offline (spec 008 research R7), `stoppedAt` is when the student stopped it.
  */
-export async function stopFocus(student: Student, sessionId: string) {
+export async function stopFocus(student: Student, sessionId: string, stoppedAt?: Date) {
+  const end = stoppedAt
+    ? Prisma.sql`greatest(started_at, least(${stoppedAt}::timestamptz, ${CAPPED_END}))`
+    : CAPPED_END
   const [row] = await prisma.$queryRaw<{ isRunning: boolean; seconds: number }[]>`
-    select ended_at is null as "isRunning", floor(${COUNTED_SECONDS})::int as seconds
+    select ended_at is null as "isRunning",
+      floor(case when ended_at is null then extract(epoch from ${end} - started_at)
+                 else ${COUNTED_SECONDS} end)::int as seconds
     from study_sessions where id = ${sessionId}::uuid and student_id = ${student.id}::uuid`
   if (!row) fail('session_not_found')
   if (!row.isRunning) return { countedSeconds: row.seconds }
@@ -764,11 +834,63 @@ export async function stopFocus(student: Student, sessionId: string) {
     return { countedSeconds: 0 }
   }
   const [stopped] = await prisma.$queryRaw<{ seconds: number }[]>`
-    update study_sessions set ended_at = ${CAPPED_END}
+    update study_sessions set ended_at = ${end}
     where id = ${sessionId}::uuid and ended_at is null
     returning floor(${COUNTED_SECONDS})::int as seconds`
   // Already ended by a start on another tab in the meantime: what was read is what it counted.
   return { countedSeconds: stopped?.seconds ?? row.seconds }
+}
+
+/** A focus session run offline (spec 008 research R7): the student's own times, within its plan. */
+export type RecordedFocus = {
+  opId: string
+  lessonId: string
+  minutes: StartFocusInput['minutes']
+  startedAt: Date
+  endedAt: Date
+}
+
+/**
+ * Records a whole session the timer ran offline. Under a minute counts 0 and isn't kept (FR-007);
+ * one that overlaps a session already recorded is refused (focus_overlap), so study time is never
+ * counted twice. A lesson not started yet becomes in progress, as startFocus does.
+ */
+export async function recordFocus(student: Student, focus: RecordedFocus) {
+  const place = await placeForAction(student, focus.lessonId)
+  if (place.courseStatus !== 'active') fail('course_not_active')
+  const seconds = Math.floor((focus.endedAt.getTime() - focus.startedAt.getTime()) / 1000)
+  if (seconds <= 0 || seconds > focus.minutes * 60) fail('invalid_input')
+  if (shouldDiscard(seconds)) return { countedSeconds: 0 }
+
+  await prisma.$transaction(async (tx) => {
+    const [clash] = await tx.$queryRaw<{ id: string }[]>`
+      select id::text from study_sessions
+      where student_id = ${student.id}::uuid
+        and tstzrange(started_at, coalesce(ended_at, ${CAPPED_END}))
+            && tstzrange(${focus.startedAt}::timestamptz, ${focus.endedAt}::timestamptz)
+      limit 1`
+    if (clash) fail('focus_overlap')
+    await tx.$executeRaw`
+      insert into study_sessions (student_id, lesson_id, started_at, ended_at, planned_minutes, client_op_id)
+      values (${student.id}::uuid, ${focus.lessonId}::uuid, ${focus.startedAt}, ${focus.endedAt},
+              ${focus.minutes}, ${focus.opId}::uuid)
+      on conflict (client_op_id) do nothing`
+    await tx.$executeRaw`
+      insert into lesson_progress (student_id, lesson_id, status, updated_at)
+      values (${student.id}::uuid, ${focus.lessonId}::uuid, 'in_progress', now())
+      on conflict (student_id, lesson_id) do update set status = 'in_progress', updated_at = now()
+      where lesson_progress.status = 'not_started'`
+  })
+  return { countedSeconds: seconds }
+}
+
+/** Whether this offline session was already recorded (spec 008 research R7: duplicates). */
+export async function isFocusRecorded(studentId: string, opId: string) {
+  const row = await prisma.studySession.findUnique({
+    where: { clientOpId: opId },
+    select: { studentId: true },
+  })
+  return row?.studentId === studentId
 }
 
 /**

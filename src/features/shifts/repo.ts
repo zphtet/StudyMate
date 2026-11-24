@@ -31,10 +31,16 @@ import { weekCheck } from '@/lib/week-check'
 // Spec 005 shifts and shift settings (research R2, R3, R10; contracts/server-actions.md). Callers MUST
 // have run requireRole('student'): every query is scoped to `student.id` from the guard
 // (data-model.md Shift.student_id), so another student's shift id is simply not found.
-// data-model.md Shift.client_op_id stays unset until the offline queue (008).
+// data-model.md Shift.client_op_id is written when /api/sync replays an offline change (spec 008).
 
 /** The caller's profile fields these functions use (the guard's `me`). */
 type Student = { id: string; timezone: string; sleepMinutes: number }
+
+/**
+ * A change the student made offline, replayed by /api/sync (spec 008 research R7): its op id (kept
+ * as client_op_id) and the version it was made on (null for a new shift). The server wins over it.
+ */
+export type ReplayedShiftOp = { opId: string; baseUpdatedAt: Date | null }
 
 const MAX_SHIFT_MINUTES = 24 * 60
 
@@ -46,6 +52,7 @@ const shiftSelect = {
   sleepMinutes: true,
   patternId: true,
   overridden: true,
+  updatedAt: true,
 } satisfies Prisma.ShiftSelect
 
 type ShiftRow = Prisma.ShiftGetPayload<{ select: typeof shiftSelect }>
@@ -59,6 +66,7 @@ function toView(row: ShiftRow): ShiftView {
     sleepMinutes: row.sleepMinutes,
     fromRotation: row.patternId !== null,
     overridden: row.overridden,
+    updatedAt: row.updatedAt.toISOString(),
   }
 }
 
@@ -103,7 +111,7 @@ function isOverlapViolation(error: unknown) {
  * daylight-saving night), shift_overlap with the clashing shift, shift_not_found. Editing a shift a
  * rotation generated marks it overridden, so rotation changes leave it as set (FR-007).
  */
-export async function saveShift(student: Student, input: SaveShiftInput) {
+export async function saveShift(student: Student, input: SaveShiftInput, op?: ReplayedShiftOp) {
   const { start, end, minutes } = instantsOf(input, student.timezone)
   const isWorking = input.type !== 'off'
   if (isWorking && minutes > MAX_SHIFT_MINUTES) fail('shift_too_long')
@@ -111,10 +119,13 @@ export async function saveShift(student: Student, input: SaveShiftInput) {
   const existing = input.shiftId
     ? await prisma.shift.findUnique({
         where: { id: input.shiftId, studentId: student.id },
-        select: { id: true, patternId: true },
+        select: { id: true, patternId: true, updatedAt: true },
       })
     : null
   if (input.shiftId && !existing) fail('shift_not_found')
+  if (op && existing && existing.updatedAt.getTime() !== op.baseUpdatedAt?.getTime()) {
+    fail('changed_on_server')
+  }
 
   if (isWorking) {
     const clash = await findOverlap(student.id, start, end, existing?.id)
@@ -126,6 +137,7 @@ export async function saveShift(student: Student, input: SaveShiftInput) {
     startAt: start,
     endAt: end,
     sleepMinutes: isWorking && input.blockSleep ? student.sleepMinutes : 0,
+    ...(op && { clientOpId: op.opId }),
   }
   try {
     const row = existing
@@ -152,12 +164,13 @@ export async function saveShift(student: Student, input: SaveShiftInput) {
  * Delete a shift. A hand-entered one is removed; a generated one becomes an overridden Off row for
  * its day, so the rotation doesn't fill the day again (research R4; spec Edge Cases).
  */
-export async function deleteShift(student: Student, shiftId: string) {
+export async function deleteShift(student: Student, shiftId: string, op?: ReplayedShiftOp) {
   const row = await prisma.shift.findUnique({
     where: { id: shiftId, studentId: student.id },
-    select: { patternId: true, startAt: true },
+    select: { patternId: true, startAt: true, updatedAt: true },
   })
   if (!row) fail('shift_not_found')
+  if (op && row.updatedAt.getTime() !== op.baseUpdatedAt?.getTime()) fail('changed_on_server')
   if (row.patternId === null) {
     await prisma.shift.delete({ where: { id: shiftId, studentId: student.id } })
     return { removed: 'deleted' as const }
@@ -165,9 +178,33 @@ export async function deleteShift(student: Student, shiftId: string) {
   const day = localDayRange(utcToZoned(row.startAt, student.timezone).date, student.timezone)
   await prisma.shift.update({
     where: { id: shiftId, studentId: student.id },
-    data: { type: 'off', startAt: day.start, endAt: day.end, sleepMinutes: 0, overridden: true },
+    data: {
+      type: 'off',
+      startAt: day.start,
+      endAt: day.end,
+      sleepMinutes: 0,
+      overridden: true,
+      ...(op && { clientOpId: op.opId }),
+    },
   })
   return { removed: 'off' as const }
+}
+
+/** The shift a replayed op created, if it was already applied (spec 008 research R7). */
+export async function shiftCreatedBy(studentId: string, opId: string) {
+  const row = await prisma.shift.findFirst({
+    where: { studentId, clientOpId: opId },
+    select: shiftSelect,
+  })
+  return row && toView(row)
+}
+
+/** A shift's version and last offline op, or null when it's gone (spec 008 research R7). */
+export function shiftVersion(studentId: string, shiftId: string) {
+  return prisma.shift.findUnique({
+    where: { id: shiftId, studentId },
+    select: { updatedAt: true, clientOpId: true },
+  })
 }
 
 /** GET /api/shifts/[shiftId]: 404 shift_not_found when it isn't the caller's. */

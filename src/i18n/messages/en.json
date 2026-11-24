@@ -205,7 +205,11 @@
     "push_quiet_now": "It's your quiet time now (quiet hours or outside your waking hours), so nothing was sent.",
     "message_not_found": "This message no longer exists.",
     "message_already_sent": "This message has already been sent.",
-    "message_time_past": "That time has passed. Choose a later time."
+    "message_time_past": "That time has passed. Choose a later time.",
+    "lesson_unavailable": "This lesson is no longer available.",
+    "changed_on_server": "It was changed on another device or by your teacher first.",
+    "file_missing": "A photo didn't finish uploading.",
+    "focus_overlap": "This study time overlaps a session already saved."
   },
   "validation": {
     "nameRequired": "Enter your name",

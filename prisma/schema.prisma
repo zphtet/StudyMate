@@ -351,6 +351,8 @@ model Submission {
   submittedAt DateTime?        @map("submitted_at") @db.Timestamptz(6)
   reviewedAt  DateTime?        @map("reviewed_at") @db.Timestamptz(6)
   updatedAt   DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  /// offline idempotency key: the last /api/sync op applied (spec 008 research R7)
+  clientOpId  String?          @unique @map("client_op_id") @db.Uuid
 
   student Profile @relation(fields: [studentId], references: [id], onDelete: Cascade)
   lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -429,6 +431,8 @@ model Shift {
   overridden   Boolean   @default(false)
   clientOpId   String?   @unique @map("client_op_id") @db.Uuid
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// the version a queued offline edit or delete was made on (spec 008 research R7)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   student Profile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   pattern ShiftPattern? @relation(fields: [patternId], references: [id], onDelete: SetNull)

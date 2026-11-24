@@ -30,7 +30,7 @@ Every op has the common fields:
 | `submission.submit` | as `submission.save` | `submitAssignmentSchema` + op fields |
 | `focus.record` | `lessonId`, `minutes` (15 \| 25), `startedAt`, `endedAt` | `startFocusSchema` + times |
 | `focus.stop` | `sessionId` (`at` = when stopped) | `stopFocusSchema` + op fields |
-| `shift.save` | 005's `saveShiftSchema` fields, `base: { updatedAt: string } \| null` (null = new shift) | `saveShiftSchema` + op fields |
+| `shift.save` | `shift`: 005's `saveShiftSchema` fields, nested because the form has its own `type` (day, night, …); `base: { updatedAt: string } \| null` (null = new shift) | `saveShiftSchema` under `shift` + op fields |
 | `shift.delete` | `shiftId`, `base: { updatedAt: string }` | `deleteShiftSchema` + op fields |
 
 Each feature exports its op schemas and `apply` functions from a server-only `sync-ops.ts`:
@@ -43,7 +43,7 @@ The route builds the `z.discriminatedUnion('type', …)` from them, so field rul
 
 1. `requireRole('student')`. Signed out → 401 `unauthenticated`. Admin → 403 `forbidden`.
 2. Parse the body. A malformed body → 400 `invalid_input`, nothing applied.
-3. For each op in order, call its feature's `apply(me, op, serverNow)`:
+3. For each op in order, call its feature's `apply(me, op, serverNow)`. `serverNow` is the app server's clock, read once per request:
    1. run the per-record guard its Server Action runs (`requireLessonReader(lessonId)`, or ownership through `where: { studentId: me.id }`);
    2. run the duplicate check, then the base check (research R7);
    3. call the same repo function as the Server Action, with the accepted time (R8);
