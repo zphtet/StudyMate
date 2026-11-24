@@ -4,15 +4,18 @@ import type { ReactNode } from 'react'
 import { LanguageSwitcher } from '@/components/shared/language-switcher'
 
 // Frame for the signed-out screens (sign in, sign up, confirm, reset, join): phone-width column,
-// optional back link on the left, language menu on the right.
+// a back link or `leading` content (sign-in's logo) on the left, language menu on the right.
 export function AuthShell({
   backHref,
   backLabel,
+  leading,
   showLanguage = true,
   children,
 }: {
   backHref?: string
   backLabel?: string
+  /** Shown on the left of the top row when there is no back link. */
+  leading?: ReactNode
   showLanguage?: boolean
   children: ReactNode
 }) {
@@ -28,7 +31,7 @@ export function AuthShell({
             <ChevronLeft className="size-6" aria-hidden />
           </Link>
         ) : (
-          <span />
+          (leading ?? <span />)
         )}
         {showLanguage && <LanguageSwitcher />}
       </div>

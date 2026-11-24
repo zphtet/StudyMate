@@ -9,7 +9,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import type { z } from 'zod'
-import { AppMark } from '@/components/shared/app-mark'
 import { Field, inputClass } from '@/components/shared/field'
 import { PasswordInput } from '@/components/shared/password-input'
 import { Button } from '@/components/ui/button'
@@ -75,7 +74,6 @@ export function SignInForm() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-col gap-4 pt-6">
-        <AppMark />
         <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight">{t('title')}</h1>
         <p className="text-lg text-muted-foreground">{tc('tagline')}</p>
       </div>
