@@ -1,5 +1,5 @@
 import 'server-only'
-import { inviteUrl } from '@/features/profile/repo'
+import { inviteUrl } from '@/lib/invite-url'
 import { prisma } from '@/lib/prisma'
 import type { AdminOverview } from './types'
 

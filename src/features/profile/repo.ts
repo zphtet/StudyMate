@@ -1,15 +1,13 @@
 import 'server-only'
 import { hasLocale } from '@/i18n/locales'
 import { toAppearance, toFontScale, type Appearance } from '@/lib/appearance'
+import { inviteUrl } from '@/lib/invite-url'
 import { prisma } from '@/lib/prisma'
 import type { SaveAppearanceInput } from './schemas'
 import type { MeResponse } from './types'
 
 // Read side for the signed-in user. Callers MUST have run requireUser(); every query is scoped to
 // that user's id.
-
-export const inviteUrl = (code: string) =>
-  `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/join/${code}`
 
 type Me = {
   id: string
