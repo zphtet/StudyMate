@@ -585,32 +585,98 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T080 [P] Update the docs (plan.md › Documentation updates):
-  - **docs/data-model.md**: the delivery columns and their lifecycle, occurrence keys, `owner_id`, the dropped `read_at`, the new policies and CHECKs;
-  - **docs/technical-spec.md §3**: `features/notifications`, `features/alerts`, `server/notifications`, `server/cron.ts`, `server/activity.ts`, `lib/notifications`, `public/sw.js`;
-  - **docs/technical-spec.md §9**: the pipeline as built (look-back, lapse, re-check, bundling, every recipient's hours) and the deploy SQL;
-  - **docs/technical-spec.md §15**: `RESEND_FROM`.
-- [ ] T081 [P] Review every new `my` and `ja` string for completeness and tone, including no pronouns for students (FR-012). List the strings that need a native speaker under a `_review` note in specs/006-notifications/quickstart.md, as 004 and 005 did.
-- [ ] T082 Run every gate from the package.json scripts: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:db`, `pnpm test:e2e` (all of us1-inbox, us2-rules, us3-messages, us4-held and us5-my-reminders on the :3100 production build), `pnpm build`.
-- [ ] T083 [P] Accessibility and layout pass at 390×844 and 1280×800. Check:
-  - 44 px targets (bell, switches, chips, tiles);
+**Going in (2026-11-24)**: US1–US5 are committed (`0e2e7f9`, `ea8f9bb`). Known gaps:
+- the project docs still describe the pre-006 pipeline: technical-spec §9 has the window `[now-5m, now]` and a React Email template, and docs/data-model.md and the ER diagrams have `notification_rules.admin_id` and `scheduled_message_recipients.read_at`;
+- `SettingsRow` cuts off "Quiet hours" and "Shift calendar" at 390 px (T083);
+- only one happy-path Playwright test per story has run. The gate (T082) is the first full run.
+
+- [X] T080 [P] Update the project docs to match what was built (plan.md › Documentation updates):
+  - **docs/data-model.md**, in its entity table and constraints rows:
+    - `notification_rules`: `owner_id` instead of `admin_id`. A personal reminder has owner = student and is daily only (CHECK `notification_rules_personal_daily`), with the message length CHECK. The renamed `notification_rules_default_once` columns.
+    - `notifications`: `deliver_at`, `delivered_at`, `expires_at`, `push`, `urgent` and the occurrence keys (data-model.md › Lifecycles › A delivery).
+    - `scheduled_message_recipients`: without `read_at`.
+    - The new RLS policies for students' own rules.
+  - **docs/data-model-3-notifications.mmd and docs/data-model.mmd**: the same columns.
+    - Regenerate data-model-3-notifications.png with `pnpm dlx @mermaid-js/mermaid-cli -i docs/data-model-3-notifications.mmd -o docs/data-model-3-notifications.png`.
+    - If that can't run (no network), say so in the task's note and leave the PNG as a follow-up.
+  - **docs/technical-spec.md**:
+    - **§3**: `features/notifications`, `features/alerts`, `server/notifications`, `server/cron.ts`, `server/activity.ts`, `lib/notifications`, `lib/week-check.ts`, `lib/streak.ts`, `lib/push-device.ts`, `public/sw.js`, `app/manifest.ts`, and the shared `use-rule-text.ts`, `rule-badge.tsx` and `choice-chip.tsx`.
+    - **§9**: rewrite the pipeline as built (research R2–R5, R13, R14):
+      - rule occurrences in `(now − 15 min, now + 10 min]`;
+      - message hand-over up to 10 minutes ahead, which closes Edit and Cancel send then;
+      - holding to `next_free_at` for every recipient, Admins included;
+      - lapsing and the re-check before delivery;
+      - pulling forward and bundling into one push per recipient;
+      - the weekly summary as plain HTML through Resend (not React Email);
+      - the deploy SQL from quickstart.md §6.
+    - **§13**: dispatcher tests run against the shared dev database with `dispatch`'s test-only `scope`, about 5 s per run. DB tests and Playwright must not run at the same time, because `runDispatch` serves every user.
+    - **§15**: `RESEND_FROM`.
+    - **§17**: 006's routes `/s/inbox`, `/a/inbox`, `/a/alerts/**`, `/s/me/reminders`, `/api/me/reminders`, `/api/cron/dispatch`.
+
+  (Done 2026-11-24. docs/data-model.md also got a "Notifications" paragraph and "Policies replaced by spec 006". data-model-3-notifications.png was regenerated with mermaid-cli 11.4.2. docs/data-model.mmd has no PNG.)
+- [X] T081 [P] Review every new `my` and `ja` string from 006 (US1–US5) for completeness and tone, including no pronouns for students (FR-012). Text addressed to the reader ("you") is fine. List the strings that need a native speaker under a `_review` note in specs/006-notifications/quickstart.md, in the format 005 used (key count, placeholder check, a table of terms).
+
+  (Done: 267 keys, all present with matching placeholders. Fixed `ruleEditor.push` (my), which was still the English "Push". The Burmese install guide keeps iOS's English button names on purpose. Questions for a native speaker are in quickstart.md › _review.)
+- [ ] T082 Run every gate from the package.json scripts, **one at a time**, in this order:
+  1. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`;
+  2. `pnpm test` (dispatch.test.ts alone takes about 5 minutes), then `pnpm test:db`;
+  3. only after those finish: `pnpm build`, `PORT=3100 pnpm start`, then `PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e`.
+
+  Never run step 3 while step 2 is running. The e2e `runDispatch` dispatches every user on the shared dev database and broke 6 dispatcher tests when they overlapped (2026-11-23).
+
+  This is the one full Playwright run, as in 004 T083 and 005 T062. It covers every feature's specs, including all of us1-inbox, us2-rules, us3-messages, us4-held and us5-my-reminders. Leave the :3000 dev server alone and stop :3100 afterwards. Record failures as they are, with the test name and error, and fix ones caused by 006 before ticking the task.
+- [X] T083 [P] Accessibility and layout pass at 390×844 and 1280×800. Check:
+  - 44 px targets: bell, switches, chips, tiles, + Reminder;
   - the bell's label with the count;
-  - switches and chips labelled;
-  - the rule editor and composer usable by keyboard;
+  - switches and chips labelled, including My reminders' switches and day chips;
+  - the rule editor, composer, quiet hours sheet and reminder sheet usable by keyboard;
   - theme tokens only.
 
   Fix findings in src/features/notifications/components/ and src/features/alerts/components/.
 
-  Known (2026-11-23): at 390 px, `SettingsRow` (src/components/shared/settings.tsx) cuts off "Quiet hours" and "Shift calendar" ("Quiet ho…"). The label is `flex-1` with a zero basis, so the value takes the room. Make the value give way first.
-- [ ] T084 Compare each changed screen at 390×844 with screenshots/24-AdminNotify.png, 25-AdminMessage.png, 26-AdminRule.png, 04-Today.png, 11-Profile.png and 16-AdminStudents.png. Fix layout, hierarchy and copy, keeping only the differences listed in contracts/ui-routes.md › Intentional differences.
-- [ ] T085 Performance (plan.md › Performance Goals):
+  Known (2026-11-23): at 390 px, `SettingsRow` (src/components/shared/settings.tsx) cuts off "Quiet hours" and "Shift calendar" ("Quiet ho…"). The label is `flex-1` with a zero basis, so the value takes the room. Make the value give way first: the label keeps its natural width and truncates last. Check that every Me row still fits in en, my and ja.
+
+  (Done 2026-11-24.
+  - **`SettingsRow`**: the value starts from flex-basis 0 with a 5.5rem minimum, and the label keeps its full width whenever it fits next to that. Two tries failed first: weighting the shrink 1:100 still shrank the label by a fraction of a pixel, which shows an ellipsis; capping the label at 70% cut short values to "Bl…".
+  - **Checked at 390 px** in en, my and ja: "Quiet hours" and "Shift calendar" are whole; only long labels truncate ("Reminders on th…", Burmese "My reminders"); short values ("Blocked", "0 on", "ブロック中") stay whole.
+  - **Tap targets**: the 1.5× switches already have a ≥ 44 px hit area from the shadcn switch's `after:` inset (about 52 px tall).
+  - **Theme tokens**: no raw colours in the new components.
+  - **Keyboard and labels**: the sheets are Radix (focus trap, Esc); the chips and tiles are native radios and checkboxes; the switches have `aria-label`.)
+- [X] T084 Compare each changed screen at 390×844 with screenshots/24-AdminNotify.png, 25-AdminMessage.png, 26-AdminRule.png, 04-Today.png, 11-Profile.png and 16-AdminStudents.png. Fix layout, hierarchy and copy, keeping only the differences listed in contracts/ui-routes.md › Intentional differences.
+  - On Me (11-Profile.png), the Study rows are now Shift calendar, Weekly goal, Quiet hours, My reminders, then Reminders on this device, which has no screenshot.
+  - My reminders and the inbox have no screenshot. Check that they follow Alerts' rule rows and the shared list style.
+
+  (Done 2026-11-24, 13 screens captured at 390×844.
+  - **Fixed on Alerts** (24-AdminNotify.png): the note text is 15 px, and the rule badge is 36 px (`RuleBadge`; the row stays the 44 px tap target).
+  - **Kept**:
+    - the 44 px Edit / Cancel send buttons (constitution V);
+    - the message's two lines (contracts/ui-routes.md says 2 lines);
+    - the composer's "When to send" above the clock switch, because "May's time · Tokyo" is longer than "Her time" (FR-012);
+    - the page titles' size, which is the shared `PageHeader`.
+  - The browser shows `<input type=time>` as 12-hour in an en-US locale; that is the device's setting, not the app's.)
+- [X] T085 Performance (plan.md › Performance Goals). Check:
   - Lighthouse (mobile) ≥ 90 on `/a/alerts` and `/s/inbox`;
   - `/a/alerts` makes one request per chip;
   - the composer's availability check is one request;
-  - with the Prisma query log, `dispatch` runs the same number of statements (≈12) for 2 and for 20 students.
+  - `dispatch` runs the same number of SQL statements for 2 students as for 20.
+
+  For the statement count, write a throwaway Vitest file that is not committed:
+  - seed 2 and then 20 linked students with a rule and a pending notice each;
+  - count the queries Prisma logs during one `dispatch(now, …, { userIds })` call.
+
+  The plan's "about 12" was written before the look-ahead and the Sunday-check steps, so record the actual count. What matters is that it doesn't grow with the number of students.
 
   Record the results in specs/006-notifications/quickstart.md §5.
-- [ ] T086 Walk through quickstart.md §4 scenarios 1–12. For each one, record the test that covers it or what wasn't checked. Real-phone push (scenarios 1, 2 and 10 on iPhone and Android) is a manual step for the user: list it as such.
+
+  (Done, see quickstart.md §5 › Performance:
+  - `/s/inbox` 90;
+  - `/a/alerts` 81–85, **below target**: LCP waits for server-seeded data from the dev database, as for 004 and 005;
+  - one navigation per chip;
+  - the availability check is one request;
+  - `dispatch` runs 18 statements for 2 students and for 20.)
+- [X] T086 Walk through quickstart.md §4 scenarios 1–12. For each one, record the test that covers it or what wasn't checked. Scenario 6 (bundle) is covered by dispatch.test.ts › held, bundled and on time; scenario 8 by › personal reminders. Real-phone push (scenarios 1, 2 and 10 on iPhone and Android) is a manual step for the user: list it as such.
+
+  (Done: quickstart.md §4 › Coverage of the scenarios. Every scenario has an automated test. Real phones, the weekly-summary email in a real mailbox, and walking the my/ja screens by hand are listed as manual.)
 - [ ] T087 Set **Status** to `Implemented` in specs/006-notifications/spec.md (constitution quality gate). Scheduling the dispatcher with `pg_cron` (quickstart.md §6) is a deploy step for the user, not part of this task.
 
 ---
@@ -633,7 +699,7 @@ Side effect, accepted: a message is handed over, becomes `sent` and stops accept
 - **US3 (5)**: after US2 (T044's actions file, T045's queries, T046's `AlertsView`). T050, T051 and T054 can start after Foundational.
 - **US4 (6)**: after US2 and US3, because its timing checks cover rules and messages and T068 changes their steps. T064 and T067 can start after Foundational.
 - **US5 (7)**: after US1 (repo and Me rows) and T041 (`ruleSummary`). Independent of US3 and US4.
-- **Polish (8)**: after the stories you're shipping.
+- **Polish (8)**: after the stories you're shipping. T080, T081, T083 and T085 can run together. T084 follows T083, because both change the same screens. T082 runs after the fixes, and T086 and T087 come last.
 
 ### Within each story
 

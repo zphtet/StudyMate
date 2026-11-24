@@ -23,7 +23,7 @@ Check: `select count(*) from notifications where delivered_at is null` is 0 righ
 pnpm typecheck && pnpm lint
 pnpm test        # occurrences, renderMessage, quickTimes, bundle, rule configs;
                  # dispatch (postpone, urgent, bundle, lapse, de-dupe), actions
-pnpm test:e2e    # us1-inbox, us2-rules, us3-messages, us5-my-reminders (390×844 + 1280×800, axe)
+pnpm test:e2e    # us1-inbox, us2-rules, us3-messages, us4-held, us5-my-reminders (390×844 + 1280×800, axe)
 ```
 Run Playwright against a production build on :3100 (`pnpm build && PORT=3100 pnpm start`, then `PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e`); leave the dev server on :3000 alone. While developing, run one smoke test per story.
 
@@ -49,6 +49,25 @@ Seed: Admin Zin (Asia/Yangon), student May (Asia/Tokyo), linked; May has a cours
 11. **Weekly summary**: a Weekly summary rule for Sunday 18:00 to both → May and Zin get the inbox item and an email with the week's numbers.
 12. **Languages**: switch May to ja and Zin to my: notification texts, the inbox and the editors are in each person's language; times in each person's zone.
 
+### Coverage of the scenarios (T086, 2026-11-24)
+
+| # | Scenario | Covered by | Not checked |
+| --- | --- | --- | --- |
+| 1 | Turn on (US1) | us1-inbox › scenario 1 (stubbed PushManager), scenario 3 (blocked); `device-state.test.ts` (iPhone outside Home Screen → `needs-install`) | **Manual**: a real Android phone and an iPhone added to the Home Screen |
+| 2 | Notices (US1) | us1-inbox › independent test; dispatch.test › delivery | **Manual**: the notification on a real phone, and tapping it |
+| 3 | Rules (US2) | us2-rules › scenario 3, toggle, edit; alerts repo.test › sendTestPush (own devices only, quiet hours refused) | Send test arriving on a real phone (manual) |
+| 4 | Held during a shift (US4) | us3-messages › scenario 4 (warning and one-tap fix); dispatch.test › independent test (23:00 → 15:30, urgent at 23:00); us4-held | – |
+| 5 | Lapse (US4) | dispatch.test › scenario 4 (Streak at risk lapses unsent) and the Daily lapse case | – |
+| 6 | Bundle (US4) | dispatch.test › held, bundled and on time (pulled forward and bundled, released together) | How a real phone shows "2 reminders" (manual) |
+| 7 | Compose (US3) | us3-messages › independent test, scenarios 2 and 3, read status | – |
+| 8 | Quiet hours (US5) | us5-my-reminders › scenarios 1–4; dispatch.test › personal reminders (12:30 → 13:00) | – |
+| 9 | Admin's own hours | dispatch.test › the Admin's own hours (23:00 → 08:00 Yangon) | – |
+| 10 | Sign out | us1-inbox › scenario 1 (signing out removes the device); repo.test › deleting (turning off, signing out) removes only the caller’s device | **Manual**: a real phone stops getting notifications |
+| 11 | Weekly summary | dispatch.test › the weekly summary (inbox item and one email to each recipient) | The email in a real mailbox (Resend, manual) |
+| 12 | Languages | dispatch.test › text in the recipient's language; `messages.test.ts` (every key in en/my/ja) | Walking the screens in my and ja by hand (see `_review`) |
+
+Real-phone push (scenarios 1, 2 and 10 on an iPhone and an Android phone) needs the deployed app and the dispatcher scheduled (§6). That's a manual step for the user.
+
 ## 5. Done means
 
 - The acceptance scenarios of US1–US5 pass (Playwright for the screens, repo tests for delivery timing; SC-002 and SC-003 in `dispatch.test.ts`).
@@ -56,6 +75,16 @@ Seed: Admin Zin (Asia/Yangon), student May (Asia/Tokyo), linked; May has a cours
 - Alerts, the rule editor, the composer, Today's bell, Me and the inbox match their screenshots at 390×844, apart from the differences in contracts/ui-routes.md.
 - `docs/data-model.md` and `docs/technical-spec.md` are updated (plan.md › Documentation updates).
 - Spec status is updated.
+
+### Performance (T085, 2026-11-24)
+
+Measured on `pnpm build && pnpm start` (localhost, dev Supabase over the internet), Lighthouse 12.8.2, mobile, performance only. Signed in (the session cookie passed with `--extra-headers`, from inside a throwaway Playwright test so the test users still exist), 3 runs each:
+
+- `/s/inbox`, 12 items: **90 / 90 / 90** (FCP 1.2 s, LCP 3.6 s, TBT 20–50 ms, CLS 0). Target met.
+- `/a/alerts?student=…`, 2 students with 2 rules each: **81 / 85 / 85** (FCP 1.2 s, LCP 4.1–4.2 s, TBT 10–90 ms, CLS 0). **Below the 90 target.** As with 004's `/s/lessons/[id]` and 005's `/s/shifts`, nearly all of the LCP is waiting for the data the page seeds on the server: `GET /api/alerts`'s rules, scheduled and recent messages and counts, about 0.6–2 s per round trip from this machine. Worth re-measuring on Vercel next to the database before changing the page.
+- Alerts' chips: switching a chip is one navigation, with the chip's data seeded on the server, and makes no other `/api/` request (recorded with a Playwright request log).
+- The composer's availability check is one request (`/api/alerts/availability`) when it opens, and one more each time a time is picked. Opening it also loads the student's lessons for the lesson picker.
+- `dispatch` runs **18 SQL statements for 2 students and for 20** (a throwaway Vitest file counting Prisma's query log during one `dispatch(…, { userIds })` call, each student with a pending notice, a due Daily and a device). The count doesn't grow with the number of users. Each student's two due items went out as one bundled push. The plan's "about 12" predates the look-ahead, the Sunday check and the message steps.
 
 ## 6. Deploy: schedule the dispatcher
 
@@ -69,3 +98,34 @@ select cron.schedule('dispatch-notifications', '*/5 * * * *', $$
       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')))
 $$);
 ```
+
+## _review: strings for a native speaker (T081)
+
+All 267 new keys exist in `my` and `ja`, with the same placeholders as `en` (the `messages.test.ts` key check passes). The only English left on purpose is iOS's own button names in the Burmese install guide (`installGuide.*`, `deviceReminders.needsInstall`: "Share", "Add to Home Screen", "Home Screen"), because iOS has no Burmese interface and the student has to find those exact words on the phone. Layout-only strings (`composer.toChip`, `scheduledMessages.whenOne`, `weeklySummary.nextItem`, `quietHours.window`) are the same in every language. No English string uses she/he/her/his for a student (FR-012). Text addressed to the reader uses "you".
+
+Each idea uses one term throughout:
+
+| Idea | Burmese | Japanese |
+| --- | --- | --- |
+| notification (bell, inbox) | အသိပေးချက် | お知らせ |
+| reminder | သတိပေးချက် | リマインダー |
+| rule | စည်းမျဉ်း | ルール |
+| message | မက်ဆေ့ချ် | メッセージ |
+| quiet hours | တိတ်ဆိတ်ချိန် | おやすみ時間 |
+| urgent | အရေးပေါ် | 緊急 |
+| push (phone notification) | ဖုန်းအသိပေးချက် | プッシュ |
+
+One string was fixed during this review: `ruleEditor.push` (my) was still the English "Push" and now says ဖုန်းအသိပေးချက်.
+
+These strings were written without a native speaker, so please check:
+
+- **Burmese**:
+  - `ruleEditor.push` ဖုန်းအသိပေးချက် ("phone notification") next to `ruleEditor.copyMe` ကျွန်ုပ်ထံ မိတ္တူ: is it clear as a switch label?
+  - Should the install guide name iOS's buttons in English (as now), or describe them ("the share button")?
+  - `myReminders.on` "{count} ခု ဖွင့်ထားသည်" on the Me row, and `pushTexts.bundleTitle` "သတိပေးချက် # ခု" as a phone notification title.
+  - Tone: like 003–005, fixed text uses written style ending in သည်. Is ပါတယ် friendlier for push texts a student reads on the lock screen?
+- **Japanese**:
+  - Quiet hours are おやすみ時間. 005 uses 睡眠 for sleep, but おやすみ also suggests sleep. Would 通知オフの時間 or サイレント時間 be clearer, given that a student's shifts and sleep always count as quiet ("シフト中 + 睡眠中")?
+  - `ruleEditor.push` プッシュ alone, or プッシュ通知?
+  - `myReminders.on` "{count} 件オン" and `pushTexts.bundleTitle` "# 件のリマインダー".
+  - `quietHours.descriptionStudent` and `myReminders.note` are polite (です/ます); the Me row values are plain nouns ("シフト中 + 睡眠中").

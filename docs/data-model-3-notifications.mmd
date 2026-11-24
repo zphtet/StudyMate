@@ -1,5 +1,5 @@
 erDiagram
-  PROFILES ||--o{ NOTIFICATION_RULES : "admin creates / student target"
+  PROFILES ||--o{ NOTIFICATION_RULES : "owns (Admin, or student for a personal reminder) / target"
   PROFILES ||--o{ SCHEDULED_MESSAGES : "admin sends"
   SCHEDULED_MESSAGES ||--o{ SCHEDULED_MESSAGE_RECIPIENTS : "sent to"
   PROFILES ||--o{ SCHEDULED_MESSAGE_RECIPIENTS : receives
@@ -28,10 +28,12 @@ erDiagram
   }
   NOTIFICATION_RULES {
     uuid id PK
-    uuid admin_id FK
+    uuid owner_id FK "Admin, or the student (personal)"
     uuid student_id FK "null = all"
     rule_trigger trigger
     jsonb config
+    text_array channels "push | copy"
+    boolean enabled
   }
   SCHEDULED_MESSAGES {
     uuid id PK
@@ -42,8 +44,8 @@ erDiagram
   SCHEDULED_MESSAGE_RECIPIENTS {
     uuid message_id PK
     uuid student_id PK
-    timestamptz deliver_at
-    timestamptz read_at
+    timestamptz deliver_at "planned"
+    timestamptz delivered_at "handed over"
   }
   PUSH_SUBSCRIPTIONS {
     uuid id PK
@@ -53,6 +55,12 @@ erDiagram
   NOTIFICATIONS {
     uuid id PK
     uuid user_id FK
+    text source_type "rule | message | system"
     text occurrence_key "dedupe"
+    timestamptz deliver_at "moved while busy"
+    timestamptz delivered_at "null = pending"
+    timestamptz expires_at "rule lapse"
+    boolean push
+    boolean urgent
     timestamptz read_at
   }

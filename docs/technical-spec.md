@@ -88,7 +88,8 @@ studymate/
 │  │  │  │  ├─ shifts/page.tsx           # month calendar + selected day (spec 005)
 │  │  │  │  └─ me/page.tsx · me/appearance/page.tsx · me/reminders/page.tsx
 │  │  │  ├─ courses/[courseId]/page.tsx · lessons/[lessonId]/page.tsx   # full screen, outside (tabs)
-│  │  │  └─ shifts/new/page.tsx · shifts/[shiftId]/page.tsx · shifts/rotation/page.tsx   # full screen
+│  │  │  ├─ shifts/new/page.tsx · shifts/[shiftId]/page.tsx · shifts/rotation/page.tsx   # full screen
+│  │  │  └─ inbox/page.tsx              # Notifications, full screen (spec 006)
 │  │  ├─ a/                            # Admin area (AdminLayout: 4 tabs)
 │  │  │  ├─ layout.tsx
 │  │  │  ├─ welcome/page.tsx
@@ -96,10 +97,13 @@ studymate/
 │  │  │  ├─ courses/page.tsx · courses/new/page.tsx · courses/[courseId]/page.tsx
 │  │  │  │   └─ lessons/[lessonId]/edit/page.tsx
 │  │  │  ├─ plan/page.tsx
-│  │  │  ├─ alerts/page.tsx · alerts/rules/[ruleId]/page.tsx · alerts/messages/new/page.tsx
+│  │  │  ├─ (tabs)/alerts/page.tsx    # Alerts: rules and scheduled messages (spec 006)
+│  │  │  ├─ alerts/rules/new · alerts/rules/[ruleId] · alerts/messages/new · alerts/messages/[messageId]
+│  │  │  ├─ inbox/page.tsx              # Notifications, full screen (spec 006)
 │  │  │  └─ me/page.tsx
-│  │  ├─ manifest.ts                   # Web App Manifest
-│  │  ├─ sw.ts                         # Serwist service worker source
+│  │  ├─ manifest.ts                   # Web App Manifest (spec 006: the minimum for iOS push)
+│  │  ├─ sw.ts                         # Serwist service worker source (spec 008; until then
+│  │  │                                #   public/sw.js has 006's push and notificationclick)
 │  │  ├─ layout.tsx                    # <html>, fonts, ThemeProvider, NextIntlClientProvider
 │  │  └─ globals.css                   # Tailwind v4 + theme tokens (10 themes × light/dark)
 │  ├─ features/                        # one folder per spec
@@ -117,12 +121,19 @@ studymate/
 │  │  │               Today banner], rotation-repo.ts [rotations, cron top-up, Sunday check], pure
 │  │  │               rules: rotation.ts, calendar.ts [month chips], timeline.ts [day list],
 │  │  │               week-check.ts, status-text.ts; components/)
-│  │  ├─ notifications/ ├─ appearance/
+│  │  ├─ notifications/ (spec 006, every user: actions.ts, queries.ts, repo.ts [devices, inbox,
+│  │  │               quiet hours, personal reminders, My reminders], pure: device-state.ts,
+│  │  │               inbox-time.ts, quiet-hours.ts; use-device-reminders.ts; components/ [Bell,
+│  │  │               Inbox, TurnOnRemindersCard, DeviceRemindersRow, QuietHoursRow, MyReminders])
+│  │  ├─ alerts/      (spec 006, Admin: actions.ts, queries.ts, repo.ts [rules, Alerts],
+│  │  │               messages-repo.ts [scheduled messages, availability], quick-times.ts;
+│  │  │               components/ [AlertsView, RuleEditor, Composer, ScheduledMessageCard])
+│  │  ├─ appearance/
 │  ├─ components/
 │  │  ├─ ui/                           # shadcn/ui generated
 │  │  ├─ layout/ (BottomNav, SideNav, PageHeader)
 │  │  └─ shared/ (Markdown, MdTextarea, CalendarMonth, DayBar, TimeBoth, StatusChip, ProgressBar,
-│  │             WeekBars, EmptyState)
+│  │             WeekBars, EmptyState; spec 006: RuleBadge, ChoiceChip, useRuleText)
 │  ├─ lib/
 │  │  ├─ prisma.ts                     # PrismaClient singleton (adapter-pg, pooler URL)
 │  │  ├─ supabase/ (server.ts, client.ts)  # auth, storage, realtime
@@ -133,6 +144,11 @@ studymate/
 │  │  ├─ realtime.ts                   # useRealtimeInvalidate: Realtime events → refetch (§7)
 │  │  ├─ image.ts                      # browser photo resizing before upload (1600 px, WebP/JPEG)
 │  │  ├─ content.ts                    # MAX_CONTENT_BYTES (200 KB Markdown: lessons, answers), utf8Bytes
+│  │  ├─ notifications/                # spec 006, shared by the dispatcher and both features:
+│  │  │                                #   rule-config.ts (Zod configs, default set), render.ts
+│  │  │                                #   ({name} {lesson} …), rule-summary.ts (row text keys)
+│  │  ├─ week-check.ts · streak.ts     # 005's Sunday check and 004's streak, moved for the dispatcher
+│  │  ├─ push-device.ts                # this browser's push subscription (Turn on, sign-out)
 │  │  ├─ offline/ (db.ts [Dexie], queue.ts, sync.ts)
 │  │  └─ utils.ts                      # cn(), etc.
 │  ├─ i18n/ (request.ts, messages/en.json, my.json, ja.json)
@@ -140,6 +156,12 @@ studymate/
 │  ├─ server/auth/guards.ts            # requireUser / requireAdminOf / requireCourseReader …
 │  ├─ server/availability.ts           # getBusySegments: busy_segments() → merged Shift / Sleep
 │  │                                   #   (003's Plan and 005's Shifts; guard first)
+│  ├─ server/activity.ts               # 004's daily activity loaders (Progress and the dispatcher)
+│  ├─ server/cron.ts                   # requireCronSecret (purge, rotations, dispatch)
+│  ├─ server/notifications/            # spec 006: dispatch.ts (the 5-minute pipeline), occurrences.ts
+│  │                                   #   (pure rule timing), bundle.ts (one push per recipient),
+│  │                                   #   record.ts (003/004 notices), push.ts (web-push), email.ts
+│  │                                   #   (Resend), rule-data.ts, rule-rows.ts, message-rows.ts
 │  ├─ app/api/**/route.ts              # GET endpoints for TanStack Query (guards + Prisma)
 │  └─ proxy.ts                         # session refresh + role guard
 ├─ prisma/
@@ -150,6 +172,7 @@ studymate/
 │  ├─ config.toml                      # local stack (auth, storage, email templates)
 │  ├─ tests/*.sql                      # pgTAP RLS tests
 │  └─ seed.sql
+├─ public/sw.js                       # spec 006: push + notificationclick (replaced by sw.ts in 008)
 ├─ tests/e2e/*.spec.ts                 # Playwright
 ├─ specs/ · .specify/ · screenshots/ · docs/
 └─ next.config.ts · components.json · package.json
@@ -308,18 +331,34 @@ const create = useMutation({
 
 ## 9. Notifications (spec 006)
 
-**Pipeline**
-1. `pg_cron` every 5 min calls the Next.js Route Handler `POST /api/cron/dispatch` via `pg_net` with `Authorization: Bearer CRON_SECRET` (works on any Vercel plan; Vercel Cron can replace pg_cron if your plan allows 5-minute schedules).
-2. The handler (Node runtime, Prisma) computes due items for window `[now-5m, now]`:
-   - rules: daily, after-shift (`shift.end_at + offset`), due-soon, overdue (+ repeats), streak-at-risk, inactivity, weekly summary;
-   - `scheduled_message_recipients` with `deliver_at <= now and delivered_at is null`.
-3. For each (user, item): if `next_free_at(student, now)` is later than now (shift, sleep, quiet hours or outside waking hours) → set `deliver_at` to it and skip (unless `urgent`). Don't use `status_now` here: it reports quiet hours as `free`.
-4. Insert into `notifications` with a unique `occurrence_key` (dedupe), bundle multiple items for the same user into one push.
-5. Send via `web-push` to every `push_subscriptions` row; delete subscriptions that return 404/410.
-- **Send test**: Server Action `sendTestPush()` called from the rule builder.
-- **Email channel** (weekly summary): the dispatcher calls the Resend API (`RESEND_API_KEY`) with a React Email template rendered to HTML; respects the user's locale.
-- **VAPID** keys: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (client subscribe) and `VAPID_PRIVATE_KEY` (server env on Vercel).
-- **Client**: after the user taps "Turn on reminders", `navigator.serviceWorker.ready` → `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → Server Action saves the subscription. On iOS show the "Add to Home Screen" guide first if `!navigator.standalone`.
+Every delivery is a `notifications` row (docs/data-model.md › Notifications): 003/004's notices, rule occurrences and one-off messages all go through one dispatcher. Decisions: specs/006-notifications/research.md R1–R14.
+
+**Pipeline** (`dispatch(now)` in `src/server/notifications/dispatch.ts`, a fixed number of set-based statements per run, whatever the number of users):
+1. `pg_cron` calls `POST /api/cron/dispatch` every 5 minutes via `pg_net`, with `Authorization: Bearer CRON_SECRET` (`requireCronSecret`). Vercel Hobby crons run only daily, so it isn't in `vercel.json`.
+2. **Rule occurrences** in `(now − 15 min, now + 10 min]` become rows at their own instant. The look-back covers a late or missed tick; the look-ahead feeds bundling. Timing is pure (`occurrences.ts`, in the student's zone): daily, after a shift, due soon, overdue and repeats, streak at risk, inactive, weekly summary. The unique key keeps each occurrence to one row.
+3. **Messages**: recipients due within 10 minutes are handed over as rows at their planned time. A message is `sent` once every recipient is handed over, so Edit and Cancel send close up to 10 minutes before its time. Unlinked students' pending recipients are dropped, and a message with none left is cancelled.
+4. **The Sunday check** (005) becomes a notice from Sunday 18:00 in the student's zone.
+5. **Availability**: for each recipient with rows due, one `next_free_at(user, now)` covers shift, sleep, outside waking hours and quiet hours, for students and Admins alike. Don't use `status_now`, which reports quiet hours as free.
+   - **Busy**: non-urgent rows move to that time, and a rule row whose `expires_at` comes first is deleted (lapsed, FR-017).
+   - **Free**: their rows due in the next 10 minutes move to now (pulled forward).
+6. **Re-check**: just before delivery, expired rule rows and rows whose condition no longer holds are deleted (lesson done, deadline moved, studied today).
+7. **Delivery**: due rows are claimed (`delivered_at`) before anything is sent, so a retry never sends twice. Then each recipient gets **one** push per device (`bundle.ts`): one row keeps its text and link, several become "{n} reminders" opening the inbox. `web-push` sends; a 404/410 deletes that subscription. "Copy me" adds an inbox-only copy for the rule's owner. The weekly summary also goes by email.
+8. **Retention**: rows older than 90 days are deleted on the first run after 03:00 UTC.
+
+- **Email** (weekly summary): plain HTML built from the delivered row, which is already in the recipient's language, sent with the Resend API (`RESEND_API_KEY`, from `RESEND_FROM`). No React Email.
+- **Send test**: Server Action `sendTestPush()` on the rule editor pushes to the Admin's own devices only, and only when the Admin isn't in their own quiet hours.
+- **VAPID** keys: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (client subscribe), `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (server).
+- **Client**: "Turn on reminders" registers `public/sw.js`, asks permission, calls `pushManager.subscribe` and saves the subscription (`useDeviceReminders`). On an iPhone outside Home Screen mode, the "Add to Home Screen" guide comes first. Signing out deletes this device's subscription. A tapped notification opens its link with `?n=<id>`, which marks it read.
+- **Deploy** (once per environment, Supabase SQL editor; the secret lives in Vault, never in a migration):
+  ```sql
+  select vault.create_secret('<CRON_SECRET>', 'cron_secret');
+  select cron.schedule('dispatch-notifications', '*/5 * * * *', $$
+    select net.http_post(
+      url := 'https://<your-domain>/api/cron/dispatch',
+      headers := jsonb_build_object('Authorization', 'Bearer ' ||
+        (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')))
+  $$);
+  ```
 
 ---
 
@@ -389,7 +428,8 @@ As built in spec 004:
 | Guards | Vitest against the local database | every guard: allowed + denied cases (same matrix as the pgTAP RLS tests) |
 | Logic | Vitest | `lib/time.ts`, `lib/availability.ts` (free gaps), progress forecast, rule evaluation |
 | Components | Vitest + Testing Library | forms, OTP input, calendar rendering of overnight shifts |
-| E2E | Playwright (390×844 + 1280×800) | one test per user story; offline mode via `context.setOffline(true)` |
+| Dispatcher | Vitest against the dev database (spec 006) | `dispatch(now, …, { userIds })` with recording push and email senders. The test-only `scope` keeps a run with a fake "now" to the test's own users on the shared database. About 5 s per run, so timing tests pick their runs instead of ticking every 5 minutes |
+| E2E | Playwright (390×844 + 1280×800) | one test per user story; offline mode via `context.setOffline(true)`. 006's `runDispatch` calls the real route, which serves **every** user, so never run Playwright while DB tests run |
 | Accessibility | `@axe-core/playwright` | no serious violations on every page |
 | Visual | Playwright screenshots vs `screenshots/` (manual review) | |
 
@@ -424,6 +464,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 | `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Vercel (server only) | send push |
 | `CRON_SECRET` | Vercel + Supabase Vault (for pg_cron) | authorize `/api/cron/dispatch` |
 | `RESEND_API_KEY` | Supabase SMTP settings + Vercel | auth emails + weekly summary |
+| `RESEND_FROM` | Vercel (server only) | sender of the weekly summary email (spec 006), e.g. `StudyMate <hello@your-domain>` |
 | `NEXT_PUBLIC_SITE_URL` | Next.js | auth redirects, invite links |
 
 `.env.local` is git-ignored; production values live in Vercel and Supabase secrets.
@@ -454,7 +495,7 @@ CI (GitHub Actions or GitLab CI): install (`prisma generate` on postinstall) →
 | 003 assign | `/a/courses/[id]` assign sheet, `/a/plan`, `/s/today` | course_assignments, lesson_deadlines, `effective_due` | DayBar, drag deadlines |
 | 004 progress | `/s/lessons/[id]`, `/s/progress`, `/a/students` | lesson_progress, submissions, comments, study_sessions, `course_progress` | optimistic updates, Realtime |
 | 005 shifts | `/s/shifts/**` (incl. `/s/shifts/rotation`), `/s/today` (banner, Sunday check), `/s/me` (Shift calendar row), `/a/plan`, `/a/students` (live status), `/api/cron/rotations` | shifts, shift_patterns, profile shift settings, `busy_segments`, `next_free_at`, `status_now` | exclusion constraint, overnight math (`shiftInstants`), rotations stored as rows 8 weeks ahead + daily Vercel Cron top-up |
-| 006 notifications | `/a/alerts/**`, `/s/me/reminders` | notification_rules, scheduled_messages(+recipients), push_subscriptions, notifications | pg_cron → `/api/cron/dispatch`, web-push, Resend |
+| 006 notifications | `/a/alerts/**`, `/s/inbox`, `/a/inbox`, `/s/me/reminders`, Me rows (quiet hours, devices), `/api/notifications`, `/api/me/reminders`, `/api/alerts/**`, `/api/cron/dispatch` | notification_rules (owner_id), scheduled_messages(+recipients), push_subscriptions, notifications (delivery state) | pg_cron → `/api/cron/dispatch`, web-push, Resend, `public/sw.js` |
 | 007 appearance | `/s/me/appearance` (also admin) | profiles columns | next-themes, CSS variables, next/font, next-intl |
 | 008 pwa | global | – | Serwist, Dexie queue, persisted TanStack Query |
 
