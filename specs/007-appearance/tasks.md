@@ -269,12 +269,14 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
   - docs/technical-spec.md §3: `lib/appearance.ts`, `app/fonts.ts`, `components/shared/appearance-sync.tsx` and `use-day-period.ts`;
   - docs/data-model.md: the profiles row (the allowed theme, font and scale values) and the CHECK list (`profiles_theme_id_check`, `profiles_font_id_check`, `profiles_font_scale_check`).
 - [X] T035 [P] Review every new `my` and `ja` string from 007 for completeness and tone, with no pronouns for students. List the strings that need a native speaker under a `_review` note in specs/007-appearance/quickstart.md, in the format 005 and 006 used (key count, placeholder check, a table of terms).
-- [ ] T036 Run every gate from the package.json scripts, **one at a time**, after checking that no other session is running tests or a :3100 server:
+- [X] T036 Run every gate from the package.json scripts, **one at a time**, after checking that no other session is running tests or a :3100 server:
   1. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`;
   2. `pnpm test`, then `pnpm test:db`;
   3. only after those finish: `pnpm build`, `PORT=3100 pnpm start`, then `PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e`.
 
   This is the one full Playwright run, covering every feature's specs. Leave :3000 alone and stop :3100 afterwards. Record failures as they are, with the test name and error, and fix the ones 007 caused before ticking the task.
+
+  (Done 2026-11-24. typecheck, lint and format:check clean. `pnpm test`: 67 files, 1737 tests. `pnpm test:db`: 9/9 files. Fresh build (cache cleared) on :3100, full e2e: 277 passed, 1 skipped (us2 scenario 4 on desktop, by design), 2 failed. us2-fonts scenario 2 on both viewports failed because the test navigated while its font save was still queued, so the page opened in Inter. It now waits for the profile row, as the other 007 tests do; scenario 1 got the same wait. Both pass 8/8 across two repeats.)
 - [X] T037 [P] Accessibility and layout pass at 390×844 and 1280×800, in Light and Dark, with Indigo, Forest and Mocha, in en, my and ja. Check:
   - swatches, tiles and segments are radios with names and visible focus rings in every theme;
   - the preview card is read as one image;
@@ -295,11 +297,13 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
   Record the results in specs/007-appearance/quickstart.md §5.
 
   (Done 2026-11-24, quickstart.md §5. The two Japanese fonts blocked every page's first paint with ~550 KB of CSS (`/s/today` 70 against 80 on main). By the user's choice they now load on demand (src/lib/lazy-fonts, LazyFontLoader, tests in lazy-fonts/index.test.ts and us2-fonts). Appearance's tiles switch to their fonts when idle. Result: `/s/today` 77–84 (main 77–82), Appearance 79–80. A theme change takes 27–40 ms with no layout shift. One font file per page. CLS 0.18 on Today already exists on main.)
-- [ ] T040 Walk through quickstart.md §4 scenarios 1–15. For each one, record the test that covers it or what wasn't checked.
+- [X] T040 Walk through quickstart.md §4 scenarios 1–15. For each one, record the test that covers it or what wasn't checked.
   - Also check by hand: a lesson's code block keeps a monospace face with every font (FR-006), and, with the network off on a fresh profile, a font that can't download falls back and loads on the next online open (spec Edge Cases).
   - SC-003's 10 throttled reloads are scenario 8 here; the automated T029 reloads without throttling.
   - The installed-app status bar (scenario 14) on a real phone is a manual step for the user: list it as such.
-- [ ] T041 Set **Status** to `Implemented` in specs/007-appearance/spec.md (constitution quality gate).
+
+  (Done: quickstart.md §6. Every scenario has an automated test. By hand: code blocks stay monospace. Left: Slow 4G reloads, a few by-eye checks, the font retry after offline (needs 008), and the real phone's status bar (manual, for the user).)
+- [X] T041 Set **Status** to `Implemented` in specs/007-appearance/spec.md (constitution quality gate).
 
 ---
 

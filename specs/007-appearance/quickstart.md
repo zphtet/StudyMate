@@ -93,3 +93,25 @@ Measured on `pnpm build && pnpm start` (localhost, dev Supabase over the interne
 - **CLS 0.18 on `/s/today` already exists on `main`**: Today's "Nothing due today" card moves when content above it appears after the first paint. Not caused by 007; follow-up for the Today screen's owner (006's Turn on reminders card is the likely cause).
 - **SC-001**: a theme change repaints in 27–40 ms (Ocean, Rose, Slate; tap to the next frame), with layout shift 0.
 - **SC-005**: `/s/today` downloads one font file with Inter, and one with Nunito; the Japanese and Burmese fallbacks only load for text in those scripts. Appearance downloads the ten families (allowed by FR-007).
+
+## 6. Coverage of the scenarios (T040, 2026-11-24)
+
+| # | Covered by | Not checked |
+| --- | --- | --- |
+| 1 | us1-themes › scenario 1, us2-fonts › scenario 1 (full screen order); screenshot compared with 12-Appearance.png (T038) | – |
+| 2 | us1-themes › scenario 2 (button, tab bar, profile); heat calendar follows `--primary` by construction (contrast test) | the heat calendar by eye |
+| 3 | us1-themes › scenario 4; us4-mode-language › scenario 1 (Auto follows the OS live) | – |
+| 4 | us1-themes › scenario 5 (status tokens unchanged under Rose) | Forest's green next to "Done" by eye |
+| 5 | us2-fonts › scenarios 1, 2 and 4 (Atkinson; Noto Sans JP under Merriweather; 36 routes + sign-in/up at Large, no sideways scroll); Burmese face at Large in the T037 screenshot | – |
+| 6 | us2-fonts › scenario 3 (root 14.88 px, a 48 px radio ≥ 44) | – |
+| 7 | §5 (one font file on `/s/today`, with Inter and with Nunito) | – |
+| 8 | us3-first-paint › scenario 1 (no change after first paint, unthrottled) | 10 reloads on Slow 4G by hand |
+| 9 | us1-themes › scenario 6; us3-first-paint › scenario 3 | – |
+| 10 | us3-first-paint › scenario 5 (exactly one switch, then none) | – |
+| 11 | us1-themes › FR-014 (aborted save: theme restored, toast) | – |
+| 12 | us3-first-paint › scenario 2 | – |
+| 13 | us1-themes › the Admin (Ocean on Students); us2-fonts › scenario 4 (20 Admin routes at Large) | 1280 px by eye |
+| 14 | us3-first-paint › FR-015 (both theme-color tags dark in a light-scheme browser) | **an installed app's status bar on a real phone: manual, for the user** |
+| 15 | us4-mode-language › scenario 2 (ja headings, theme names, Me row, Today's date; my title); `_review` above | a native speaker's read (`_review`) |
+
+Also checked by hand: a lesson's code block keeps the system monospace face under Merriweather (`pre`, `code`; FR-006). Not checked: a font that can't download falls back and loads on the next online open (spec Edge Cases). It needs offline caching (008) to be meaningful.

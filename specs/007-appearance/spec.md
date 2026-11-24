@@ -2,7 +2,7 @@
 
 **Feature Branch**: `007-appearance`
 **Created**: 2026-11-20
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "007-appearance" (the draft spec written at project setup, refined)
 **Screens**: `12-Appearance.png` (Appearance), `11-Profile.png` (Me: the Appearance row and Language)
 
