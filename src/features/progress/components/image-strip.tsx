@@ -14,12 +14,15 @@ export type EditorImage = { path: string; name: string; size: number; src: strin
 
 export function ImageStrip({
   images,
+  pendingPaths,
   uploading,
   disabled,
   onAdd,
   onRemove,
 }: {
   images: EditorImage[]
+  /** Photos kept on the device until they sync (spec 008 FR-003a): shown with "Will sync". */
+  pendingPaths: ReadonlySet<string>
   /** Number of photos being uploaded. */
   uploading: number
   disabled: boolean
@@ -27,6 +30,7 @@ export function ImageStrip({
   onRemove: (image: EditorImage) => void
 }) {
   const t = useTranslations('submission')
+  const pwa = useTranslations('pwa')
   const inputId = useId()
   const full = images.length + uploading >= MAX_IMAGES
 
@@ -50,6 +54,11 @@ export function ImageStrip({
               alt={image.name}
               className="size-full rounded-2xl border bg-muted object-cover"
             />
+            {pendingPaths.has(image.path) && (
+              <span className="absolute inset-x-1 bottom-1 rounded-full bg-background/90 px-1.5 py-0.5 text-center text-[0.6875rem] font-medium text-muted-foreground">
+                {pwa('willSync')}
+              </span>
+            )}
             <Button
               type="button"
               variant="secondary"

@@ -13,7 +13,8 @@ import {
   sendFailed,
   type SyncResult,
 } from './outbox'
-import { handlersFor } from './registry'
+import { getBrowserQueryClient } from '@/lib/query/client'
+import { forgetQueuedFiles, uploadQueuedFiles } from './queued-files'
 
 // The sync loop (spec 008 research R5, R9, R10): sends the signed-in student's outbox to /api/sync in
 // order, whenever the app is open and online. Network failures back off from 5 s to 60 s; a 401
@@ -54,13 +55,21 @@ function scheduleRetry() {
 
 class SyncStopped extends Error {}
 
+/**
+ * After a batch, every screen refetches what the server now holds: what each Server Action's
+ * onSettled would invalidate, and the server's version where a change was dropped (R7).
+ */
+function refreshScreens() {
+  return getBrowserQueryClient().invalidateQueries()
+}
+
 /** Sends one batch; returns false when there was nothing to send. Throws SyncStopped to wait. */
 async function sendBatch(userId: string): Promise<boolean> {
   const batch = await nextBatch(userId)
   if (batch.length === 0) return false
   const ids = batch.map((entry) => entry.id)
   try {
-    for (const entry of batch) await handlersFor(entry.type).prepare?.(entry)
+    for (const entry of batch) await uploadQueuedFiles(entry)
   } catch {
     await sendFailed(ids)
     throw new SyncStopped()
@@ -91,7 +100,7 @@ async function sendBatch(userId: string): Promise<boolean> {
       batch,
       ids.map((id) => ({ id, status: 'dropped', code: 'invalid_input' })),
     )
-    batch.forEach((entry) => handlersFor(entry.type).onDropped?.(entry))
+    await refreshScreens()
     return true
   }
   if (!response.ok) {
@@ -101,16 +110,11 @@ async function sendBatch(userId: string): Promise<boolean> {
 
   const { results } = (await response.json()) as { results: SyncResult[] }
   await resolve(batch, results)
-  const byId = new Map(batch.map((entry) => [entry.id, entry]))
-  for (const result of results) {
-    const entry = byId.get(result.id)
-    if (!entry) continue
-    if (result.status === 'applied' || result.status === 'duplicate') {
-      handlersFor(entry.type).onApplied?.(entry, result)
-    } else if (result.status === 'dropped') {
-      handlersFor(entry.type).onDropped?.(entry)
-    }
-  }
+  const saved = new Set(
+    results.flatMap((r) => (r.status === 'applied' || r.status === 'duplicate' ? [r.id] : [])),
+  )
+  await Promise.all(batch.filter((e) => saved.has(e.id)).map(forgetQueuedFiles))
+  await refreshScreens()
   if (results.some((result) => result.status === 'retry')) throw new SyncStopped()
   return true
 }

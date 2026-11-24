@@ -7,22 +7,39 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Markdown } from '@/components/shared/markdown'
 import { MdTextarea } from '@/components/shared/md-textarea'
+import { SyncPill } from '@/components/shared/sync-pill'
 import { useInstantFormat } from '@/components/shared/use-instant-format'
 import { Button } from '@/components/ui/button'
 import { MAX_CONTENT_BYTES, utf8Bytes } from '@/lib/content'
+import { useQueuedFilePaths } from '@/lib/offline/queued-files'
+import { runOrQueue } from '@/lib/offline/run-or-queue'
 import { ActionResultError, unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { saveDraft, submitAssignment } from '../actions'
+import {
+  lessonLabel,
+  PENDING_SUBMISSION_ID,
+  queueAnswer,
+  serverVersion,
+  submissionKey,
+} from '../offline'
 import { lessonWorkKeys } from '../queries'
 import { MAX_IMAGES, type SaveDraftInput } from '../schemas'
 import type { LessonWork, SubmissionView } from '../types'
-import { removeSubmissionImage, uploadSubmissionImage } from '../upload'
+import {
+  forgetKeptPhoto,
+  keepPhotoForLater,
+  removeSubmissionImage,
+  uploadSubmissionImage,
+} from '../upload'
 import { ImageStrip, type EditorImage } from './image-strip'
 
 // The student's answer while it is editable (Draft, Needs redo or none; spec 004 US2 scenarios 1, 2,
 // 4; research.md R7). The text and photos live in local state, so a refetch (Realtime, focus) never
 // overwrites what the student is typing. Autosave runs 1.5 s after the last change and when the page
-// is hidden; saves and the submit run one after another (one mutation scope).
+// is hidden; saves and the submit run one after another (one mutation scope). Offline (spec 008
+// FR-003a, FR-003c) both go to the outbox, made on the version loaded here, and photos stay on the
+// device until they sync.
 
 const AUTOSAVE_MS = 1500
 
@@ -58,6 +75,9 @@ export function AssignmentEditor({
     submission?.status === 'draft' ? submission.updatedAt : null,
   )
   const [uploading, setUploading] = useState(0)
+  const queuedPaths = useQueuedFilePaths(lessonId)
+  // The server's version this editor writes over (research R7): moves on with each online save.
+  const base = useRef(serverVersion(submission))
 
   // The latest values for saves started by timers and page events.
   const latest = useRef({ text, images })
@@ -78,11 +98,53 @@ export function AssignmentEditor({
   const imageViews = () =>
     latest.current.images.map(({ path, name, size, src }) => ({ path, name, size, url: src }))
 
+  const queue = (values: SaveDraftInput, isSubmit: boolean) =>
+    queueAnswer({
+      userId: studentId,
+      ...values,
+      baseUpdatedAt: base.current,
+      isSubmit,
+      label: lessonLabel(queryClient, lessonId),
+    })
+
+  /** Queued: what is on screen is also what the saved copy of the lesson shows (FR-004). */
+  const keepQueued = (status: SubmissionView['status'], values: SaveDraftInput) =>
+    queryClient.setQueryData<LessonWork>(
+      workKey,
+      (old) =>
+        old && {
+          ...old,
+          submission: {
+            id: old.submission?.id ?? PENDING_SUBMISSION_ID,
+            status,
+            bodyMd: values.bodyMd,
+            attachments: imageViews(),
+            submittedAt:
+              status === 'submitted'
+                ? new Date().toISOString()
+                : (old.submission?.submittedAt ?? null),
+            reviewedAt: old.submission?.reviewedAt ?? null,
+            updatedAt: old.submission?.updatedAt ?? '',
+          },
+        },
+    )
+
   const save = useMutation({
     scope,
-    mutationFn: async (values: SaveDraftInput) => unwrap(await saveDraft(values)),
+    networkMode: 'always',
+    mutationFn: (values: SaveDraftInput) =>
+      runOrQueue({
+        online: async () => unwrap(await saveDraft(values)),
+        queue: () => queue(values, false),
+      }),
     // The saved values are already on screen; only the Lesson tab's card needs the new time.
-    onSuccess: (result, values) => {
+    onSuccess: (outcome, values) => {
+      if (outcome.isQueued) {
+        keepQueued(submission?.status === 'needs_redo' ? 'needs_redo' : 'draft', values)
+        return
+      }
+      const result = outcome.data
+      base.current = result.updatedAt
       setSavedAt(result.updatedAt)
       queryClient.setQueryData<LessonWork>(
         workKey,
@@ -142,8 +204,19 @@ export function AssignmentEditor({
 
   const submit = useMutation({
     scope,
-    mutationFn: async (values: SaveDraftInput) => unwrap(await submitAssignment(values)),
-    onSuccess: (result) => {
+    networkMode: 'always',
+    mutationFn: (values: SaveDraftInput) =>
+      runOrQueue({
+        online: async () => unwrap(await submitAssignment(values)),
+        queue: () => queue(values, true),
+      }),
+    onSuccess: (outcome, values) => {
+      // Offline, the answer shows as submitted with "Will submit" (spec 008 US2 scenario 3).
+      if (outcome.isQueued) {
+        keepQueued('submitted', values)
+        return
+      }
+      const result = outcome.data
       // The read-only view replaces the editor at once; the refetch fills in the server's copy.
       queryClient.setQueryData<LessonWork>(
         workKey,
@@ -163,7 +236,8 @@ export function AssignmentEditor({
       )
     },
     onError: (error) => toast.error(errorMessage(error)),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: workKey }),
+    onSettled: (outcome) =>
+      outcome?.isQueued ? undefined : queryClient.invalidateQueries({ queryKey: workKey }),
   })
 
   const onSubmit = () => {
@@ -183,7 +257,7 @@ export function AssignmentEditor({
     setUploading((n) => n + picked.length)
     for (const file of picked) {
       try {
-        const image = await uploadSubmissionImage(studentId, lessonId, file)
+        const image = await uploadOrKeep(file)
         const src = URL.createObjectURL(file)
         previews.current.push(src)
         change({ images: [...latest.current.images, { ...image, src }] }, { now: true })
@@ -195,9 +269,25 @@ export function AssignmentEditor({
     }
   }
 
+  /** Offline, or when the upload can't reach Storage, the photo waits on the device (FR-003a). */
+  async function uploadOrKeep(file: File) {
+    if (!navigator.onLine) return keepPhotoForLater(studentId, lessonId, file)
+    try {
+      return await uploadSubmissionImage(studentId, lessonId, file)
+    } catch (error) {
+      if (error instanceof ActionResultError && error.code === 'offline') {
+        return keepPhotoForLater(studentId, lessonId, file)
+      }
+      throw error
+    }
+  }
+
   async function removeImage(image: EditorImage) {
     try {
-      await removeSubmissionImage(image.path)
+      // A photo still on the device never reached Storage; offline, one in Storage just leaves the
+      // draft (the file stays until the draft is saved without it online).
+      if (queuedPaths.has(image.path)) await forgetKeptPhoto(image.path)
+      else if (navigator.onLine) await removeSubmissionImage(image.path)
       change({ images: latest.current.images.filter((i) => i.path !== image.path) }, { now: true })
     } catch (error) {
       toast.error(errorMessage(error))
@@ -257,6 +347,7 @@ export function AssignmentEditor({
 
       <ImageStrip
         images={images}
+        pendingPaths={queuedPaths}
         uploading={uploading}
         disabled={busy}
         onAdd={(files) => void addImages(files)}
@@ -271,7 +362,8 @@ export function AssignmentEditor({
             t('saving')
           ) : savedAt ? (
             t('saved', { time: f.time(savedAt) })
-          ) : null}
+          ) : null}{' '}
+          <SyncPill recordKey={submissionKey(lessonId)} />
         </p>
         <Button
           type="button"

@@ -291,16 +291,18 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - network errors back off from 5 s to 60 s; a 401 sets a `paused` flag the banner reads.
 
   Start it from `OfflineRuntime` for students (T038). (Done. Photo uploads run through a registry `prepare` hook, so `lib/offline` imports no feature. A 400 drops the whole batch as `invalid_input` instead of retrying forever. An entry that was sent once is never merged into (it may already be applied under its id); a later change gets its own entry and is rebased.) Expose `useOutboxState()` (pending count, dropped entries, paused, syncing) with Dexie `liveQuery`. Add src/lib/offline/sync.test.ts with a mocked `fetch`: order kept, upload before the op, 401 pauses without deleting, `retry` backs off.
-- [ ] T040 [P] [US2] Write src/components/shared/online-only.tsx (contracts/ui-routes.md › Shared pieces) and src/components/shared/sync-pill.tsx ("Will sync" / "Will submit", reading the outbox by `recordKey`). Add the `pwa.needsConnection`, `pwa.willSync` and `pwa.willSubmit` keys in all 3 message files.
-- [ ] T041 [US2] Write src/features/progress/offline.ts:
+- [X] T040 [P] [US2] Write src/components/shared/online-only.tsx (contracts/ui-routes.md › Shared pieces) and src/components/shared/sync-pill.tsx ("Will sync" / "Will submit", reading the outbox by `recordKey`). Add the `pwa.needsConnection`, `pwa.willSync` and `pwa.willSubmit` keys in all 3 message files.
+- [X] T041 [US2] Write src/features/progress/offline.ts:
   - `enqueueComplete`/`enqueueUndo` with `base: { wasDone }`, `enqueueDraft`/`enqueueSubmit` with `base: { updatedAt }` from the cached `lessonWorkKeys.work` data, and `enqueueFocusRecord`/`enqueueFocusStop`;
   - optimistic `setQueryData` on the same keys the online mutations update;
   - `registerOp` for each type: label = lesson title; `onApplied` invalidates the keys the Server Actions' `onSettled` does.
 
+  (Done, with one change: there is no per-type registry. After any batch, the sync loop refetches active queries, which covers what each Server Action's `onSettled` invalidated and undoes optimistic changes when an op is dropped. Photo uploads moved into `lib/offline/queued-files.ts`, so they never depend on a feature's code being loaded. A focus session started offline lives in an in-memory store: the `['focus']` query refetches on reconnect and would wipe a running timer. It survives navigation, not a reload.)
+
   Then the call sites:
   - src/features/progress/components/lesson-bottom-bar.tsx: offline, or when the Server Action rejects with a network `TypeError`, enqueue instead, and show `SyncPill`;
   - src/features/progress/use-focus-timer.ts: offline start runs a local session; stop or auto-stop enqueues `focus.record`, or `focus.stop` for a session started online.
-- [ ] T042 [US2] Offline drafts with photos in src/features/progress/components/assignment-editor.tsx and src/features/progress/components/image-strip.tsx (research R9; data-model.md outboxFiles.blob, outboxFiles.path):
+- [X] T042 [US2] Offline drafts with photos in src/features/progress/components/assignment-editor.tsx and src/features/progress/components/image-strip.tsx (research R9; data-model.md outboxFiles.blob, outboxFiles.path):
   - offline autosave → `enqueueDraft`;
   - Add photo offline → `resizeImage`, store in `outboxFiles` under a new `<studentId>/<lessonId>/<uuid>.<ext>` path, show the Blob URL with "Will sync";
   - removing a pending photo deletes its file row;
@@ -320,7 +322,7 @@ The worker, the Dexie database, the offline page and the headers are Foundationa
   - in src/components/shared/youtube-embed.tsx, show "Video needs a connection" offline.
 
   Add the `pwa.notOffline` and `pwa.videoOffline` keys.
-- [ ] T046 [US2] Write src/features/pwa/components/offline-banner.tsx and src/features/pwa/components/dropped-changes-sheet.tsx (contracts/ui-routes.md › Global pieces): student and Admin wording, "{n} waiting", "Syncing {n}…", the 401 "Sign in to sync" link, the toast "{n} changes weren't saved" → sheet with label, `errors.*` reason, the draft text with Copy, and OK deleting the dropped rows. Render both in src/app/s/layout.tsx and the banner in src/app/a/layout.tsx (sync already starts from `OfflineRuntime`, T038/T039). Add the `pwa.banner.*` and `pwa.dropped.*` keys.
+- [X] T046 [US2] Write src/features/pwa/components/offline-banner.tsx and src/features/pwa/components/dropped-changes-sheet.tsx (contracts/ui-routes.md › Global pieces): student and Admin wording, "{n} waiting", "Syncing {n}…", the 401 "Sign in to sync" link, the toast "{n} changes weren't saved" → sheet with label, `errors.*` reason, the draft text with Copy, and OK deleting the dropped rows. Render both in src/app/s/layout.tsx and the banner in src/app/a/layout.tsx (sync already starts from `OfflineRuntime`, T038/T039). Add the `pwa.banner.*` and `pwa.dropped.*` keys.
 - [ ] T047 [US2] Sign-out warning and wipe (FR-004a; research R11):
   - write src/lib/offline/wipe.ts: `wipeOfflineData()` deletes the Dexie database and the `pages`, `pages-rsc`, `pages-rsc-prefetch` and `media` caches, then clears the query client. `pendingCount` is re-exported;
   - in src/features/profile/components/me-view.tsx, Sign out first counts pending entries. If any, show a confirm (`AlertDialog` or `BottomSheet`) "{n} changes not synced yet — sign out anyway?" with Cancel / Sign out. Then wipe, then the existing push unsubscribe + `signOut`. Offline: the wipe, the push unsubscribe, then supabase-js `auth.signOut({ scope: 'local' })` and `router.replace('/sign-in')` (research R11 › Offline sign-out).

@@ -10,6 +10,8 @@ import { canStudentEdit } from '../submission-status'
 import { AssignmentEditor } from './assignment-editor'
 import { CommentList } from './comment-list'
 import { SubmissionStatusChip } from './submission-status-chip'
+import { SyncPill } from '@/components/shared/sync-pill'
+import { submissionKey } from '../offline'
 import { SubmissionView } from './submission-view'
 
 // The student's Assignment tab (spec 004 US1 scenario 2, US2; contracts/ui-routes.md › Lesson): the
@@ -80,6 +82,8 @@ export function AssignmentTab({
                     : t('submittedAt', { date: f.dayTime(submission.submittedAt) })}
                 </span>
               )}
+              {/* Submitted offline (spec 008 US2 scenario 3): "Will submit" until it syncs. */}
+              <SyncPill recordKey={submissionKey(lessonId)} />
             </div>
             <SubmissionView bodyMd={submission.bodyMd} attachments={submission.attachments} />
             {feedback}

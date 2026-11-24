@@ -1284,6 +1284,27 @@
       "iosStep2": "<add></add>「ホーム画面に追加」を選びます。",
       "iosStep3": "「追加」をタップし、ホーム画面からStudyMateを開きます。",
       "gotIt": "わかりました"
+    },
+    "needsConnection": "接続が必要です",
+    "willSync": "あとで同期",
+    "willSubmit": "あとで提出",
+    "banner": {
+      "offline": "オフライン — 変更はあとで同期されます",
+      "offlineWaiting": "オフライン — {count}件の変更はあとで同期されます",
+      "offlineAdmin": "オフライン — 保存済みのデータを表示しています",
+      "syncing": "同期中{count, plural, =0 {…} other {（#件）…}}",
+      "paused": "変更を同期するにはサインインしてください。",
+      "signIn": "サインイン",
+      "notSaved": "{count}件の変更を保存できませんでした",
+      "view": "表示"
+    },
+    "dropped": {
+      "title": "保存できませんでした",
+      "description": "オフラインで行った変更ですが、サーバー側で先に変更されていました。サーバーの内容を残しています。",
+      "overlap": "ほかのシフトと重なっています。",
+      "copy": "テキストをコピー",
+      "copied": "コピーしました",
+      "ok": "OK"
     }
   }
 }

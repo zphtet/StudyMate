@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from 'react'
 import { AppearanceSync } from '@/components/shared/appearance-sync'
 import { MarkReadOnOpen } from '@/features/notifications/components/mark-read-on-open'
 import { InstallPrompt } from '@/features/pwa/components/install-prompt'
+import { OfflineBanner } from '@/features/pwa/components/offline-banner'
 import { OfflineRuntime } from '@/features/pwa/components/offline-runtime'
 import { hasActiveLink } from '@/features/links/repo'
 import { toAppearance } from '@/lib/appearance'
@@ -22,6 +23,7 @@ export default async function StudentLayout({ children }: { children: ReactNode 
   return (
     // Spec 008 FR-004: this user's data saved on the device; OfflineRuntime clears anyone else's.
     <PersistQueries userId={me.id}>
+      <OfflineBanner userId={me.id} role="student" />
       {children}
       <OfflineRuntime userId={me.id} role="student" />
       <AppearanceSync appearance={toAppearance(me)} />

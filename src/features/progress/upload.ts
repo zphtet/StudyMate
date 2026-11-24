@@ -1,4 +1,5 @@
 import { resizeImage } from '@/lib/image'
+import { db } from '@/lib/offline/db'
 import { ActionResultError } from '@/lib/result'
 import { MAX_IMAGE_BYTES, type Attachment } from './schemas'
 
@@ -24,14 +25,10 @@ function displayName(name: string, extension: string) {
 }
 
 /**
- * Resizes and uploads one photo; returns the attachment for saveDraft. Throws ActionResultError with
- * file_type_not_allowed, file_too_large (over 2 MB after resizing), upload_failed or offline.
+ * Checks, resizes and re-encodes one photo and picks its Storage path (research.md R7). Throws
+ * ActionResultError with file_type_not_allowed or file_too_large (over 2 MB after resizing).
  */
-export async function uploadSubmissionImage(
-  studentId: string,
-  lessonId: string,
-  file: File,
-): Promise<Attachment> {
+async function preparePhoto(studentId: string, lessonId: string, file: File) {
   if (!file.type.startsWith('image/')) throw new ActionResultError('file_type_not_allowed')
   if (file.size > MAX_SOURCE_BYTES) throw new ActionResultError('file_too_large')
 
@@ -46,13 +43,54 @@ export async function uploadSubmissionImage(
   const extension = STORED_TYPES[body.type]
   if (!extension) throw new ActionResultError('file_type_not_allowed')
   if (body.size > MAX_IMAGE_BYTES) throw new ActionResultError('file_too_large')
+  const attachment: Attachment = {
+    path: `${studentId}/${lessonId}/${crypto.randomUUID()}.${extension}`,
+    name: displayName(file.name, extension),
+    size: body.size,
+  }
+  return { body, attachment }
+}
 
-  const path = `${studentId}/${lessonId}/${crypto.randomUUID()}.${extension}`
+/**
+ * Resizes and uploads one photo; returns the attachment for saveDraft. Throws ActionResultError with
+ * file_type_not_allowed, file_too_large (over 2 MB after resizing), upload_failed or offline.
+ */
+export async function uploadSubmissionImage(
+  studentId: string,
+  lessonId: string,
+  file: File,
+): Promise<Attachment> {
+  const { body, attachment } = await preparePhoto(studentId, lessonId, file)
   const { error } = await (
     await bucket()
-  ).upload(path, body, { contentType: body.type, upsert: false })
+  ).upload(attachment.path, body, { contentType: body.type, upsert: false })
   if (error) throw new ActionResultError(navigator.onLine ? 'upload_failed' : 'offline')
-  return { path, name: displayName(file.name, extension), size: body.size }
+  return attachment
+}
+
+/**
+ * Offline (spec 008 FR-003a; research R9): the photo is resized now and kept on the device under its
+ * final path; it uploads before the draft that names it syncs (lib/offline/queued-files.ts).
+ */
+export async function keepPhotoForLater(
+  studentId: string,
+  lessonId: string,
+  file: File,
+): Promise<Attachment> {
+  const { body, attachment } = await preparePhoto(studentId, lessonId, file)
+  await db().outboxFiles.put({
+    ...attachment,
+    userId: studentId,
+    lessonId,
+    blob: body,
+    uploaded: false,
+  })
+  return attachment
+}
+
+/** A photo removed before it ever left the device. */
+export async function forgetKeptPhoto(path: string) {
+  await db().outboxFiles.delete(path)
 }
 
 /** Deletes a photo the student removed (research.md R7). Throws offline / upload_failed. */

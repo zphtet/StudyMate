@@ -1284,6 +1284,27 @@
       "iosStep2": "Choose <add></add> Add to Home Screen.",
       "iosStep3": "Tap Add, then open StudyMate from your Home Screen.",
       "gotIt": "Got it"
+    },
+    "needsConnection": "Needs a connection",
+    "willSync": "Will sync",
+    "willSubmit": "Will submit",
+    "banner": {
+      "offline": "Offline — changes will sync",
+      "offlineWaiting": "Offline — {count, plural, one {# change} other {# changes}} will sync",
+      "offlineAdmin": "Offline — showing saved data",
+      "syncing": "Syncing {count, plural, =0 {…} one {# change…} other {# changes…}}",
+      "paused": "Sign in to sync your changes.",
+      "signIn": "Sign in",
+      "notSaved": "{count, plural, one {# change wasn't} other {# changes weren't}} saved",
+      "view": "View"
+    },
+    "dropped": {
+      "title": "{count, plural, one {Not saved} other {Not saved}}",
+      "description": "These changes were made offline, but something changed on the server first. The server's version was kept.",
+      "overlap": "It overlaps another shift.",
+      "copy": "Copy text",
+      "copied": "Copied",
+      "ok": "OK"
     }
   }
 }

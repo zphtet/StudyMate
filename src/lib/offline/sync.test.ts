@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { uploadQueuedFiles } from './queued-files'
 import { db } from './db'
 import { enqueue, type EnqueueInput } from './outbox'
-import { registerOp } from './registry'
 import { startSync, syncNow } from './sync'
 
 // Spec 008 research R5, R9, R10: the sync loop sends the outbox in order, runs an op's preparation
 // (photo uploads) before sending it, pauses on 401 without losing anything, and retries later.
+
+vi.mock('./queued-files', () => ({
+  uploadQueuedFiles: vi.fn(async () => undefined),
+  forgetQueuedFiles: vi.fn(async () => undefined),
+}))
 
 const ME = '11111111-1111-4111-8111-111111111111'
 let stop: () => void
@@ -38,10 +43,8 @@ afterEach(async () => {
 describe('the sync loop', () => {
   it('sends the outbox in order and clears what was applied', async () => {
     const events: string[] = []
-    registerOp(['submission.save'], {
-      prepare: async (e) => {
-        events.push(`prepare ${e.label}`)
-      },
+    vi.mocked(uploadQueuedFiles).mockImplementation(async (e) => {
+      events.push(`prepare ${e.label}`)
     })
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
       const { ops } = JSON.parse(String(init.body)) as { ops: { id: string; bodyMd: string }[] }
@@ -60,11 +63,7 @@ describe('the sync loop', () => {
   })
 
   it('a failed preparation (photo upload) sends nothing and keeps the entry for later', async () => {
-    registerOp(['submission.save'], {
-      prepare: async () => {
-        throw new Error('upload failed')
-      },
-    })
+    vi.mocked(uploadQueuedFiles).mockRejectedValueOnce(new Error('upload failed'))
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     await enqueue(entry('a'))
@@ -75,7 +74,6 @@ describe('the sync loop', () => {
   })
 
   it('a 401 pauses without deleting or counting an attempt', async () => {
-    registerOp(['submission.save'], {})
     vi.stubGlobal(
       'fetch',
       vi.fn(() => reply(401)),
@@ -87,7 +85,6 @@ describe('the sync loop', () => {
   })
 
   it('a network error or retry is tried again later', async () => {
-    registerOp(['submission.save'], {})
     const fetchMock = vi
       .fn()
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))

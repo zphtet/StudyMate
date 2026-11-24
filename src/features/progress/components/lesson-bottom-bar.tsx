@@ -6,11 +6,14 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { BottomBar } from '@/components/layout/screen'
+import { SyncPill } from '@/components/shared/sync-pill'
 import { Button } from '@/components/ui/button'
 import { todayKeys } from '@/features/assignments/queries'
+import { runOrQueue } from '@/lib/offline/run-or-queue'
 import { ActionResultError, unwrap } from '@/lib/result'
 import { useErrorMessage } from '@/lib/use-error-message'
 import { completeLesson, undoCompletion } from '../actions'
+import { lessonLabel, progressKey, queueCompletion } from '../offline'
 import { lessonWorkKeys, lessonWorkQuery, progressKeys } from '../queries'
 import type { LessonWork } from '../types'
 import { useFocusTimer } from '../use-focus-timer'
@@ -20,6 +23,7 @@ import { FocusButton } from './focus-button'
 // the lesson at once and roll back on error (SC-001, research.md R14); Today, Courses and Progress
 // refetch. "Submit before complete" switches to the Assignment tab instead of showing an error.
 // The focus timer (US4) sits on the left until the lesson is done; its countdown keeps running after.
+// Offline (spec 008 US2 scenario 2), both are queued and the bar shows "Will sync" until they sync.
 
 export function LessonBottomBar({
   lessonId,
@@ -33,7 +37,7 @@ export function LessonBottomBar({
   const queryClient = useQueryClient()
   const errorMessage = useErrorMessage()
   const workKey = lessonWorkKeys.work(lessonId)
-  const focus = useFocusTimer(lessonId)
+  const focus = useFocusTimer(lessonId, work.studentId)
 
   const optimistic = (done: boolean) => async () => {
     await queryClient.cancelQueries({ queryKey: workKey })
@@ -64,8 +68,27 @@ export function LessonBottomBar({
     if (context?.snapshot) queryClient.setQueryData(workKey, context.snapshot)
   }
 
+  /** Online: the Server Action. Offline: the outbox, and the optimistic bar stays as it is. */
+  const changeDone = (done: boolean) =>
+    runOrQueue({
+      online: async () =>
+        done
+          ? unwrap(await completeLesson({ lessonId }))
+          : unwrap(await undoCompletion({ lessonId })),
+      queue: () =>
+        queueCompletion({
+          userId: work.studentId,
+          lessonId,
+          done,
+          label: lessonLabel(queryClient, lessonId),
+        }),
+    })
+  const settleUnlessQueued = (result: { isQueued: boolean } | undefined) =>
+    result?.isQueued ? undefined : settle()
+
   const complete = useMutation({
-    mutationFn: async () => unwrap(await completeLesson({ lessonId })),
+    networkMode: 'always',
+    mutationFn: () => changeDone(true),
     onMutate: optimistic(true),
     onError: (error, _input, context) => {
       rollback(context)
@@ -75,17 +98,18 @@ export function LessonBottomBar({
         toast.error(errorMessage(error))
       }
     },
-    onSettled: settle,
+    onSettled: settleUnlessQueued,
   })
 
   const undo = useMutation({
-    mutationFn: async () => unwrap(await undoCompletion({ lessonId })),
+    networkMode: 'always',
+    mutationFn: () => changeDone(false),
     onMutate: optimistic(false),
     onError: (error, _input, context) => {
       rollback(context)
       toast.error(errorMessage(error))
     },
-    onSettled: settle,
+    onSettled: settleUnlessQueued,
   })
 
   const busy = complete.isPending || undo.isPending
@@ -102,6 +126,7 @@ export function LessonBottomBar({
                   ? t('markedDoneBy', { name: work.progress.completedByName })
                   : t('done')}
               </span>
+              <SyncPill recordKey={progressKey(lessonId)} className="shrink-0" />
             </p>
             <Button variant="outline" size="touch" disabled={busy} onClick={() => undo.mutate()}>
               {t('undo')}
