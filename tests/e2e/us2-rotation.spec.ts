@@ -197,8 +197,14 @@ test('scenario 3: the Sunday check shows from 18:00 until Confirm, on every devi
   await expectNoSeriousA11yViolations(page)
   await openShifts(page, monday)
   await expect(card(page)).toBeVisible()
+  // The card hides optimistically, so wait for the Server Action itself before reloading; under a
+  // full parallel run the reload otherwise beats the write (006 T082).
+  const confirmed = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.request().headers()['next-action'] !== undefined,
+  )
   await card(page).getByRole('button', { name: 'Confirm' }).click()
   await expect(card(page)).toBeHidden()
+  await confirmed
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Shifts', exact: true })).toBeVisible()
   await expect(card(page)).toBeHidden()
