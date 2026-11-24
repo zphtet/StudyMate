@@ -35,7 +35,7 @@ export function ShiftChip({
       data-part={part}
       aria-hidden
       className={cn(
-        'block self-stretch truncate px-0.5 text-center text-[11px] leading-5 font-semibold tracking-tight tabular-nums',
+        'block self-stretch truncate px-0.5 text-center text-[0.6875rem] leading-5 font-semibold tracking-tight tabular-nums',
         SHIFT_COLOR[type],
         part === 'whole' && 'mx-0.5 rounded-md',
         part === 'start' && '-mr-0.5 ml-0.5 rounded-l-md',

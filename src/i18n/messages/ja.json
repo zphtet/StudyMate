@@ -266,6 +266,11 @@
       "slate": "スレート",
       "mocha": "モカ"
     },
+    "font": "フォント · {name}",
+    "textSize": "文字サイズ",
+    "small": "小",
+    "default": "標準",
+    "large": "大",
     "previewStreak": "{n}日連続",
     "previewLesson": "Particles は vs が",
     "previewMeta": "JLPT N4 Grammar · 15 min · 私は学生です。"

@@ -190,7 +190,7 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T023 [P] [US2] Write Playwright tests in tests/e2e/us2-fonts.spec.ts (390×844 and 1280×800, axe). Cases:
+- [X] T023 [P] [US2] Write Playwright tests in tests/e2e/us2-fonts.spec.ts (390×844 and 1280×800, axe). Cases:
   - **scenario 1**: tap Atkinson Hyperlegible → `data-font="atkinson"`, "Font · Atkinson Hyperlegible", and Today's heading's computed `font-family` starts with Atkinson's `next/font` family;
   - **scenario 2**: a lesson with Japanese text, with Merriweather → the `font-family` stack includes the Noto Sans JP family;
   - **scenario 3**: Large → the root font size is 1.13× the default; Small → 0.93×;
@@ -205,11 +205,13 @@ The pre-paint script, the cookie and the one Server Action are Foundational, bec
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Build src/features/profile/components/font-tiles.tsx (contracts/ui-routes.md; research R6). A 2-column radiogroup of ≥ 56 px tiles, each with "Aa" and the name in `var(--font-<id>)`. Selected: `border-primary` and `bg-accent`. Add "Font · {name}" and the tiles to appearance-view.tsx.
-- [ ] T025 [US2] Add Text size to appearance-view.tsx with `SegmentedChoice` (Small / Default / Large, each label at its own size; FR-008).
-- [ ] T026 [US2] Find the sizes that don't scale and fix where Large or Small breaks a screen (research R7). Search src/ for `text-[…px]`, `h-[…px]`, `w-[…px]`, inline `px` font sizes and fixed-height text containers. Change the ones T023 scenario 4 shows overflowing, and list each change in this task.
-- [ ] T027 [US2] Add `appearance.font` (`"Font · {name}"`), `appearance.textSize`, `appearance.small`, `appearance.default` and `appearance.large` to src/i18n/messages/en.json, my.json and ja.json.
-- [ ] T028 [US2] Run tests/e2e/us2-fonts.spec.ts (T023) scenarios 1 and 4 with `--grep` on the :3100 build until they pass.
+- [X] T024 [US2] Build src/features/profile/components/font-tiles.tsx (contracts/ui-routes.md; research R6). A 2-column radiogroup of ≥ 56 px tiles, each with "Aa" and the name in `var(--font-<id>)`. Selected: `border-primary` and `bg-accent`. Add "Font · {name}" and the tiles to appearance-view.tsx.
+- [X] T025 [US2] Add Text size to appearance-view.tsx with `SegmentedChoice` (Small / Default / Large, each label at its own size; FR-008).
+- [X] T026 [US2] Find the sizes that don't scale and fix where Large or Small breaks a screen (research R7). Search src/ for `text-[…px]`, `h-[…px]`, `w-[…px]`, inline `px` font sizes and fixed-height text containers. Change the ones T023 scenario 4 shows overflowing, and list each change in this task.
+
+  (Done 2026-11-24. The only pixel size in src/ outside components/ui was the shift calendar chip, `text-[11px]` in src/features/shifts/components/shift-chip.tsx; it is now `text-[0.6875rem]`, the same 11 px at Default, so it scales with the text (clarification Q1). No inline px font sizes. T023 scenario 4 found no page scrolling sideways at Large: 14 student routes, 20 Admin routes, sign-in and sign-up.)
+- [X] T027 [US2] Add `appearance.font` (`"Font · {name}"`), `appearance.textSize`, `appearance.small`, `appearance.default` and `appearance.large` to src/i18n/messages/en.json, my.json and ja.json.
+- [X] T028 [US2] Run tests/e2e/us2-fonts.spec.ts (T023) scenarios 1 and 4 with `--grep` on the :3100 build until they pass.
 
 **Checkpoint**: quickstart.md §4 scenarios 5–7 pass by hand.
 

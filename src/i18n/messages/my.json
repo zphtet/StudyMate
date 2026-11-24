@@ -266,6 +266,11 @@
       "slate": "ကျောက်ပြား",
       "mocha": "မိုကာ"
     },
+    "font": "ဖောင့် · {name}",
+    "textSize": "စာလုံးအရွယ်အစား",
+    "small": "သေး",
+    "default": "ပုံမှန်",
+    "large": "ကြီး",
     "previewStreak": "{n} ရက် ဆက်တိုက်",
     "previewLesson": "Particles は vs が",
     "previewMeta": "JLPT N4 Grammar · 15 min · 私は学生です。"
