@@ -1,13 +1,10 @@
-import { Check } from 'lucide-react'
+import Image from 'next/image'
 
-/** StudyMate mark: a check on the primary colour (screenshots 01, 15). */
+/**
+ * The StudyMate logo (public/logo.png, the owner's artwork, 2026-11-24; replaces the check tile of
+ * screenshots 01 and 15). Decorative: each screen names the app in its heading. Shown a little larger
+ * than the old 48 px tile because the artwork has a wide transparent margin.
+ */
 export function AppMark() {
-  return (
-    <span
-      aria-hidden
-      className="flex size-12 items-center justify-center rounded-[0.9rem] bg-primary text-primary-foreground"
-    >
-      <Check className="size-6" strokeWidth={3} />
-    </span>
-  )
+  return <Image src="/logo.png" alt="" width={64} height={64} className="size-16" />
 }

@@ -96,7 +96,10 @@ const runtimeCaching: RuntimeCaching[] = [
     }),
   },
   {
-    matcher: /\.(?:js|css|woff2?|png|svg|ico|webp|jpg|jpeg)$/i,
+    // Static files, and next/image's resized copies (the logo, also on the offline page).
+    matcher: ({ url }) =>
+      url.pathname === '/_next/image' ||
+      /\.(?:js|css|woff2?|png|svg|ico|webp|jpg|jpeg)$/i.test(url.href),
     handler: new CacheFirst({
       cacheName: CACHE.assets,
       plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * DAY })],
