@@ -67,9 +67,10 @@ export function DroppedChangesSheet({
                 <p className="text-sm text-muted-foreground">{reason(entry.error)}</p>
                 {text && (
                   <>
-                    <p className="mt-2 line-clamp-4 rounded-lg bg-muted p-2 text-sm whitespace-pre-wrap">
-                      {text}
-                    </p>
+                    {/* The clamp sits inside the padding, so no part of a 5th line shows below it. */}
+                    <div className="mt-2 rounded-lg bg-muted p-2">
+                      <p className="line-clamp-4 text-sm whitespace-pre-wrap">{text}</p>
+                    </div>
                     <Button
                       variant="outline"
                       className="mt-2 min-h-11"

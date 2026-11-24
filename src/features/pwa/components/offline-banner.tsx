@@ -74,7 +74,7 @@ export function OfflineBanner({ userId, role }: { userId: string; role: 'student
           {isPaused && (
             <Link
               href={`/sign-in?next=${encodeURIComponent(pathname)}`}
-              className="font-medium text-foreground underline underline-offset-4"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center font-medium text-foreground underline underline-offset-4"
             >
               {t('signIn')}
             </Link>
@@ -82,7 +82,7 @@ export function OfflineBanner({ userId, role }: { userId: string; role: 'student
           {!isPaused && dropped.length > 0 && (
             <button
               type="button"
-              className="min-h-9 font-medium text-foreground underline underline-offset-4"
+              className="min-h-11 min-w-11 shrink-0 font-medium text-foreground underline underline-offset-4"
               onClick={() => setSheetOpen(true)}
             >
               {t('view')}
