@@ -61,3 +61,6 @@ Thumbs.db
 *.log
 *.tmp
 *.swp
+
+# Mirror of .claude/skills made by other agent tools
+.agents/
