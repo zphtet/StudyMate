@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // Busts the persisted query cache on every deploy (spec 008 research R4).
   env: { NEXT_PUBLIC_BUILD_ID: buildRevision() },
+  experimental: {
+    // Going back to a tab within 30 s reuses its page instead of asking the server again. Screens
+    // read their data from TanStack Query, which mutations invalidate, and an older seed in a cached
+    // page never overwrites newer data. Edits the server draws directly call router.refresh().
+    staleTimes: { dynamic: 30 },
+  },
   async headers() {
     return [
       {
