@@ -71,7 +71,7 @@ from net._http_response order by created desc limit 5;
 -- 401 {"error":{"code":"unauthenticated"}}
 ```
 
-### Fix 2 (still open): the secret in Vault was the placeholder
+### Fix 2: the secret in Vault was the placeholder
 A 401 means the route rejected the secret. The setup SQL in the docs reads:
 
 ```sql
@@ -86,21 +86,31 @@ and it had been run **as written**, so Vault held the literal text `<CRON_SECRET
 | the string `<CRON_SECRET>` | 13 | `e4f275cc8f43` ← same |
 | local `CRON_SECRET` | 64 | `1c5d2a36d9cf` |
 
-The fix is to store the real value, the one Vercel has:
+**Which value is the right one?** Vercel's `CRON_SECRET` can't be read from here, so we tested the local one by calling the dispatcher with it, the same call the cron job makes:
 
-```sql
-select vault.update_secret(
-  (select id from vault.secrets where name = 'cron_secret'),
-  '<the real CRON_SECRET from Vercel>'
-);
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  https://study-mate-one-alpha.vercel.app/api/cron/dispatch
+# HTTP 200 {"delivered":13,"pushes":5,...}
 ```
 
-Then `net._http_response` should show `200` with the dispatcher's counts.
+A 401 would have changed nothing. The 200 proved the local value matches Vercel's, and it also sent the 13 items that had been waiting, including the stuck message.
+
+Then we stored that value in Vault. The secret goes in as a psql variable (`:'secret'`), so it isn't printed:
+
+```bash
+printf '%s\n' "select vault.update_secret(
+  (select id from vault.secrets where name = 'cron_secret'), :'secret');" \
+  | psql "$DIRECT_URL" -v secret="$CRON_SECRET"
+```
+
+The next cron run (13:00 UTC) got `200 {"delivered":1,...}`. Scheduled messages now go out within 5 minutes of their time, with no manual step.
 
 ### Lessons
 - **Background jobs fail silently.** Nothing in the app told anyone that 276 runs had failed. Look at the job's own log (`cron.job_run_details`) first.
 - **Follow the chain one link at a time:** timer → HTTP call → auth → the code. Each link has its own place to check.
 - **Placeholders in setup docs get pasted as-is.** Hashing two values is a safe way to tell whether they're equal without showing a secret.
+- **Test a secret by using it** on a call that's harmless when it fails: a 401 changes nothing, and a 200 proves the value.
 
 ---
 
