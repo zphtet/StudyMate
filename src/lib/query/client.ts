@@ -6,7 +6,11 @@ export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30_000,
+        // Every page navigation brings fresh data from the server (Prefetched), but HydrationBoundary
+        // applies it to a query already in the cache only after render. With a short staleTime the
+        // older copy looked stale on mount and refetched the same data from /api. Mutations still
+        // invalidate at once.
+        staleTime: 5 * 60_000,
         // Kept as long as the persisted copy (spec 008 research R4), so restored data isn't collected.
         gcTime: 7 * 24 * 60 * 60 * 1000,
         // Don't retry answers that won't change (401/403/404/400).

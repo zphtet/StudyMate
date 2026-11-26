@@ -258,7 +258,7 @@ Server Component (page) ──prefetch the same queryOptions──► repo (Pris
 ```
 
 **Setup**
-- `src/lib/query/client.ts`: one `QueryClient` per browser session (`staleTime: 30_000`, `gcTime: 24h`, `retry: 2`), provided by `QueryProvider` in `app/layout.tsx`.
+- `src/lib/query/client.ts`: one `QueryClient` per browser session (`staleTime: 5 min`, since each page navigation reseeds the data, `gcTime: 24h`, `retry: 2`), provided by `QueryProvider` in `app/layout.tsx`.
 - `src/lib/query/server.ts`: `getQueryClient()` wrapped in React `cache()` for Server Component prefetching.
 - `PersistQueryClientProvider` with a Dexie persister, one saved client per user (spec 008, §10). Devtools in development.
 
