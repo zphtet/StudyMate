@@ -55,6 +55,12 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Next serves it with max-age=0, so browsers re-checked it on every navigation. It changes
+        // only with a deploy; a day's delay is fine.
+        source: '/manifest.webmanifest',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+      {
         // Browsers find a new worker on the next open (research R13).
         source: '/serwist/sw.js',
         headers: [{ key: 'Cache-Control', value: 'no-cache' }],
